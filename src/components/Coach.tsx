@@ -26,6 +26,8 @@ export default function Coach({ ctx }: { ctx: Ctx }) {
   const [betaInfo, setBetaInfo] = useState<{ code: string; uses: number; maxUses: number; expires: string } | null>(null);
   const [cesMarks, setCesMarks] = useState<string[]>([]);
   const [cesSaved, setCesSaved] = useState('');
+  const [videoMsg, setVideoMsg] = useState('');
+  const [deleteVideoKey, setDeleteVideoKey] = useState('');
 
   useEffect(() => {
     if (unlocked && api.getMode() === 'server') {
@@ -124,6 +126,50 @@ export default function Coach({ ctx }: { ctx: Ctx }) {
         <div className="card gold-frame">
           <h3>{selected.displayName || selected.email}</h3>
           <p>Phase {selected.data.assessment?.startingPhase || 'not assessed'} · Findings: {selected.data.assessment?.findings.join(', ') || 'none'} · Workouts: {selected.data.workouts.length} · Check-ins: {selected.data.checkins.length} · Cardio: {selected.data.cardio.reduce((s, c) => s + Number(c.minutes || 0), 0)} min</p>
+
+          <h3>Assessment videos</h3>
+          {(selected.data.assessmentVideos || []).length === 0 && (
+            <p className="muted">No assessment videos from this client yet. Filming is optional.</p>
+          )}
+          {(selected.data.assessmentVideos || []).map((v) => (
+            <div key={v.id} style={{ borderTop: '1px solid #d7e3ee', padding: '8px 0' }}>
+              <p>
+                <strong>{v.label}</strong> · Week {v.week} · {new Date(v.date).toLocaleDateString()} · {(v.sizeBytes / 1024 / 1024).toFixed(1)} MB
+              </p>
+              {api.getMode() === 'server' ? (
+                <video src={api.coachVideoUrl(selected.id, v.key)} controls style={{ width: '100%', maxHeight: 280 }} />
+              ) : (
+                <p className="small muted">Video playback needs the live app with video storage set up.</p>
+              )}
+              <div className="row" style={{ marginTop: 8 }}>
+                {deleteVideoKey === v.key ? (
+                  <span>
+                    Delete this video?{' '}
+                    <button
+                      className="primary"
+                      onClick={async () => {
+                        try {
+                          if (api.getMode() === 'server') await api.coachDeleteVideo(selected.id, v.key);
+                          setClients((prev) => prev.map((c) => (c.id === selected.id ? { ...c, data: { ...c.data, assessmentVideos: (c.data.assessmentVideos || []).filter((x) => x.key !== v.key) } } : c)));
+                          setSelected((prev) => (prev ? { ...prev, data: { ...prev.data, assessmentVideos: (prev.data.assessmentVideos || []).filter((x) => x.key !== v.key) } } : prev));
+                          setVideoMsg('Video deleted.');
+                        } catch {
+                          setVideoMsg('That video could not be deleted. Try again.');
+                        }
+                        setDeleteVideoKey('');
+                      }}
+                    >
+                      Yes, delete
+                    </button>{' '}
+                    <button onClick={() => setDeleteVideoKey('')}>Cancel</button>
+                  </span>
+                ) : (
+                  <button onClick={() => setDeleteVideoKey(v.key)}>Delete video</button>
+                )}
+              </div>
+            </div>
+          ))}
+          {videoMsg && <p className="ok">{videoMsg}</p>}
 
           <h3>Messages and questions</h3>
           {selected.data.messages.length === 0 && <p className="muted">No messages yet.</p>}

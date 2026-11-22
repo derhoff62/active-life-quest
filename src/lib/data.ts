@@ -87,6 +87,26 @@ export const PHASES: PhaseInfo[] = [
   },
 ];
 
+// Weekly sets per muscle, by phase. Shorter sessions hit each muscle
+// with fewer sets, so they need more days a week to reach the same
+// weekly total. 15 minutes needs 4 days, 30 minutes needs 3 days, and
+// 45 or more minutes needs 2 days in Phases 1-2 and 3 days in Phases 3-5,
+// where the sets per muscle are higher. Always with 1 to 2 rest days
+// between strength days.
+export const PHASE_WEEKLY_SETS: Record<number, string> = {
+  1: '6 to 10',
+  2: '8 to 12',
+  3: '10 to 15',
+  4: '12 to 18',
+  5: '10 to 15',
+};
+
+export function daysForTime(timeMin: 15 | 30 | 45, phase: number): number {
+  if (timeMin === 15) return 4;
+  if (timeMin === 30) return 3;
+  return phase >= 3 ? 3 : 2;
+}
+
 // --------------------------------------------------------------- WORKOUTS
 
 function e(
@@ -1504,6 +1524,74 @@ export const ASSESSMENT_QUESTIONS: { questions: string[]; parq: string[] } = {
     'Do you know of any other reason you should not do physical activity?',
   ],
 };
+
+// ------------------------------------------- ASSESSMENT EXAMPLE DEMOS
+// Text demos for each assessment move. There is no playable example video
+// for these moves yet. Do NOT label a workout clip as an assessment demo:
+// the exact video matches on file are barbell back squat, barbell
+// deadlift, dumbbell goblet squat, lat pulldown, seated cable row, and
+// single-arm dumbbell row, none of which is an overhead squat, a
+// single-leg squat, a postural assessment, or a balance hold. Derek will
+// film these four examples. Until then the text demo is the example.
+
+export interface AssessmentExample {
+  id: string;
+  title: string;
+  whatToDo: string[];
+  goodForm: string;
+  videoNote: string;
+}
+
+export const ASSESSMENT_EXAMPLES: AssessmentExample[] = [
+  {
+    id: 'overhead-squat',
+    title: 'Overhead squat',
+    whatToDo: [
+      'Stand with feet about shoulder width apart, toes pointing slightly out.',
+      'Raise both arms straight overhead, elbows soft, palms facing each other.',
+      'Sit back and down like you are sitting into a chair. Lower slowly for 3 to 4 seconds.',
+      'Go as low as you can with your heels down and your chest up, then stand back up.',
+    ],
+    goodForm: 'Good form looks like heels staying down, knees tracking over toes, arms staying up, and a slow lowering.',
+    videoNote: 'Example video coming. Derek will film this.',
+  },
+  {
+    id: 'single-leg-squat',
+    title: 'Single-leg squat',
+    whatToDo: [
+      'Stand near something stable you can touch if you wobble.',
+      'Lift one foot just off the floor and hold your arms out in front of you.',
+      'Bend the standing knee a little and sit back. Lower slowly for 3 to 4 seconds.',
+      'Come back up the same way. Do one side, then the other.',
+    ],
+    goodForm: 'Good form looks like the standing knee tracking over the toes, hips level, and a slow, controlled lowering.',
+    videoNote: 'Example video coming. Derek will film this.',
+  },
+  {
+    id: 'postural-assessment',
+    title: 'Postural assessment',
+    whatToDo: [
+      'Stand tall and relaxed, arms at your sides, feet about shoulder width apart.',
+      'Look straight ahead and breathe normally. Do not pose or pull yourself up.',
+      'Derek looks at your head, shoulders, hips, knees, and feet from the front, side, and back.',
+      'Note anything that looks uneven, like one shoulder higher than the other.',
+    ],
+    goodForm: 'Good posture looks like head over shoulders, shoulders over hips, and weight even on both feet.',
+    videoNote: 'Example video coming. Derek will film this.',
+  },
+  {
+    id: 'balance-baseline',
+    title: 'Balance baseline',
+    whatToDo: [
+      'Stand near something stable, like a chair or a wall.',
+      'Lift one foot just off the floor and hold still.',
+      'Count the seconds until you put your foot down or wobble too much to hold it.',
+      'Do one side, then the other. Stop if you feel unsteady.',
+    ],
+    goodForm: 'Good balance looks like standing still, hips level, and arms relaxed at your sides.',
+    videoNote: 'Example video coming. Derek will film this.',
+  },
+];
 
 // ----------------------------------------------------------- PHASE RECOMMENDER
 

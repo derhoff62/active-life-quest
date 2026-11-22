@@ -42,6 +42,20 @@ send a screenshot of the log — do not change the commands.
 
 ## Step 2. Add the settings (environment variables)
 
+## Step 1b. Video storage (R2) — do this BEFORE deploying the video version
+
+Assessment videos are stored in Cloudflare R2 (free tier, 10 GB).
+In the Cloudflare dashboard:
+
+1. Go to Storage & databases, then R2. If R2 is not enabled, enable it.
+2. Create a bucket named exactly `active-life-quest-videos`.
+3. Then redeploy the Worker (Deployments > Redeploy, or push a new commit).
+
+If the bucket does not exist yet, the deploy fails, because
+`wrangler.toml` binds it as VIDEOS. Until the bucket exists, the upload
+button shows a plain error and the assessment still finishes fine
+without a video. No video bytes ever go in the Neon database.
+
 In the new Worker project, go to Settings, then Variables and
 secrets, then Add, one at a time. Do not share these values in chat.
 

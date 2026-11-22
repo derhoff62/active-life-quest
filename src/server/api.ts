@@ -1,3 +1,4 @@
+/// <reference types="@cloudflare/workers-types" />
 import { Hono } from "hono";
 import type { Context } from "hono";
 import { deleteCookie, getCookie, setCookie } from "hono/cookie";
@@ -18,6 +19,13 @@ export type Env = {
   BETA_CODE?: string;
   BETA_USES?: string;
   BETA_EXPIRES?: string;
+  // Cloudflare R2 bucket for assessment videos. Bound in wrangler.toml as
+  // VIDEOS (bucket active-life-quest-videos). R2 must be enabled in the
+  // Cloudflare dashboard and the bucket created before the first deploy
+  // that includes the binding, or the deploy fails. Until then the
+  // upload endpoint returns a plain error and the assessment still
+  // finishes fine without a video.
+  VIDEOS?: R2Bucket;
 };
 
 type Sql = ReturnType<typeof neon>;
@@ -533,6 +541,176 @@ app.put("/api/profile", async (c) => {
     updatedAt: string;
   }>;
   return c.json({ ok: true, updatedAt: rows[0]?.updatedAt ?? null });
+});
+
+// ---------- assessment videos (Cloudflare R2) ----------
+// Video bytes live in R2 only, never in the Neon profile JSON
+// (PROFILE_MAX_BYTES is 1,000,000, a video would blow it up). Only the
+// small metadata record (key, label, date, week, size, type) is stored
+// in the profile doc, in assessmentVideos.
+
+const MAX_VIDEO_BYTES = 100 * 1024 * 1024; // 100 MB
+
+function videoKeyFor(userId: string, fileName: string): string {
+  const safe = fileName.replace(/[^A-Za-z0-9._-]+/g, "-").slice(-60) || "video";
+  const ext = safe.includes(".") ? safe.slice(safe.lastIndexOf(".")) : "";
+  const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+  return `assessment/${userId}/${stamp}-${randomHex(8)}${ext}`;
+}
+
+function isOwnVideoKey(userId: string, key: string): boolean {
+  return (
+    key.startsWith(`assessment/${userId}/`) &&
+    !key.includes("..") &&
+    !key.slice(`assessment/${userId}/`.length).includes("/")
+  );
+}
+
+app.post("/api/assessment/video", async (c) => {
+  const db = getDb(c);
+  if (!db) {
+    return dbMissing(c);
+  }
+  const user = await requireSession(c, db);
+  if (!user) {
+    return c.json({ error: "You are not signed in." }, 401);
+  }
+  const bucket = c.env.VIDEOS;
+  if (!bucket) {
+    return c.json(
+      {
+        error:
+          "Video storage is not set up yet. Derek needs to enable R2 in Cloudflare and create the active-life-quest-videos bucket, then redeploy. You can still finish the assessment without a video.",
+      },
+      503,
+    );
+  }
+  let form: FormData;
+  try {
+    form = await c.req.formData();
+  } catch {
+    return c.json({ error: "No video was attached." }, 400);
+  }
+  const file = form.get("video");
+  if (!(file instanceof File)) {
+    return c.json({ error: "No video was attached." }, 400);
+  }
+  if (!file.type.startsWith("video/")) {
+    return c.json({ error: "That file is not a video. Pick a video file." }, 400);
+  }
+  if (file.size === 0) {
+    return c.json({ error: "That video is empty. Pick a different video." }, 400);
+  }
+  if (file.size > MAX_VIDEO_BYTES) {
+    return c.json(
+      { error: "That video is over 100 MB. Pick a shorter clip." },
+      400,
+    );
+  }
+  const label =
+    typeof form.get("label") === "string" && (form.get("label") as string).trim()
+      ? (form.get("label") as string).trim().slice(0, 100)
+      : "Assessment video";
+  const weekRaw = Number(form.get("week"));
+  const week = Number.isFinite(weekRaw) && weekRaw >= 1 && weekRaw <= 13 ? Math.floor(weekRaw) : 1;
+  const key = videoKeyFor(user.id, file.name || "video.mp4");
+  try {
+    await bucket.put(key, file, {
+      httpMetadata: { contentType: file.type || "video/mp4" },
+    });
+  } catch {
+    return c.json(
+      {
+        error:
+          "The video could not be saved. Video storage may not be set up yet. You can still finish the assessment without a video.",
+      },
+      503,
+    );
+  }
+  const doc = await getProfileDoc(db, user.id);
+  if (!doc) {
+    await bucket.delete(key);
+    return c.json({ error: "Client not found." }, 404);
+  }
+  const video = {
+    id: randomHex(16),
+    key,
+    label,
+    date: new Date().toISOString(),
+    week,
+    sizeBytes: file.size,
+    contentType: file.type || "video/mp4",
+  };
+  const videos = Array.isArray(doc.assessmentVideos) ? doc.assessmentVideos : [];
+  videos.unshift(video);
+  doc.assessmentVideos = videos;
+  await saveProfileDoc(db, user.id, doc);
+  return c.json({ ok: true, video }, 201);
+});
+
+// Coach-only: stream one client's assessment video from R2.
+app.get("/api/coach/videos/:userId/:key", async (c) => {
+  const db = getDb(c);
+  if (!db) {
+    return dbMissing(c);
+  }
+  if (!(await hasCoachSession(c, db))) {
+    return c.json({ error: "Coach sign-in is required." }, 401);
+  }
+  const userId = c.req.param("userId");
+  const fileName = c.req.param("key");
+  const key = `assessment/${userId}/${fileName}`;
+  if (!isOwnVideoKey(userId, key)) {
+    return c.json({ error: "Video not found." }, 404);
+  }
+  const bucket = c.env.VIDEOS;
+  if (!bucket) {
+    return c.json({ error: "Video storage is not set up yet." }, 503);
+  }
+  const obj = await bucket.get(key);
+  if (!obj) {
+    return c.json({ error: "Video not found." }, 404);
+  }
+  return new Response(obj.body, {
+    headers: {
+      "Content-Type": obj.httpMetadata?.contentType || "video/mp4",
+      "Content-Length": String(obj.size),
+      "Cache-Control": "private, max-age=3600",
+    },
+  });
+});
+
+// Coach-only: delete one client's assessment video (R2 + profile record).
+app.delete("/api/coach/videos/:userId/:key", async (c) => {
+  const db = getDb(c);
+  if (!db) {
+    return dbMissing(c);
+  }
+  if (!(await hasCoachSession(c, db))) {
+    return c.json({ error: "Coach sign-in is required." }, 401);
+  }
+  const userId = c.req.param("userId");
+  const fileName = c.req.param("key");
+  const key = `assessment/${userId}/${fileName}`;
+  if (!isOwnVideoKey(userId, key)) {
+    return c.json({ error: "Video not found." }, 404);
+  }
+  const bucket = c.env.VIDEOS;
+  if (bucket) {
+    await bucket.delete(key);
+  }
+  const doc = await getProfileDoc(db, userId);
+  if (doc) {
+    const videos = Array.isArray(doc.assessmentVideos) ? doc.assessmentVideos : [];
+    doc.assessmentVideos = videos.filter(
+      (v) =>
+        v === null ||
+        typeof v !== "object" ||
+        (v as Record<string, unknown>).key !== key,
+    );
+    await saveProfileDoc(db, userId, doc);
+  }
+  return c.json({ ok: true });
 });
 
 // ---------- beta ----------

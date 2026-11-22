@@ -116,6 +116,35 @@ export async function redeemBeta(code: string): Promise<{ ok: boolean; usesLeft?
   }
 }
 
+// --- Assessment videos ---
+export async function uploadAssessmentVideo(file: File, label: string, week: number) {
+  const form = new FormData();
+  form.append("video", file);
+  form.append("label", label);
+  form.append("week", String(week));
+  const res = await fetch("/api/assessment/video", {
+    method: "POST",
+    body: form,
+    credentials: "same-origin",
+  });
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error((body as { error?: string }).error || `Upload failed (${res.status})`);
+  return body as {
+    ok: boolean;
+    video: { id: string; key: string; label: string; date: string; week: number; sizeBytes: number; contentType: string };
+  };
+}
+export function coachVideoUrl(userId: string, key: string) {
+  const fileName = key.split("/").pop() || "";
+  return `/api/coach/videos/${encodeURIComponent(userId)}/${encodeURIComponent(fileName)}`;
+}
+export async function coachDeleteVideo(userId: string, key: string) {
+  const fileName = key.split("/").pop() || "";
+  return req<{ ok: boolean }>(`/api/coach/videos/${encodeURIComponent(userId)}/${encodeURIComponent(fileName)}`, {
+    method: "DELETE",
+  });
+}
+
 // --- Coach ---
 export async function coachUnlock(pin: string) {
   return req<{ ok: boolean; firstSet?: boolean }>('/api/coach/pin', {

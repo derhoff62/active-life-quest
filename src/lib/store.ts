@@ -27,6 +27,16 @@ export interface LogEntry {
   [key: string]: unknown;
 }
 
+export interface AssessmentVideo {
+  id: string;
+  key: string;
+  label: string;
+  date: string;
+  week: number;
+  sizeBytes: number;
+  contentType: string;
+}
+
 export interface ProfileDoc {
   version: number;
   displayName: string;
@@ -60,6 +70,7 @@ export interface ProfileDoc {
   quests: LogEntry[];
   retests: LogEntry[];
   bossHp: Record<string, number>;
+  assessmentVideos: AssessmentVideo[];
   balanceBaseline: { left: number; right: number } | null;
   messages: ClientMessage[];
   nudges: { id: string; text: string; date: string; read: boolean }[];
@@ -112,6 +123,7 @@ export function defaultProfile(email = '', displayName = ''): ProfileDoc {
     quests: [],
     retests: [],
     bossHp: {},
+    assessmentVideos: [],
     balanceBaseline: null,
     messages: [],
     nudges: [],

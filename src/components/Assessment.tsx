@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import type { Ctx } from '../App';
-import { ASSESSMENT_QUESTIONS, CES_TEMPLATES, CONTRAINDICATIONS, DEFAULT_EQUIPMENT, EQUIPMENT_NOTES, EQUIPMENT_OPTIONS, recommendPhase } from '../lib/data';
+import * as api from '../lib/api';
+import { ASSESSMENT_EXAMPLES, ASSESSMENT_QUESTIONS, CES_TEMPLATES, CONTRAINDICATIONS, DEFAULT_EQUIPMENT, EQUIPMENT_NOTES, EQUIPMENT_OPTIONS, recommendPhase } from '../lib/data';
+import { currentWeekForDoc } from '../lib/store';
 import type { FindingId, FormRating } from '../lib/types';
 
 const FINDING_LABELS: { id: FindingId; label: string }[] = CES_TEMPLATES.map((t) => ({ id: t.id, label: t.plainName }));
@@ -28,6 +30,52 @@ export default function Assessment({ ctx }: { ctx: Ctx }) {
   );
   const [done, setDone] = useState(false);
   const [retaking, setRetaking] = useState(false);
+  const [videoFile, setVideoFile] = useState<File | null>(null);
+  const [videoPreview, setVideoPreview] = useState('');
+  const [videoUploading, setVideoUploading] = useState(false);
+  const [videoMsg, setVideoMsg] = useState('');
+  const [videoError, setVideoError] = useState('');
+  const [videoSkipped, setVideoSkipped] = useState(false);
+
+  function pickVideo(file: File | undefined) {
+    setVideoMsg('');
+    setVideoError('');
+    setVideoSkipped(false);
+    if (!file) return;
+    if (!file.type.startsWith('video/')) {
+      setVideoError('That file is not a video. Pick a video file.');
+      return;
+    }
+    if (file.size > 100 * 1024 * 1024) {
+      setVideoError('That video is over 100 MB. Pick a shorter clip.');
+      return;
+    }
+    if (videoPreview) URL.revokeObjectURL(videoPreview);
+    setVideoFile(file);
+    setVideoPreview(URL.createObjectURL(file));
+  }
+
+  async function uploadVideo() {
+    if (!videoFile || videoUploading) return;
+    setVideoUploading(true);
+    setVideoMsg('');
+    setVideoError('');
+    try {
+      const r = await api.uploadAssessmentVideo(videoFile, 'Assessment video', currentWeekForDoc(doc));
+      update((d) => {
+        const videos = d.assessmentVideos || [];
+        d.assessmentVideos = [r.video, ...videos];
+      });
+      setVideoMsg('Video uploaded. Derek can watch it in Coach.');
+      if (videoPreview) URL.revokeObjectURL(videoPreview);
+      setVideoPreview('');
+      setVideoFile(null);
+    } catch (e) {
+      setVideoError(e instanceof Error ? e.message : 'The video could not be uploaded. You can still finish without a video.');
+    } finally {
+      setVideoUploading(false);
+    }
+  }
 
   const toggle = (arr: string[], v: string, set: (a: string[]) => void) =>
     set(arr.includes(v) ? arr.filter((x) => x !== v) : [...arr, v]);
@@ -94,6 +142,16 @@ export default function Assessment({ ctx }: { ctx: Ctx }) {
           </div>
           <button className="primary" onClick={() => { setDone(false); setRetaking(true); setStep(0); }}>Retake the assessment</button>
         </div>
+        {(doc.assessmentVideos || []).length > 0 && (
+          <div className="card">
+            <h3>Assessment videos you uploaded</h3>
+            {(doc.assessmentVideos || []).map((v) => (
+              <p key={v.id}>
+                {v.label} · Week {v.week} · {new Date(v.date).toLocaleDateString()} · {(v.sizeBytes / 1024 / 1024).toFixed(1)} MB · Derek can watch it in Coach.
+              </p>
+            ))}
+          </div>
+        )}
         {templates.map((t) => (
           <details className="card" key={t.id}>
             <summary>{t.plainName} ({t.name})</summary>
@@ -215,6 +273,18 @@ export default function Assessment({ ctx }: { ctx: Ctx }) {
         <div>
           <h3>Step 3: Movement screen</h3>
           <p>Do an overhead squat, a single-leg squat, and a postural check, or watch Derek do them and mark what you see. Pick every pattern you notice.</p>
+          <h3 style={{ marginTop: 16 }}>Watch how to do it</h3>
+          <p className="small muted">One example per move. Open one to see it.</p>
+          {ASSESSMENT_EXAMPLES.map((ex) => (
+            <details className="card" key={ex.id}>
+              <summary>{ex.title}</summary>
+              {ex.whatToDo.map((s, i) => (
+                <p key={i}>· {s}</p>
+              ))}
+              <p><strong>Good form:</strong> {ex.goodForm}</p>
+              <p className="small muted">{ex.videoNote}</p>
+            </details>
+          ))}
           <div className="row">
             {FINDING_LABELS.map((f) => (
               <button
@@ -266,8 +336,60 @@ export default function Assessment({ ctx }: { ctx: Ctx }) {
               <input id="a-bal-r" inputMode="numeric" value={balR} onChange={(e) => setBalR(e.target.value)} placeholder="e.g. 9" />
             </div>
           </div>
-          <div className="notice">
-            <strong>Filming is never required.</strong> You can film a short form-check clip for Derek if you want, or skip it. Skipping never blocks you.
+          <div className="card">
+            <h3 style={{ marginTop: 0 }}>Upload a video (optional)</h3>
+            <p className="small muted">Filming is never required. If you want, film a short clip of your squat so Derek can see your form. Skipping never blocks you.</p>
+            {!videoSkipped && (
+              <div>
+                <label htmlFor="a-video">Pick a video, or record one on your phone</label>
+                <input
+                  id="a-video"
+                  type="file"
+                  accept="video/*"
+                  onChange={(e) => pickVideo(e.target.files?.[0])}
+                />
+                {videoPreview && videoFile && (
+                  <div style={{ marginTop: 10 }}>
+                    <video src={videoPreview} controls style={{ width: '100%', maxHeight: 240 }} />
+                    <p className="small muted">{videoFile.name} · {(videoFile.size / 1024 / 1024).toFixed(1)} MB</p>
+                    <div className="row">
+                      <button className="primary" disabled={videoUploading} onClick={uploadVideo}>
+                        {videoUploading ? 'Uploading...' : 'Upload this video'}
+                      </button>
+                      <button
+                        onClick={() => {
+                          if (videoPreview) URL.revokeObjectURL(videoPreview);
+                          setVideoPreview('');
+                          setVideoFile(null);
+                          setVideoMsg('');
+                          setVideoError('');
+                        }}
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  </div>
+                )}
+                <div className="row" style={{ marginTop: 10 }}>
+                  <button
+                    onClick={() => {
+                      if (videoPreview) URL.revokeObjectURL(videoPreview);
+                      setVideoPreview('');
+                      setVideoFile(null);
+                      setVideoSkipped(true);
+                    }}
+                  >
+                    Skip video
+                  </button>
+                </div>
+              </div>
+            )}
+            {videoSkipped && <p className="small muted">No video added. You can still finish.</p>}
+            {videoMsg && <p className="ok">{videoMsg}</p>}
+            {videoError && <p className="error">{videoError}</p>}
+            {(doc.assessmentVideos || []).length > 0 && (
+              <p className="small muted">Uploaded this assessment: {(doc.assessmentVideos || []).length} video{(doc.assessmentVideos || []).length === 1 ? '' : 's'}.</p>
+            )}
           </div>
           <div className="row" style={{ marginTop: 14 }}>
             <button className="primary" onClick={finish}>Finish my assessment</button>

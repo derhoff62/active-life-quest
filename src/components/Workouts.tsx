@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Ctx } from '../App';
-import { WORKOUTS, PHASES, CES_TEMPLATES, EQUIPMENT_NOTES, effectiveEquipment, resolveExercise } from '../lib/data';
+import { WORKOUTS, PHASES, PHASE_WEEKLY_SETS, daysForTime, CES_TEMPLATES, EQUIPMENT_NOTES, effectiveEquipment, resolveExercise } from '../lib/data';
 import { phaseForDoc, hasFullAccess, metCompanionIds } from '../lib/store';
 import type { Workout } from '../lib/types';
 
@@ -15,6 +15,8 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
   const [finishMinutes, setFinishMinutes] = useState('');
   const [notice, setNotice] = useState('');
   const [timeMin, setTimeMin] = useState<15 | 30 | 45>(30);
+  const [cardioMin, setCardioMin] = useState('');
+  const [cardioMsg, setCardioMsg] = useState('');
   const [editId, setEditId] = useState<string | null>(null);
   const [editMinutes, setEditMinutes] = useState('');
   const timerRef = useRef<number | null>(null);
@@ -26,6 +28,36 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
   // included. Only a rest day overrides it, and only if you trained yesterday.
   const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().split('T')[0];
   const trainedYesterday = doc.lastWorkoutDate === yesterday;
+  const todayStr = new Date().toISOString().split('T')[0];
+  const trainedToday = doc.lastWorkoutDate === todayStr;
+  const restLoggedToday = doc.quests.some((q) => (q as { kind?: string }).kind === 'rest-day' && new Date(String(q.date)).toISOString().split('T')[0] === todayStr);
+  const daysNeeded = daysForTime(timeMin, phase);
+  const weeklySets = PHASE_WEEKLY_SETS[phase] || '6 to 10';
+
+  function logRestDay() {
+    const m = metCompanionIds(doc);
+    let xp = 5;
+    const names: string[] = [];
+    if (m.has('tilda')) { xp += 5; names.push('Tilda'); }
+    if (m.has('miso')) { xp += 5; names.push('Miso'); }
+    update((d) => {
+      d.quests.push({ id: `q${Date.now()}`, date: new Date().toISOString(), kind: 'rest-day' });
+      d.xp += xp;
+    });
+    setNotice(`Rest day logged. +${xp} XP.${names.length ? ` Includes +5 XP from ${names.join(' and ')}.` : ''}`);
+  }
+
+  // Month calendar, same as Progress: navy days are trained days, green
+  // days are active rest days.
+  const nowCal = new Date();
+  const daysInMonth = new Date(nowCal.getFullYear(), nowCal.getMonth() + 1, 0).getDate();
+  const trainedDays = new Set(doc.workouts.map((w) => new Date(String(w.date)).getDate()));
+  const restDays = new Set(doc.quests.filter((q) => (q as { kind?: string }).kind === 'rest-day').map((q) => new Date(String(q.date)).getDate()));
+  const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+  const cardioThisWeek = doc.cardio
+    .filter((c) => new Date(String(c.date)).getTime() >= weekAgo)
+    .reduce((s, c) => s + Number(c.minutes || 0), 0);
+  const cardioMilestone = cardioThisWeek >= 300 ? '300 minute milestone done' : cardioThisWeek >= 200 ? '200 done, next is 300' : cardioThisWeek >= 150 ? '150 done, next is 200' : 'Next milestone is 150';
   const mainGoal = doc.goals[0];
   const goalLabel = mainGoal?.label || doc.mainGoal || 'your goal';
   const goalNote =
@@ -301,20 +333,7 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
           <div>
             <p><strong>Today is an active rest day.</strong> You trained yesterday. Take 1 to 2 rest days between strength days.</p>
             <p className="small muted">Rest well today: a gentle walk, your 2-minute balance hold, and your stretches. No strength workout today. The gym gives the stimulus, recovery builds on it.</p>
-            <button
-              onClick={() => {
-                const m = metCompanionIds(doc);
-                let xp = 5;
-                const names: string[] = [];
-                if (m.has('tilda')) { xp += 5; names.push('Tilda'); }
-                if (m.has('miso')) { xp += 5; names.push('Miso'); }
-                update((d) => {
-                  d.quests.push({ id: `q${Date.now()}`, date: new Date().toISOString(), kind: 'rest-day' });
-                  d.xp += xp;
-                });
-                setNotice(`Rest day logged. +${xp} XP.${names.length ? ` Includes +5 XP from ${names.join(' and ')}.` : ''}`);
-              }}
-            >
+            <button onClick={logRestDay}>
               Log my rest day (+5 XP)
             </button>
             {notice && <p className="notice" style={{ marginTop: 8 }}>{notice}</p>}
@@ -342,8 +361,78 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
       )}
 
       <div className="card">
+        <h3>Your week at a glance</h3>
+        <p className="small muted">
+          {nowCal.toLocaleString('default', { month: 'long' })} {nowCal.getFullYear()}. Navy days are days you trained, green days are active rest days.
+        </p>
+        <div className="row" style={{ gap: 4 }}>
+          {Array.from({ length: daysInMonth }, (_, i) => i + 1).map((day) => (
+            <span
+              key={day}
+              style={{
+                width: 28, height: 28, display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                borderRadius: 8,
+                background: trainedDays.has(day) ? '#124571' : restDays.has(day) ? '#1e7a46' : '#eef5fb',
+                color: trainedDays.has(day) || restDays.has(day) ? '#fff' : '#124571',
+                fontSize: 12,
+                outline: day === nowCal.getDate() ? '2px solid #c9a227' : 'none',
+              }}
+            >
+              {day}
+            </span>
+          ))}
+        </div>
+        <p className="small muted">Today is outlined in gold. Workouts this week: {doc.workouts.filter((w) => new Date(String(w.date)).getTime() >= weekAgo).length}.</p>
+      </div>
+
+      <div className="card">
+        <h3>Active rest days</h3>
+        {trainedYesterday && !restLoggedToday && (
+          <div>
+            <p><strong>Today is an active rest day.</strong> You trained yesterday. Take 1 to 2 rest days between strength days.</p>
+            <p className="small muted">Rest well today: a gentle walk, your 2-minute balance hold, and your stretches. No strength workout today. The gym gives the stimulus, recovery builds on it.</p>
+            <button onClick={logRestDay}>Log my rest day (+5 XP)</button>
+          </div>
+        )}
+        {trainedYesterday && restLoggedToday && <p>Today is an active rest day, and you logged it. Walk, stretch, balance, and rest well.</p>}
+        {!trainedYesterday && trainedToday && (
+          <p><strong>Tomorrow is an active rest day.</strong> You trained today. Tomorrow, walk, stretch, and do your 2-minute balance hold. No strength workout tomorrow.</p>
+        )}
+        {!trainedYesterday && !trainedToday && (
+          <p>Rest days are active days. On a rest day, walk, stretch, and do your 2-minute balance hold. Take 1 to 2 rest days between strength days.</p>
+        )}
+        {notice && <p className="notice" style={{ marginTop: 8 }}>{notice}</p>}
+      </div>
+
+      <div className="card">
+        <h3>Log cardio</h3>
+        <p><strong>{cardioThisWeek} of 150 to 300 minutes this week.</strong> {cardioMilestone}.</p>
+        <div className="progress-bar"><div style={{ width: `${Math.min(100, (cardioThisWeek / 300) * 100)}%` }} /></div>
+        <p className="small muted">Milestones at 150, then 200, then 300 minutes. Zone 2, easy enough to talk. High intensity counts double: log the doubled minutes.</p>
+        <div className="row">
+          <input inputMode="numeric" value={cardioMin} onChange={(e) => setCardioMin(e.target.value)} placeholder="Minutes" style={{ maxWidth: 140 }} aria-label="Cardio minutes" />
+          <button
+            className="primary"
+            onClick={() => {
+              if (!cardioMin) return;
+              update((d) => {
+                d.cardio.push({ id: `k${Date.now()}`, date: new Date().toISOString(), minutes: Number(cardioMin), zone: 'Zone 2' });
+                d.xp += metCompanionIds(doc).has('sylva') ? 15 : 10;
+              });
+              setCardioMsg(`Cardio logged: ${cardioMin} minutes (+10 XP${metCompanionIds(doc).has('sylva') ? ', +5 from Sylva' : ''}).`);
+              setCardioMin('');
+            }}
+          >
+            Log cardio (+10 XP)
+          </button>
+        </div>
+        {cardioMsg && <p className="ok">{cardioMsg}</p>}
+      </div>
+
+      <div className="card">
         <h3>Fit the workout to your time</h3>
-        <p>Shorter workouts need more days: at 15 minutes, train 4 days a week to hit your Phase 1 weekly sets (6 to 10 per muscle). Split days work different muscles, so weekly volume still adds up.</p>
+        <p>Shorter workouts need more days: at {timeMin === 45 ? '45 or more' : timeMin} minutes, train {daysNeeded} days a week to hit your Phase {phase} weekly sets ({weeklySets} per muscle). Split days work different muscles, so weekly volume still adds up.</p>
+        <p className="small muted">15 minutes: 4 days a week. 30 minutes: 3 days a week. 45 or more minutes: {phase >= 3 ? '3' : '2'} days a week. Take 1 to 2 rest days between strength days.</p>
       </div>
 
       {WORKOUTS.map((w) => {
