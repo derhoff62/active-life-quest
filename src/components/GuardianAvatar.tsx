@@ -213,13 +213,13 @@ export default function GuardianAvatar({
             )}
           </linearGradient>
           <radialGradient id={id('goldlight')} cx="50%" cy="45%" r="55%">
-            <stop offset="0%" stopColor="#f2d878" stopOpacity="0.5" />
-            <stop offset="60%" stopColor="#f2d878" stopOpacity="0.14" />
+            <stop offset="0%" stopColor="#f2d878" stopOpacity="0.7" />
+            <stop offset="60%" stopColor="#f2d878" stopOpacity="0.3" />
             <stop offset="100%" stopColor="#f2d878" stopOpacity="0" />
           </radialGradient>
           <radialGradient id={id('aura')} cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stopColor={gem} stopOpacity="0.65" />
-            <stop offset="55%" stopColor={gem} stopOpacity="0.28" />
+            <stop offset="0%" stopColor={gem} stopOpacity="0.85" />
+            <stop offset="55%" stopColor={gem} stopOpacity="0.45" />
             <stop offset="100%" stopColor={gem} stopOpacity="0" />
           </radialGradient>
           <linearGradient id={id('tunic')} x1="0" y1="0" x2="0" y2="1">
@@ -266,10 +266,13 @@ export default function GuardianAvatar({
         {/* Elden Ring style golden light: a soft golden glow behind the
             figure, like a big sky at dawn. Warm, never dark. */}
         <circle className="guardian-aura" cx="100" cy="100" r="95" fill={`url(#${id('goldlight')})`} />
-        {/* Glowing aura behind the figure, plus a visible halo ring in the gem color */}
+        {/* Glowing aura behind the figure, plus a visible halo ring in the gem color.
+            A soft solid gem-colored glow blob sits behind the figure too, so
+            the glow reads clearly even on a light card, not just as a thin ring. */}
         <circle className="guardian-aura" cx="100" cy="105" r="92" fill={`url(#${id('aura')})`} />
-        <circle className="guardian-halo" cx="100" cy="105" r="80" fill="none" stroke={gem} strokeWidth="3.5" />
-        <circle className="guardian-halo" cx="100" cy="105" r="70" fill="none" stroke={gemLight} strokeWidth="1.5" opacity="0.7" style={{ animationDelay: '1.2s' }} />
+        <circle cx="100" cy="105" r="58" fill={gem} opacity="0.3" filter={`url(#${id('glow')})`} />
+        <circle className="guardian-halo" cx="100" cy="105" r="80" fill="none" stroke={gem} strokeWidth="5" />
+        <circle className="guardian-halo" cx="100" cy="105" r="70" fill="none" stroke={gemLight} strokeWidth="2.5" opacity="0.7" style={{ animationDelay: '1.2s' }} />
         {/* Ground shadow, shrinks as the figure bobs up */}
         <ellipse className="guardian-shadow" cx="100" cy="188" rx="44" ry="6" fill="#124571" opacity="0.18" />
 

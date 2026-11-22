@@ -111,8 +111,8 @@ details summary { cursor: pointer; font-weight: 600; color: var(--navy); padding
 .guardian-aura { animation: guardian-glow 3s ease-in-out infinite; transform-origin: center; }
 .guardian-halo { animation: halo-pulse 3s ease-in-out infinite; transform-origin: center; transform-box: fill-box; }
 @keyframes halo-pulse {
-  0%, 100% { opacity: 0.3; }
-  50% { opacity: 0.8; }
+  0%, 100% { opacity: 0.55; }
+  50% { opacity: 0.95; }
 }
 @keyframes guardian-glow {
   0%, 100% { opacity: 0.55; }

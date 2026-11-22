@@ -1,244 +1,569 @@
-// Small pure-SVG portraits for companions and bosses, in the same friendly
-// style as the guardian avatar. No external images, no AI images.
-// Each is a 56x56 drawing that sits inside the gold-ringed .avatar circle.
-// Bosses stay enemies: no cute befriending, just a clear face to fight.
-export default function CompanionAvatar({ id }: { id: string }) {
+// Small pure-SVG portraits for companions and bosses, in the same epic
+// style as the guardian avatar: gradients, shading, highlights, a glowing
+// aura and halo ring in each character's color, and a neck that connects
+// the head to the shoulders, so no head floats. LOTR / Eragon / Harry
+// Potter / Elden Ring warmth: friendly, never grim. No external images,
+// no AI images. Bosses stay enemies: sterner faces and a red ring.
+import { useId } from 'react';
+import type { ReactNode } from 'react';
+
+function shade(hex: string, amount: number): string {
+  const n = hex.replace('#', '');
+  const num = parseInt(n.length === 3 ? n.split('').map((c) => c + c).join('') : n, 16);
+  const r = Math.min(255, Math.max(0, (num >> 16) + amount));
+  const g = Math.min(255, Math.max(0, ((num >> 8) & 0xff) + amount));
+  const b = Math.min(255, Math.max(0, (num & 0xff) + amount));
+  return `#${((r << 16) | (g << 8) | b).toString(16).padStart(6, '0')}`;
+}
+
+type Pal = {
+  glow: string;
+  glowLight: string;
+  cloth: string;
+  clothDark: string;
+  skin: string;
+  hair: string;
+  accent: string;
+};
+
+const PALS: Record<string, Pal> = {
+  bram: { glow: '#e8a91c', glowLight: '#f7cf6b', cloth: '#5b3a1e', clothDark: '#3a2410', skin: '#f7d9ae', hair: '#8a6238', accent: '#b9c9d8' },
+  sylva: { glow: '#1e9e5a', glowLight: '#7ed3a4', cloth: '#1e7a46', clothDark: '#0f4d28', skin: '#f7d9ae', hair: '#e8c85a', accent: '#2f6fd0' },
+  kaelith: { glow: '#2f9e7a', glowLight: '#8fd8bd', cloth: '#2f6f5a', clothDark: '#1a4234', skin: '#3d8a6d', hair: '#f2d878', accent: '#f2d878' },
+  tilda: { glow: '#c22747', glowLight: '#f08a9d', cloth: '#a83232', clothDark: '#6d1f1f', skin: '#f7d9ae', hair: '#8a6238', accent: '#fffdf4' },
+  pip: { glow: '#2f6fd0', glowLight: '#8db4f2', cloth: '#2f6fd0', clothDark: '#1d4fa1', skin: '#f7d9ae', hair: '#e8e2d4', accent: '#f6ecd0' },
+  hoot: { glow: '#e8a91c', glowLight: '#f7cf6b', cloth: '#8a6238', clothDark: '#5b3a1e', skin: '#e8e2d4', hair: '#8a6238', accent: '#e8a91c' },
+  ash: { glow: '#8a9aa8', glowLight: '#c8d2da', cloth: '#5b6b7a', clothDark: '#3a4a5a', skin: '#e8e2d4', hair: '#8a9aa8', accent: '#f2d878' },
+  ember: { glow: '#e8702a', glowLight: '#f7a76b', cloth: '#e8702a', clothDark: '#a84a12', skin: '#f7a76b', hair: '#f2d878', accent: '#f2d878' },
+  rowan: { glow: '#b9c9d8', glowLight: '#eef3f7', cloth: '#5b6b7a', clothDark: '#3a4a5a', skin: '#f7d9ae', hair: '#e8e2d4', accent: '#c9a227' },
+  mara: { glow: '#1e9e5a', glowLight: '#7ed3a4', cloth: '#fffdf4', clothDark: '#1e7a46', skin: '#f7d9ae', hair: '#5b3a1e', accent: '#1e7a46' },
+  quill: { glow: '#5b6b8a', glowLight: '#9aa5c8', cloth: '#1c2b3a', clothDark: '#0e1822', skin: '#2a3a4a', hair: '#1c2b3a', accent: '#e8a91c' },
+  miso: { glow: '#e8a91c', glowLight: '#f7cf6b', cloth: '#f2a541', clothDark: '#b96f14', skin: '#f7cf9e', hair: '#e8a91c', accent: '#c96a7a' },
+  unknown: { glow: '#5b6b7a', glowLight: '#9aa5b1', cloth: '#5b6b7a', clothDark: '#3a4a5a', skin: '#9aa5b1', hair: '#5b6b7a', accent: '#ffffff' },
+};
+
+const BOSS_PALS: Record<string, Pal> = {
+  'the-slump': { glow: '#8a9aa8', glowLight: '#c8d2da', cloth: '#5b6b7a', clothDark: '#3a4a5a', skin: '#a8b6c2', hair: '#8a9aa8', accent: '#f2d878' },
+  'stiff-hips-goblin': { glow: '#57b368', glowLight: '#9ad8a4', cloth: '#5b3a1e', clothDark: '#3a2410', skin: '#57b368', hair: '#2f7a38', accent: '#fff' },
+  'achy-knees-troll': { glow: '#8a9aa8', glowLight: '#c8d2da', cloth: '#5b6b7a', clothDark: '#3a4a5a', skin: '#8a9aa8', hair: '#c8ccd0', accent: '#fff' },
+  'tired-back-beast': { glow: '#8a6238', glowLight: '#c8a06a', cloth: '#5b3a1e', clothDark: '#3a2410', skin: '#8a6238', hair: '#5b3a1e', accent: '#e8e2d4' },
+  'wobbly-balance-sprite': { glow: '#7b2fbe', glowLight: '#c9a7e8', cloth: '#7b2fbe', clothDark: '#4d1a78', skin: '#c9b8f2', hair: '#7b2fbe', accent: '#f2d878' },
+};
+
+function Portrait({
+  pal,
+  enemy,
+  animal,
+  behind,
+  front,
+  face,
+}: {
+  pal: Pal;
+  enemy?: boolean;
+  animal?: boolean;
+  behind?: ReactNode;
+  front?: ReactNode;
+  face: ReactNode;
+}) {
+  const uid = useId().replace(/[^a-zA-Z0-9]/g, '');
+  const gid = (n: string) => `${n}-${uid}`;
+  const light = shade(pal.cloth, 45);
+  const dark = pal.clothDark;
   return (
-    <svg width="48" height="48" viewBox="0 0 56 56" role="img" aria-label={id} style={{ display: 'block' }}>
-      {id === 'bram' && (
+    <svg width="56" height="56" viewBox="0 0 64 64" role="img" style={{ display: 'block' }}>
+      <defs>
+        <radialGradient id={gid('aura')} cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stopColor={pal.glow} stopOpacity="0.85" />
+          <stop offset="60%" stopColor={pal.glow} stopOpacity="0.35" />
+          <stop offset="100%" stopColor={pal.glow} stopOpacity="0" />
+        </radialGradient>
+        <linearGradient id={gid('skin')} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={shade(pal.skin, 35)} />
+          <stop offset="100%" stopColor={shade(pal.skin, -25)} />
+        </linearGradient>
+        <linearGradient id={gid('cloth')} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={light} />
+          <stop offset="55%" stopColor={pal.cloth} />
+          <stop offset="100%" stopColor={dark} />
+        </linearGradient>
+        <linearGradient id={gid('gold')} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#f2d878" />
+          <stop offset="100%" stopColor="#a8840a" />
+        </linearGradient>
+        <filter id={gid('glow')} x="-80%" y="-80%" width="260%" height="260%">
+          <feGaussianBlur stdDeviation="2.5" result="blur" />
+          <feMerge>
+            <feMergeNode in="blur" />
+            <feMergeNode in="SourceGraphic" />
+          </feMerge>
+        </filter>
+      </defs>
+      {/* Glowing aura and halo ring, in the character's color */}
+      <circle className="guardian-aura" cx="32" cy="30" r="30" fill={`url(#${gid('aura')})`} />
+      <circle className="guardian-halo" cx="32" cy="30" r="27" fill="none" stroke={pal.glow} strokeWidth="2.5" />
+      {enemy && <circle cx="32" cy="30" r="30" fill="none" stroke="#a83232" strokeWidth="2" opacity="0.75" />}
+      {behind}
+      {/* Neck: connects the head to the shoulders, so the head never floats */}
+      <rect x="28" y="34" width="8" height="13" rx="3" fill={`url(#${gid('skin')})`} stroke={dark} strokeWidth="1.5" />
+      {/* Shoulders and chest, one connected figure */}
+      {animal ? (
         <g>
-          <rect x="14" y="36" width="28" height="14" rx="4" fill="#5b3a1e" />
-          <rect x="24" y="36" width="8" height="14" fill="#8a6d00" />
-          <circle cx="28" cy="26" r="12" fill="#f7d9ae" />
-          <path d="M16 28 Q16 44 28 44 Q40 44 40 28 Q36 36 28 36 Q20 36 16 28 Z" fill="#8a6238" />
-          <path d="M16 22 Q16 12 28 12 Q40 12 40 22 Q36 16 28 16 Q20 16 16 22 Z" fill="#9aa5b1" />
-          <circle cx="23" cy="24" r="1.8" fill="#1c2b3a" />
-          <circle cx="33" cy="24" r="1.8" fill="#1c2b3a" />
-          <path d="M25 31 Q28 33 31 31" stroke="#1c2b3a" strokeWidth="1.5" fill="none" strokeLinecap="round" />
-          <g transform="rotate(-30 46 40)">
-            <rect x="44" y="28" width="4" height="16" rx="2" fill="#5b3a1e" />
-            <rect x="38" y="24" width="16" height="7" rx="2" fill="#7d93a8" />
-          </g>
+          <ellipse cx="32" cy="55" rx="15" ry="11" fill={`url(#${gid('cloth')})`} stroke={dark} strokeWidth="1.5" />
+          <ellipse cx="32" cy="51" rx="8" ry="6" fill={pal.skin} opacity="0.65" />
+          <path d="M20 50 Q32 46 44 50" fill="none" stroke={pal.glowLight} strokeWidth="1.5" opacity="0.6" />
+        </g>
+      ) : (
+        <g>
+          <path d="M32 40 L47 45 L49 64 L15 64 L17 45 Z" fill={`url(#${gid('cloth')})`} stroke={dark} strokeWidth="1.5" />
+          <path d="M21 48 Q32 44 43 48" fill="none" stroke={pal.glowLight} strokeWidth="1.5" opacity="0.6" />
+          <path d="M32 40 L38 42 L38 48 L26 48 L26 42 Z" fill={`url(#${gid('gold')})`} stroke="#8a6d00" strokeWidth="1" />
         </g>
       )}
-      {id === 'sylva' && (
-        <g>
-          <path d="M14 20 L8 12 L18 16 Z" fill="#f7d9ae" />
-          <path d="M42 20 L48 12 L38 16 Z" fill="#f7d9ae" />
-          <circle cx="28" cy="26" r="12" fill="#f7d9ae" />
-          <path d="M16 24 Q16 12 28 12 Q40 12 40 24 Q36 16 28 16 Q20 16 16 24 Z" fill="#e8c85a" />
-          <circle cx="23" cy="26" r="1.8" fill="#1c2b3a" />
-          <circle cx="33" cy="26" r="1.8" fill="#1c2b3a" />
-          <path d="M24 32 Q28 35 32 32" stroke="#1c2b3a" strokeWidth="1.5" fill="none" strokeLinecap="round" />
-          <path d="M14 38 L42 38 L38 50 L18 50 Z" fill="#1e7a46" />
-          <circle cx="28" cy="42" r="3" fill="#2f6fd0" />
-        </g>
+      {/* Head: overlaps the neck, so head, neck, and shoulders are one figure */}
+      {animal ? (
+        <ellipse cx="32" cy="27" rx="15" ry="13" fill={`url(#${gid('skin')})`} stroke={dark} strokeWidth="1.5" />
+      ) : (
+        <circle cx="32" cy="26" r="13" fill={`url(#${gid('skin')})`} stroke={dark} strokeWidth="1.5" />
       )}
-      {id === 'kaelith' && (
-        <g>
-          <path d="M12 30 Q6 14 20 16 Q26 8 30 18 Q38 10 40 22 Q48 20 44 32 Q36 40 24 38 Q14 38 12 30 Z" fill="#2f6f5a" />
-          <path d="M20 16 L22 10 L26 15 Z" fill="#f2d878" />
-          <path d="M32 14 L35 8 L37 14 Z" fill="#f2d878" />
-          <circle cx="24" cy="26" r="2.2" fill="#fff" />
-          <circle cx="24" cy="26" r="1.1" fill="#1c2b3a" />
-          <circle cx="34" cy="26" r="2.2" fill="#fff" />
-          <circle cx="34" cy="26" r="1.1" fill="#1c2b3a" />
-          <path d="M26 32 Q29 35 32 32" stroke="#fff" strokeWidth="1.5" fill="none" strokeLinecap="round" />
-          <path d="M40 34 Q48 38 46 46 Q42 42 38 40 Z" fill="#2f6f5a" />
-        </g>
-      )}
-      {id === 'tilda' && (
-        <g>
-          <circle cx="28" cy="24" r="11" fill="#f7d9ae" />
-          <circle cx="18" cy="16" r="4" fill="#8a6238" />
-          <circle cx="38" cy="16" r="4" fill="#8a6238" />
-          <path d="M17 22 Q17 13 28 13 Q39 13 39 22 Q35 16 28 16 Q21 16 17 22 Z" fill="#8a6238" />
-          <circle cx="23" cy="24" r="1.8" fill="#1c2b3a" />
-          <circle cx="33" cy="24" r="1.8" fill="#1c2b3a" />
-          <path d="M24 29 Q28 32 32 29" stroke="#1c2b3a" strokeWidth="1.5" fill="none" strokeLinecap="round" />
-          <path d="M16 38 L40 38 L38 50 L18 50 Z" fill="#a83232" />
-          <path d="M22 38 L34 38 L33 50 L23 50 Z" fill="#fffdf4" />
-        </g>
-      )}
-      {id === 'pip' && (
-        <g>
-          <path d="M28 4 L36 24 L20 24 Z" fill="#2f6fd0" />
-          <circle cx="28" cy="26" r="11" fill="#f7d9ae" />
-          <path d="M18 28 Q18 40 28 40 Q38 40 38 28 Q34 34 28 34 Q22 34 18 28 Z" fill="#e8e2d4" />
-          <circle cx="23" cy="24" r="1.8" fill="#1c2b3a" />
-          <circle cx="33" cy="24" r="1.8" fill="#1c2b3a" />
-          <path d="M24 29 Q28 31 32 29" stroke="#1c2b3a" strokeWidth="1.5" fill="none" strokeLinecap="round" />
-          <path d="M14 40 L42 40 L40 50 L16 50 Z" fill="#2f6fd0" />
-          <rect x="42" y="38" width="10" height="8" rx="2" fill="#f6ecd0" stroke="#8a6d00" />
-        </g>
-      )}
-      {id === 'hoot' && (
-        <g>
-          <ellipse cx="28" cy="30" rx="15" ry="17" fill="#8a6238" />
-          <path d="M20 16 L24 10 L26 16 Z" fill="#8a6238" />
-          <path d="M32 16 L36 10 L38 16 Z" fill="#8a6238" />
-          <circle cx="22" cy="26" r="6" fill="#fff" />
-          <circle cx="34" cy="26" r="6" fill="#fff" />
-          <circle cx="22" cy="26" r="2.8" fill="#1c2b3a" />
-          <circle cx="34" cy="26" r="2.8" fill="#1c2b3a" />
-          <polygon points="28,30 24,34 32,34" fill="#e8a91c" />
-          <ellipse cx="28" cy="40" rx="8" ry="6" fill="#e8e2d4" opacity="0.7" />
-        </g>
-      )}
-      {id === 'ash' && (
-        <g>
-          <path d="M16 22 L14 8 L24 16 Z" fill="#5b6b7a" />
-          <path d="M40 22 L42 8 L32 16 Z" fill="#5b6b7a" />
-          <ellipse cx="28" cy="30" rx="14" ry="13" fill="#8a9aa8" />
-          <ellipse cx="28" cy="36" rx="8" ry="7" fill="#e8e2d4" />
-          <circle cx="21" cy="26" r="2.2" fill="#f2d878" />
-          <circle cx="35" cy="26" r="2.2" fill="#f2d878" />
-          <circle cx="21" cy="26" r="1.1" fill="#1c2b3a" />
-          <circle cx="35" cy="26" r="1.1" fill="#1c2b3a" />
-          <ellipse cx="28" cy="36" rx="3.5" ry="2.5" fill="#1c2b3a" />
-          <path d="M28 38 L28 41 M24 41 Q28 44 32 41" stroke="#1c2b3a" strokeWidth="1.5" fill="none" strokeLinecap="round" />
-        </g>
-      )}
-      {id === 'ember' && (
-        <g>
-          <path d="M14 28 Q8 16 18 16 Q22 8 28 16 Q36 8 38 18 Q46 18 42 28 Q36 36 28 36 Q18 36 14 28 Z" fill="#e8702a" />
-          <path d="M24 14 L26 8 L29 13 Z" fill="#f2d878" />
-          <path d="M32 13 L34 7 L37 12 Z" fill="#f2d878" />
-          <circle cx="23" cy="24" r="2" fill="#fff" />
-          <circle cx="33" cy="24" r="2" fill="#fff" />
-          <circle cx="23" cy="24" r="1" fill="#1c2b3a" />
-          <circle cx="33" cy="24" r="1" fill="#1c2b3a" />
-          <path d="M24 30 Q28 33 32 30" stroke="#fff" strokeWidth="1.5" fill="none" strokeLinecap="round" />
-          <path d="M40 30 Q48 34 46 42 Q42 38 38 36 Z" fill="#e8702a" />
-          <path d="M14 30 Q8 26 12 20 Q16 24 18 28 Z" fill="#f2a541" />
-        </g>
-      )}
-      {id === 'rowan' && (
-        <g>
-          <circle cx="28" cy="26" r="12" fill="#f7d9ae" />
-          <path d="M17 28 Q17 42 28 42 Q39 42 39 28 Q35 35 28 35 Q21 35 17 28 Z" fill="#e8e2d4" />
-          <path d="M16 22 Q16 12 28 12 Q40 12 40 22 Q36 15 28 15 Q20 15 16 22 Z" fill="#c8ccd0" />
-          <circle cx="23" cy="24" r="1.8" fill="#1c2b3a" />
-          <circle cx="33" cy="24" r="1.8" fill="#1c2b3a" />
-          <path d="M24 30 Q28 32 32 30" stroke="#1c2b3a" strokeWidth="1.5" fill="none" strokeLinecap="round" />
-          <path d="M14 40 L42 40 L40 50 L16 50 Z" fill="#5b6b7a" />
-          <path d="M44 36 L52 36 L52 46 Q48 51 44 46 Z" fill="#b9c9d8" stroke="#c9a227" strokeWidth="1.5" />
-        </g>
-      )}
-      {id === 'mara' && (
-        <g>
-          <circle cx="28" cy="24" r="11" fill="#f7d9ae" />
-          <path d="M17 22 Q17 12 28 12 Q39 12 39 22 Q35 16 28 16 Q21 16 17 22 Z" fill="#5b3a1e" />
-          <circle cx="23" cy="24" r="1.8" fill="#1c2b3a" />
-          <circle cx="33" cy="24" r="1.8" fill="#1c2b3a" />
-          <path d="M24 29 Q28 32 32 29" stroke="#1c2b3a" strokeWidth="1.5" fill="none" strokeLinecap="round" />
-          <path d="M16 38 L40 38 L38 50 L18 50 Z" fill="#fffdf4" stroke="#1e7a46" strokeWidth="1.5" />
-          <path d="M28 38 L28 50" stroke="#1e7a46" strokeWidth="1.5" />
-          <rect x="44" y="18" width="3" height="30" rx="1.5" fill="#5b3a1e" />
-          <ellipse cx="45" cy="14" rx="5" ry="7" fill="#1e7a46" transform="rotate(20 45 14)" />
-        </g>
-      )}
-      {id === 'quill' && (
-        <g>
-          <ellipse cx="28" cy="30" rx="14" ry="15" fill="#1c2b3a" />
-          <path d="M18 20 Q28 12 38 20 Q38 12 28 10 Q18 12 18 20 Z" fill="#1c2b3a" />
-          <circle cx="22" cy="26" r="2.5" fill="#fff" />
-          <circle cx="34" cy="26" r="2.5" fill="#fff" />
-          <circle cx="22" cy="26" r="1.2" fill="#1c2b3a" />
-          <circle cx="34" cy="26" r="1.2" fill="#1c2b3a" />
-          <polygon points="28,30 22,33 28,38" fill="#e8a91c" />
-          <path d="M36 32 Q46 36 44 44 Q40 40 36 38 Z" fill="#2a3a4a" />
-        </g>
-      )}
-      {id === 'miso' && (
-        <g>
-          <path d="M18 22 L16 10 L26 16 Z" fill="#e8a91c" />
-          <path d="M38 22 L40 10 L30 16 Z" fill="#e8a91c" />
-          <circle cx="28" cy="28" r="13" fill="#f2a541" />
-          <circle cx="22" cy="26" r="2" fill="#1c2b3a" />
-          <circle cx="34" cy="26" r="2" fill="#1c2b3a" />
-          <ellipse cx="28" cy="33" rx="2.5" ry="1.8" fill="#c96a7a" />
-          <path d="M28 35 L28 37 M24 37 Q28 39 32 37" stroke="#1c2b3a" strokeWidth="1.2" fill="none" strokeLinecap="round" />
-          <path d="M10 28 L18 30 M10 34 L18 33 M46 28 L38 30 M46 34 L38 33" stroke="#8a6238" strokeWidth="1.2" strokeLinecap="round" />
-        </g>
-      )}
-      {id === 'unknown' && (
-        <g>
-          <circle cx="28" cy="22" r="9" fill="#5b6b7a" />
-          <path d="M12 50 Q12 34 28 34 Q44 34 44 50 Z" fill="#5b6b7a" />
-          <text x="28" y="27" textAnchor="middle" fontSize="14" fontWeight="700" fill="#fff">?</text>
-        </g>
-      )}
+      {front}
+      {face}
     </svg>
   );
 }
 
-// Boss monsters: enemies, not friends. Same small SVG style, sterner faces.
-export function BossAvatar({ id }: { id: string }) {
+function FriendlyFace({ stern }: { stern?: boolean }) {
   return (
-    <svg width="48" height="48" viewBox="0 0 56 56" role="img" aria-label={id} style={{ display: 'block' }}>
-      {id === 'the-slump' && (
-        <g>
-          <ellipse cx="20" cy="32" rx="12" ry="9" fill="#8a9aa8" />
-          <ellipse cx="32" cy="28" rx="13" ry="11" fill="#a8b6c2" />
-          <ellipse cx="40" cy="34" rx="9" ry="7" fill="#8a9aa8" />
-          <path d="M24 28 Q27 30 30 28 M34 28 Q37 30 40 28" stroke="#1c2b3a" strokeWidth="1.8" fill="none" strokeLinecap="round" />
-          <path d="M28 34 Q31 36 34 34" stroke="#1c2b3a" strokeWidth="1.5" fill="none" strokeLinecap="round" />
-          <text x="46" y="16" fontSize="11" fontWeight="700" fill="#5b6b7a">Z</text>
-          <text x="50" y="9" fontSize="8" fontWeight="700" fill="#5b6b7a">z</text>
-        </g>
+    <g>
+      {stern ? (
+        <>
+          <path d="M22 21 L28 24 M42 21 L36 24" stroke="#1c2b3a" strokeWidth="2" strokeLinecap="round" />
+          <path d="M26 34 Q32 31 38 34" stroke="#1c2b3a" strokeWidth="1.8" fill="none" strokeLinecap="round" />
+        </>
+      ) : (
+        <>
+          <path d="M23 22 Q26 20 29 22 M35 22 Q38 20 41 22" stroke="#5b3a1e" strokeWidth="1.8" fill="none" strokeLinecap="round" />
+          <path d="M27 32 Q32 36 37 32" stroke="#1c2b3a" strokeWidth="1.8" fill="none" strokeLinecap="round" />
+        </>
       )}
-      {id === 'stiff-hips-goblin' && (
+      <circle cx="27" cy="26" r="2" fill="#1c2b3a" />
+      <circle cx="37" cy="26" r="2" fill="#1c2b3a" />
+      <circle cx="27.8" cy="25.2" r="0.7" fill="#fff" />
+      <circle cx="37.8" cy="25.2" r="0.7" fill="#fff" />
+      <ellipse cx="23" cy="30" rx="2.5" ry="1.6" fill="#e88a7a" opacity="0.35" />
+      <ellipse cx="41" cy="30" rx="2.5" ry="1.6" fill="#e88a7a" opacity="0.35" />
+    </g>
+  );
+}
+
+export default function CompanionAvatar({ id }: { id: string }) {
+  const pal = PALS[id] ?? PALS.unknown;
+
+  if (id === 'unknown') {
+    return (
+      <Portrait
+        pal={pal}
+        face={<text x="32" y="31" textAnchor="middle" fontSize="15" fontWeight="700" fill="#fff">?</text>}
+        front={<path d="M19 24 Q19 13 32 13 Q45 13 45 24 Q41 17 32 17 Q23 17 19 24 Z" fill={pal.hair} />}
+      />
+    );
+  }
+
+  if (id === 'bram') {
+    return (
+      <Portrait
+        pal={pal}
+        face={<FriendlyFace />}
+        front={
+          <g>
+            <path d="M19 24 Q19 13 32 13 Q45 13 45 24 Q41 16 32 16 Q23 16 19 24 Z" fill="#9aa5b1" />
+            <path d="M20 28 Q20 42 32 42 Q44 42 44 28 Q40 35 32 35 Q24 35 20 28 Z" fill={pal.hair} />
+            <path d="M24 38 Q28 40 32 40 M28 40 Q32 42 36 40" stroke={shade(pal.hair, -20)} strokeWidth="1" fill="none" opacity="0.6" />
+          </g>
+        }
+      />
+    );
+  }
+
+  if (id === 'sylva') {
+    return (
+      <Portrait
+        pal={pal}
+        face={<FriendlyFace />}
+        behind={
+          <g>
+            <path d="M20 24 L11 14 L22 18 Z" fill={pal.skin} stroke={pal.clothDark} strokeWidth="1" />
+            <path d="M44 24 L53 14 L42 18 Z" fill={pal.skin} stroke={pal.clothDark} strokeWidth="1" />
+          </g>
+        }
+        front={
+          <g>
+            <path d="M19 24 Q19 13 32 13 Q45 13 45 24 Q41 16 32 16 Q23 16 19 24 Z" fill={pal.hair} />
+            <path d="M25 16 Q29 13 32 13" fill="none" stroke="#fff" strokeWidth="1.5" opacity="0.6" />
+            <circle cx="32" cy="46" r="3" fill={pal.accent} stroke="#fff" strokeWidth="1" />
+          </g>
+        }
+      />
+    );
+  }
+
+  if (id === 'kaelith') {
+    return (
+      <Portrait
+        pal={pal}
+        animal
+        behind={
+          <g>
+            <path d="M18 30 Q8 18 16 12 Q22 18 24 28 Z" fill={pal.cloth} stroke={pal.clothDark} strokeWidth="1" opacity="0.9" />
+            <path d="M46 30 Q56 18 48 12 Q42 18 40 28 Z" fill={pal.cloth} stroke={pal.clothDark} strokeWidth="1" opacity="0.9" />
+          </g>
+        }
+        front={
+          <g>
+            <path d="M26 15 L28 8 L31 14 Z" fill={pal.accent} />
+            <path d="M34 14 L37 7 L39 14 Z" fill={pal.accent} />
+            <ellipse cx="32" cy="33" rx="5" ry="3" fill={shade(pal.skin, -15)} />
+            <circle cx="29" cy="32" r="0.9" fill="#1c2b3a" />
+            <circle cx="35" cy="32" r="0.9" fill="#1c2b3a" />
+          </g>
+        }
+        face={
+          <g>
+            <circle cx="26" cy="25" r="2.4" fill="#fff" />
+            <circle cx="38" cy="25" r="2.4" fill="#fff" />
+            <circle cx="26" cy="25" r="1.2" fill="#1c2b3a" />
+            <circle cx="38" cy="25" r="1.2" fill="#1c2b3a" />
+            <path d="M27 36 Q32 39 37 36" stroke="#fff" strokeWidth="1.6" fill="none" strokeLinecap="round" />
+          </g>
+        }
+      />
+    );
+  }
+
+  if (id === 'tilda') {
+    return (
+      <Portrait
+        pal={pal}
+        face={<FriendlyFace />}
+        front={
+          <g>
+            <circle cx="20" cy="16" r="4.5" fill={pal.hair} />
+            <circle cx="44" cy="16" r="4.5" fill={pal.hair} />
+            <path d="M19 24 Q19 13 32 13 Q45 13 45 24 Q41 16 32 16 Q23 16 19 24 Z" fill={pal.hair} />
+            <path d="M25 44 L39 44 L38 64 L26 64 Z" fill={pal.accent} opacity="0.9" />
+            <circle cx="32" cy="44" r="2" fill={pal.glow} />
+          </g>
+        }
+      />
+    );
+  }
+
+  if (id === 'pip') {
+    return (
+      <Portrait
+        pal={pal}
+        face={<FriendlyFace />}
+        front={
+          <g>
+            <path d="M32 4 L40 22 L24 22 Z" fill={pal.cloth} stroke={pal.clothDark} strokeWidth="1" />
+            <circle cx="32" cy="6" r="2.5" fill={pal.glow} />
+            <path d="M22 28 Q22 40 32 40 Q42 40 42 28 Q38 34 32 34 Q26 34 22 28 Z" fill={pal.hair} />
+            <rect x="46" y="44" width="11" height="9" rx="2" fill={pal.accent} stroke="#8a6d00" strokeWidth="1" />
+            <line x1="49" y1="47" x2="54" y2="47" stroke="#8a6d00" strokeWidth="1" />
+            <line x1="49" y1="50" x2="54" y2="50" stroke="#8a6d00" strokeWidth="1" />
+          </g>
+        }
+      />
+    );
+  }
+
+  if (id === 'hoot') {
+    return (
+      <Portrait
+        pal={pal}
+        animal
+        behind={
+          <g>
+            <path d="M22 18 L25 10 L28 17 Z" fill={pal.hair} />
+            <path d="M36 17 L39 10 L42 18 Z" fill={pal.hair} />
+          </g>
+        }
+        face={
+          <g>
+            <circle cx="25" cy="25" r="6" fill="#fff" />
+            <circle cx="39" cy="25" r="6" fill="#fff" />
+            <circle cx="25" cy="25" r="3" fill="#1c2b3a" />
+            <circle cx="39" cy="25" r="3" fill="#1c2b3a" />
+            <circle cx="26" cy="24" r="1" fill="#fff" />
+            <circle cx="40" cy="24" r="1" fill="#fff" />
+            <polygon points="32,29 28,33 36,33" fill={pal.accent} />
+            <ellipse cx="32" cy="40" rx="7" ry="5" fill={pal.skin} opacity="0.7" />
+          </g>
+        }
+      />
+    );
+  }
+
+  if (id === 'ash') {
+    return (
+      <Portrait
+        pal={pal}
+        animal
+        behind={
+          <g>
+            <path d="M20 22 L17 9 L27 16 Z" fill={pal.hair} stroke={pal.clothDark} strokeWidth="1" />
+            <path d="M44 22 L47 9 L37 16 Z" fill={pal.hair} stroke={pal.clothDark} strokeWidth="1" />
+          </g>
+        }
+        face={
+          <g>
+            <ellipse cx="32" cy="33" rx="8" ry="6" fill={pal.skin} />
+            <circle cx="24" cy="24" r="2.4" fill={pal.accent} />
+            <circle cx="40" cy="24" r="2.4" fill={pal.accent} />
+            <circle cx="24" cy="24" r="1.2" fill="#1c2b3a" />
+            <circle cx="40" cy="24" r="1.2" fill="#1c2b3a" />
+            <ellipse cx="32" cy="32" rx="3.5" ry="2.5" fill="#1c2b3a" />
+            <path d="M32 34 L32 37 M28 37 Q32 40 36 37" stroke="#1c2b3a" strokeWidth="1.5" fill="none" strokeLinecap="round" />
+          </g>
+        }
+      />
+    );
+  }
+
+  if (id === 'ember') {
+    return (
+      <Portrait
+        pal={pal}
+        animal
+        behind={
+          <g>
+            <path d="M18 30 Q8 18 17 12 Q23 18 25 28 Z" fill={pal.accent} opacity="0.85" />
+            <path d="M46 30 Q56 18 47 12 Q41 18 39 28 Z" fill={pal.accent} opacity="0.85" />
+          </g>
+        }
+        front={
+          <g>
+            <path d="M27 15 L29 8 L32 14 Z" fill={pal.hair} />
+            <path d="M34 14 L37 7 L39 14 Z" fill={pal.hair} />
+            <ellipse cx="32" cy="33" rx="5" ry="3" fill={shade(pal.skin, -10)} />
+          </g>
+        }
+        face={
+          <g>
+            <circle cx="26" cy="25" r="2.2" fill="#fff" />
+            <circle cx="38" cy="25" r="2.2" fill="#fff" />
+            <circle cx="26" cy="25" r="1.1" fill="#1c2b3a" />
+            <circle cx="38" cy="25" r="1.1" fill="#1c2b3a" />
+            <path d="M27 36 Q32 39 37 36" stroke="#fff" strokeWidth="1.6" fill="none" strokeLinecap="round" />
+          </g>
+        }
+      />
+    );
+  }
+
+  if (id === 'rowan') {
+    return (
+      <Portrait
+        pal={pal}
+        face={<FriendlyFace />}
+        front={
+          <g>
+            <path d="M19 24 Q19 13 32 13 Q45 13 45 24 Q41 16 32 16 Q23 16 19 24 Z" fill={pal.hair} />
+            <path d="M20 28 Q20 42 32 42 Q44 42 44 28 Q40 35 32 35 Q24 35 20 28 Z" fill={pal.hair} />
+            <circle cx="48" cy="50" r="8" fill="#b9c9d8" stroke={pal.accent} strokeWidth="2" />
+            <circle cx="48" cy="50" r="3" fill={pal.accent} />
+          </g>
+        }
+      />
+    );
+  }
+
+  if (id === 'mara') {
+    return (
+      <Portrait
+        pal={pal}
+        face={<FriendlyFace />}
+        front={
+          <g>
+            <path d="M19 24 Q19 13 32 13 Q45 13 45 24 Q41 16 32 16 Q23 16 19 24 Z" fill={pal.hair} />
+            <path d="M24 16 Q28 13 32 13" fill="none" stroke={pal.glowLight} strokeWidth="1.5" opacity="0.7" />
+            <line x1="49" y1="20" x2="49" y2="52" stroke="#5b3a1e" strokeWidth="2.5" strokeLinecap="round" />
+            <ellipse cx="49" cy="16" rx="5" ry="7" fill={pal.accent} transform="rotate(20 49 16)" />
+            <circle cx="32" cy="46" r="2.5" fill={pal.accent} />
+          </g>
+        }
+      />
+    );
+  }
+
+  if (id === 'quill') {
+    return (
+      <Portrait
+        pal={pal}
+        animal
+        face={
+          <g>
+            <circle cx="25" cy="25" r="2.6" fill="#fff" />
+            <circle cx="39" cy="25" r="2.6" fill="#fff" />
+            <circle cx="25" cy="25" r="1.3" fill="#1c2b3a" />
+            <circle cx="39" cy="25" r="1.3" fill="#1c2b3a" />
+            <polygon points="32,28 24,32 32,38" fill={pal.accent} />
+            <path d="M20 18 Q32 12 44 18" fill="none" stroke={pal.glowLight} strokeWidth="1.5" opacity="0.7" />
+          </g>
+        }
+      />
+    );
+  }
+
+  // miso (default human branch fallback for the remaining cat)
+  return (
+    <Portrait
+      pal={pal}
+      animal
+      behind={
         <g>
-          <path d="M14 24 L6 16 L14 14 Z" fill="#3f9e4d" />
-          <path d="M42 24 L50 16 L42 14 Z" fill="#3f9e4d" />
-          <circle cx="28" cy="28" r="13" fill="#57b368" />
-          <path d="M20 20 L26 23 M36 20 L30 23" stroke="#1c2b3a" strokeWidth="2" strokeLinecap="round" />
-          <circle cx="22" cy="28" r="2" fill="#1c2b3a" />
-          <circle cx="34" cy="28" r="2" fill="#1c2b3a" />
-          <ellipse cx="28" cy="35" rx="3" ry="2" fill="#1c2b3a" />
-          <path d="M24 40 Q28 38 32 40" stroke="#1c2b3a" strokeWidth="1.5" fill="none" strokeLinecap="round" />
-          <path d="M16 40 L40 40 L38 50 L18 50 Z" fill="#5b3a1e" />
+          <path d="M20 22 L17 9 L27 16 Z" fill={pal.hair} stroke={pal.clothDark} strokeWidth="1" />
+          <path d="M44 22 L47 9 L37 16 Z" fill={pal.hair} stroke={pal.clothDark} strokeWidth="1" />
         </g>
-      )}
-      {id === 'achy-knees-troll' && (
+      }
+      front={
         <g>
-          <circle cx="28" cy="26" r="15" fill="#8a9aa8" />
-          <path d="M18 18 L20 10 L24 17 Z" fill="#c8ccd0" />
-          <path d="M34 17 L38 10 L40 18 Z" fill="#c8ccd0" />
-          <path d="M18 22 L26 24 M38 22 L30 24" stroke="#1c2b3a" strokeWidth="2" strokeLinecap="round" />
-          <circle cx="22" cy="28" r="2.2" fill="#1c2b3a" />
-          <circle cx="34" cy="28" r="2.2" fill="#1c2b3a" />
-          <ellipse cx="28" cy="33" rx="4" ry="3" fill="#6d7d8c" />
-          <path d="M22 40 L24 36 M34 40 L32 36" stroke="#fff" strokeWidth="2" strokeLinecap="round" />
-          <path d="M22 42 Q28 44 34 42" stroke="#1c2b3a" strokeWidth="1.5" fill="none" strokeLinecap="round" />
-          <path d="M12 42 L44 42 L42 50 L14 50 Z" fill="#5b6b7a" />
+          <path d="M24 16 Q28 13 32 13 Q36 13 40 16" fill="none" stroke={shade(pal.hair, -25)} strokeWidth="1.5" opacity="0.7" />
+          <ellipse cx="32" cy="33" rx="2.6" ry="1.9" fill={pal.accent} />
         </g>
-      )}
-      {id === 'tired-back-beast' && (
+      }
+      face={
         <g>
-          <ellipse cx="28" cy="30" rx="16" ry="14" fill="#8a6238" />
-          <path d="M16 20 L14 12 L22 16 Z" fill="#8a6238" />
-          <path d="M40 20 L42 12 L34 16 Z" fill="#8a6238" />
-          <path d="M18 22 Q22 20 26 22 M30 22 Q34 20 38 22" stroke="#1c2b3a" strokeWidth="2" strokeLinecap="round" />
-          <path d="M20 26 Q23 27 26 26 M30 26 Q33 27 36 26" stroke="#1c2b3a" strokeWidth="1.5" fill="none" strokeLinecap="round" />
-          <ellipse cx="28" cy="34" rx="5" ry="3.5" fill="#5b3a1e" />
-          <path d="M24 40 Q28 38 32 40" stroke="#1c2b3a" strokeWidth="1.5" fill="none" strokeLinecap="round" />
-          <path d="M14 44 Q28 48 42 44" stroke="#5b3a1e" strokeWidth="2" fill="none" strokeLinecap="round" />
+          <circle cx="25" cy="25" r="2.2" fill="#1c2b3a" />
+          <circle cx="39" cy="25" r="2.2" fill="#1c2b3a" />
+          <circle cx="25.8" cy="24.2" r="0.7" fill="#fff" />
+          <circle cx="39.8" cy="24.2" r="0.7" fill="#fff" />
+          <path d="M32 35 L32 37 M28 37 Q32 40 36 37" stroke="#1c2b3a" strokeWidth="1.4" fill="none" strokeLinecap="round" />
+          <path d="M12 26 L21 28 M12 32 L21 31 M52 26 L43 28 M52 32 L43 31" stroke="#8a6238" strokeWidth="1.2" strokeLinecap="round" />
         </g>
-      )}
-      {id === 'wobbly-balance-sprite' && (
+      }
+    />
+  );
+}
+
+// Boss monsters: enemies, not friends. Same epic portrait style, but with
+// a red ring, sterner faces, and no friendly smile.
+export function BossAvatar({ id }: { id: string }) {
+  const pal = BOSS_PALS[id] ?? BOSS_PALS['the-slump'];
+
+  if (id === 'the-slump') {
+    return (
+      <Portrait
+        pal={pal}
+        enemy
+        animal
+        front={
+          <g>
+            <ellipse cx="24" cy="20" rx="9" ry="6" fill={pal.skin} opacity="0.9" />
+            <ellipse cx="40" cy="20" rx="9" ry="6" fill={pal.skin} opacity="0.9" />
+            <text x="50" y="14" fontSize="11" fontWeight="700" fill={pal.glowLight}>Z</text>
+            <text x="55" y="7" fontSize="8" fontWeight="700" fill={pal.glowLight}>z</text>
+          </g>
+        }
+        face={
+          <g>
+            <path d="M22 25 Q25 27 28 25 M36 25 Q39 27 42 25" stroke="#1c2b3a" strokeWidth="1.8" fill="none" strokeLinecap="round" />
+            <path d="M27 33 Q32 35 37 33" stroke="#1c2b3a" strokeWidth="1.5" fill="none" strokeLinecap="round" />
+          </g>
+        }
+      />
+    );
+  }
+
+  if (id === 'stiff-hips-goblin') {
+    return (
+      <Portrait
+        pal={pal}
+        enemy
+        behind={
+          <g>
+            <path d="M20 24 L10 15 L22 18 Z" fill={pal.skin} stroke={pal.clothDark} strokeWidth="1" />
+            <path d="M44 24 L54 15 L42 18 Z" fill={pal.skin} stroke={pal.clothDark} strokeWidth="1" />
+          </g>
+        }
+        front={
+          <g>
+            <path d="M19 24 Q19 13 32 13 Q45 13 45 24 Q41 17 32 17 Q23 17 19 24 Z" fill={pal.hair} />
+            <ellipse cx="32" cy="33" rx="3.5" ry="2.5" fill={pal.clothDark} />
+            <path d="M26 38 L28 34 L30 38 M34 38 L36 34 L38 38" fill="#fff" stroke="#1c2b3a" strokeWidth="0.8" />
+          </g>
+        }
+        face={<FriendlyFace stern />}
+      />
+    );
+  }
+
+  if (id === 'achy-knees-troll') {
+    return (
+      <Portrait
+        pal={pal}
+        enemy
+        front={
+          <g>
+            <path d="M22 18 L24 9 L28 17 Z" fill={pal.hair} />
+            <path d="M36 17 L40 9 L42 18 Z" fill={pal.hair} />
+            <ellipse cx="32" cy="32" rx="5" ry="3.5" fill={shade(pal.skin, -25)} />
+            <path d="M24 40 L26 35 L28 40 M36 40 L38 35 L40 40" fill="#fff" stroke="#1c2b3a" strokeWidth="0.8" />
+          </g>
+        }
+        face={<FriendlyFace stern />}
+      />
+    );
+  }
+
+  if (id === 'tired-back-beast') {
+    return (
+      <Portrait
+        pal={pal}
+        enemy
+        animal
+        behind={
+          <g>
+            <path d="M20 22 L17 12 L27 17 Z" fill={pal.hair} />
+            <path d="M44 22 L47 12 L37 17 Z" fill={pal.hair} />
+          </g>
+        }
+        face={
+          <g>
+            <path d="M20 22 Q24 20 28 22 M36 22 Q40 20 44 22" stroke="#1c2b3a" strokeWidth="2" strokeLinecap="round" />
+            <path d="M22 27 Q25 28 28 27 M36 27 Q39 28 42 27" stroke="#1c2b3a" strokeWidth="1.6" fill="none" strokeLinecap="round" />
+            <ellipse cx="32" cy="33" rx="5" ry="3.5" fill={pal.clothDark} />
+            <path d="M27 39 Q32 37 37 39" stroke="#1c2b3a" strokeWidth="1.6" fill="none" strokeLinecap="round" />
+          </g>
+        }
+      />
+    );
+  }
+
+  // wobbly-balance-sprite
+  return (
+    <Portrait
+      pal={pal}
+      enemy
+      behind={
         <g>
-          <path d="M18 24 Q10 12 20 12 Q24 18 22 26 Z" fill="#b9a7e8" opacity="0.9" />
-          <path d="M38 24 Q46 12 36 12 Q32 18 34 26 Z" fill="#b9a7e8" opacity="0.9" />
-          <circle cx="28" cy="28" r="11" fill="#c9b8f2" />
-          <circle cx="23" cy="26" r="2" fill="#1c2b3a" />
-          <circle cx="33" cy="26" r="2" fill="#1c2b3a" />
-          <path d="M22 31 Q28 36 34 31" stroke="#1c2b3a" strokeWidth="1.5" fill="none" strokeLinecap="round" />
-          <path d="M24 18 Q28 12 32 18" stroke="#7b2fbe" strokeWidth="2" fill="none" strokeLinecap="round" />
-          <path d="M18 40 L38 40 L36 50 L20 50 Z" fill="#7b2fbe" />
+          <path d="M20 28 Q10 14 20 12 Q26 18 25 30 Z" fill={pal.glowLight} opacity="0.85" />
+          <path d="M44 28 Q54 14 44 12 Q38 18 39 30 Z" fill={pal.glowLight} opacity="0.85" />
         </g>
-      )}
-    </svg>
+      }
+      front={
+        <g>
+          <path d="M19 24 Q19 13 32 13 Q45 13 45 24 Q41 16 32 16 Q23 16 19 24 Z" fill={pal.hair} />
+          <path d="M28 14 Q32 8 36 14" fill="none" stroke={pal.accent} strokeWidth="2" strokeLinecap="round" />
+        </g>
+      }
+      face={
+        <g>
+          <circle cx="27" cy="26" r="2" fill="#1c2b3a" />
+          <circle cx="37" cy="26" r="2" fill="#1c2b3a" />
+          <path d="M24 31 Q32 37 40 31" stroke="#1c2b3a" strokeWidth="1.8" fill="none" strokeLinecap="round" />
+          <path d="M28 34 L30 32 M36 34 L34 32" stroke="#fff" strokeWidth="1.2" strokeLinecap="round" />
+        </g>
+      }
+    />
   );
 }

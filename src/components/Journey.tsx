@@ -129,7 +129,7 @@ export default function Journey({ ctx }: { ctx: Ctx }) {
                 </div>
                 <p className="small" style={{ margin: '4px 0 0' }}>
                   {locked
-                    ? `Locked until your Week ${r.week - 4} retest.`
+                    ? `${r.maxHp} HP · Locked until your Week ${r.week - 4} retest.`
                     : hp <= 0
                       ? 'Beaten. You move on to the next land.'
                       : `${hp} of ${r.maxHp} HP`}
@@ -138,7 +138,7 @@ export default function Journey({ ctx }: { ctx: Ctx }) {
             </div>
           );
         })}
-        <p className="small"><strong>Attacking:</strong> {boss.name}. {bossBeaten ? 'Already beaten.' : bossUnlocked ? `${bossHp} of ${boss.maxHp} HP left.` : 'Locked.'}</p>
+        <p className="small"><strong>Attacking:</strong> {boss.name}. {bossBeaten ? 'Already beaten.' : bossUnlocked ? `${bossHp} of ${boss.maxHp} HP left.` : `${boss.maxHp} HP · Locked until your Week ${boss.week - 4} retest.`}</p>
         <div className="row">
           {mySpells.map((s) => (
             <button
