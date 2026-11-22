@@ -140,17 +140,19 @@ export default function Nutrition({ ctx }: { ctx: Ctx }) {
             <div className="card gold-frame">
               <h3>Calorie calculator</h3>
               <p className="muted small">Coach turned this on for you.</p>
-              <p className="nut-cal">
-                About{' '}
-                {doc.body.weightLb && doc.body.heightIn && doc.body.age
-                  ? Math.round(
-                      (doc.body.sex === 'male'
-                        ? 66 + 6.2 * doc.body.weightLb + 12.7 * doc.body.heightIn - 6.76 * doc.body.age
-                        : 655 + 4.35 * doc.body.weightLb + 4.7 * doc.body.heightIn - 4.7 * doc.body.age) * 1.4,
-                    )
-                  : '2,170'}{' '}
-                calories a day to maintain your weight.
-              </p>
+              {doc.body.weightLb && doc.body.heightIn && doc.body.age ? (
+                <p className="nut-cal">
+                  About{' '}
+                  {Math.round(
+                    (doc.body.sex === 'male'
+                      ? 66 + 6.2 * doc.body.weightLb + 12.7 * doc.body.heightIn - 6.76 * doc.body.age
+                      : 655 + 4.35 * doc.body.weightLb + 4.7 * doc.body.heightIn - 4.7 * doc.body.age) * 1.4,
+                  )}{' '}
+                  calories a day to maintain your weight.
+                </p>
+              ) : (
+                <p>Add your height, weight, and age in the assessment to see your number.</p>
+              )}
               <p className="small muted" style={{ marginBottom: 0 }}>
                 This is a rough estimate. It needs to be adjusted as you progress or regress. Derek adjusts it in check-ins. No daily calorie tracking, and you do not have to log food.
               </p>

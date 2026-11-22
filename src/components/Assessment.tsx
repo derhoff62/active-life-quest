@@ -4,6 +4,7 @@ import * as api from '../lib/api';
 import { ASSESSMENT_EXAMPLES, ASSESSMENT_QUESTIONS, CES_TEMPLATES, CONTRAINDICATIONS, DEFAULT_EQUIPMENT, EQUIPMENT_NOTES, EQUIPMENT_OPTIONS, FOCUS_AREAS, recommendPhase } from '../lib/data';
 import { currentWeekForDoc, awardBadges } from '../lib/store';
 import type { FindingId, FormRating } from '../lib/types';
+import ExampleVideo from './ExampleVideo';
 
 const FINDING_LABELS: { id: FindingId; label: string }[] = CES_TEMPLATES.map((t) => ({ id: t.id, label: t.plainName }));
 
@@ -37,6 +38,7 @@ export default function Assessment({ ctx }: { ctx: Ctx }) {
   const [retestMsg, setRetestMsg] = useState('');
   const [done, setDone] = useState(false);
   const [retaking, setRetaking] = useState(false);
+  const [doctorCleared, setDoctorCleared] = useState(false);
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [videoPreview, setVideoPreview] = useState('');
   const [videoUploading, setVideoUploading] = useState(false);
@@ -91,7 +93,14 @@ export default function Assessment({ ctx }: { ctx: Ctx }) {
 
   function finish() {
     const rec = recommendPhase(findings.length, experience, years, { squatForm: squat, hingeForm: hinge, benchForm: bench });
-    const contra = CONTRAINDICATIONS.filter((c) => flags.some((f) => c.flag.toLowerCase().includes(f.toLowerCase()) || f.toLowerCase().includes(c.flag.toLowerCase().split(' ')[0]))).map((c) => c.flag);
+    // Match each picked flag to its contraindication by exact name, with
+    // one alias (Heart condition is the Coronary entry). The old fuzzy
+    // match could pair a flag with the wrong entry.
+    const alias: Record<string, string> = { 'Heart condition': 'Coronary or heart condition' };
+    const contra = CONTRAINDICATIONS.filter((c) =>
+      flags.some((f) => c.flag === f || c.flag === alias[f]),
+    ).map((c) => c.flag);
+    const firstTime = !doc.assessmentDone;
     update((d) => {
       d.assessment = {
         findings,
@@ -107,7 +116,9 @@ export default function Assessment({ ctx }: { ctx: Ctx }) {
         reason: rec.reason,
       };
       d.assessmentDone = true;
-      d.healthFlags = flags;
+      // PAR-Q answers are health flags too: a yes to any of them is saved
+      // on the profile so Derek sees it, not thrown away.
+      d.healthFlags = [...new Set([...flags, ...parq])];
       d.equipment = equipment.length > 0 ? equipment : [...DEFAULT_EQUIPMENT];
       d.contraindications = contra;
       d.balanceBaseline = { left: Number(balL) || 0, right: Number(balR) || 0 };
@@ -121,10 +132,42 @@ export default function Assessment({ ctx }: { ctx: Ctx }) {
       };
       d.focus = focus;
       d.socialPermission = socialPerm;
-      d.xp += 60;
+      // 60 XP is for the first assessment only. Retaking it to update
+      // answers does not earn again.
+      if (firstTime) d.xp += 60;
     });
     setDone(true);
     setRetaking(false);
+  }
+
+  function startRetake() {
+    // A retake starts blank, with the client's current answers cleared,
+    // so old findings and body details do not silently carry over.
+    setParq([]);
+    setFlags([]);
+    setFindings([]);
+    setExperience('new');
+    setYears('under1');
+    setSquat('ok');
+    setHinge('ok');
+    setBench('ok');
+    setBalL('');
+    setBalR('');
+    setSex('');
+    setHeight('');
+    setWeight('');
+    setGoalWeight('');
+    setAge('');
+    setEquipment(doc.equipment && doc.equipment.length > 0 ? doc.equipment : [...DEFAULT_EQUIPMENT]);
+    setFocus(doc.focus || {});
+    setSocialPerm(doc.socialPermission || false);
+    setDoctorCleared(false);
+    setVideoFile(null);
+    setVideoPreview('');
+    setVideoSkipped(false);
+    setDone(false);
+    setRetaking(true);
+    setStep(0);
   }
 
   if (result && (done || doc.assessmentDone) && !retaking) {
@@ -134,7 +177,7 @@ export default function Assessment({ ctx }: { ctx: Ctx }) {
         <div className="card gold-frame">
           <h2>Your assessment is done</h2>
           <p><strong>Starting phase: Phase {result.startingPhase}.</strong> {result.reason}</p>
-          <p className="muted small">Total time: 30 to 45 minutes, goals and history plus the movement screen. You earned 60 XP.</p>
+          <p className="muted small">Total time: 30 to 45 minutes, goals and history plus the movement screen. The first assessment earns 60 XP.</p>
           {result.findings.length === 0 && <p>Your screen was clean. No corrective templates were flagged.</p>}
           {result.findings.length > 0 && <p>Movement patterns to work on: {result.findings.map((f) => FINDING_LABELS.find((x) => x.id === f)?.label).join(', ')}.</p>}
           <p>Balance baseline: {result.balanceLeftSec}s left, {result.balanceRightSec}s right. This is a general balance check, not a formal test.</p>
@@ -149,7 +192,7 @@ export default function Assessment({ ctx }: { ctx: Ctx }) {
               </label>
             ))}
           </div>
-          <button className="primary" onClick={() => { setDone(false); setRetaking(true); setStep(0); }}>Retake the assessment</button>
+          <button className="primary" onClick={startRetake}>Retake the assessment</button>
         </div>
         <div className="card">
           <h3>Retest (Weeks 4, 8, and 12)</h3>
@@ -173,6 +216,22 @@ export default function Assessment({ ctx }: { ctx: Ctx }) {
           <button
             className="primary"
             onClick={() => {
+              // One retest per week, in order. Saving Week 8 before Week 4,
+              // or the same week twice, used to hand out +20 XP and a phase
+              // jump every tap.
+              const doneWeeks = new Set(doc.retests.map((r) => (r as { week?: number }).week));
+              if (doneWeeks.has(retestWeek)) {
+                setRetestMsg(`Week ${retestWeek} retest is already saved. Pick the next week.`);
+                return;
+              }
+              if (retestWeek === 8 && !doneWeeks.has(4)) {
+                setRetestMsg('Do the Week 4 retest first.');
+                return;
+              }
+              if (retestWeek === 12 && !doneWeeks.has(8)) {
+                setRetestMsg('Do the Week 8 retest first.');
+                return;
+              }
               const nextPhase = retestWeek === 4 ? 2 : retestWeek === 8 ? 3 : 4;
               update((d) => {
                 d.retests.push({ week: retestWeek, date: new Date().toISOString(), clean: retestClean, balanceLeftSec: Number(retestBalL) || 0, balanceRightSec: Number(retestBalR) || 0 } as never);
@@ -270,8 +329,17 @@ export default function Assessment({ ctx }: { ctx: Ctx }) {
             ))}
           </div>
           <div className="row" style={{ marginTop: 14 }}>
-            <button className="primary" onClick={() => setStep(1)}>Next: your goals and history</button>
+            <button className="primary" onClick={() => setStep(1)} disabled={parq.length > 0 && !doctorCleared}>Next: your goals and history</button>
           </div>
+          {parq.length > 0 && (
+            <div className="notice" style={{ marginTop: 10 }}>
+              <strong>You answered yes to a health question.</strong> Talk to your doctor before the movement part, and only carry on once you have clearance. Your answers are saved so Derek sees them.
+              <label style={{ display: 'flex', gap: 10, alignItems: 'flex-start', fontWeight: 400, marginTop: 8 }}>
+                <input type="checkbox" checked={doctorCleared} onChange={(e) => setDoctorCleared(e.target.checked)} style={{ width: 'auto', minHeight: 0, marginTop: 4 }} />
+                My doctor cleared me to start training.
+              </label>
+            </div>
+          )}
         </div>
       )}
 
@@ -367,8 +435,7 @@ export default function Assessment({ ctx }: { ctx: Ctx }) {
                 <p key={i}>· {s}</p>
               ))}
               <p><strong>Good form:</strong> {ex.goodForm}</p>
-              <video src={ex.videoUrl} controls playsInline preload="metadata" style={{ width: '100%', maxHeight: 320, borderRadius: 8 }} />
-              <p className="small muted">Derek shows the move.</p>
+              <ExampleVideo src={ex.videoUrl} label="Derek shows the move." />
             </details>
           ))}
           <div className="row">

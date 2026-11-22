@@ -39,7 +39,7 @@ export default function Auth({ onAuth }: { onAuth: (a: { email: string; displayN
         onAuth(r.user);
       } else if (mode === 'forgot') {
         await api.forgotPassword(email.trim().toLowerCase());
-        setInfo('No reset email is sent in beta yet. Message Derek and he will send you a one-time reset code. Then tap "Set a new password" below and enter the code.');
+        setInfo('No reset email is sent in beta yet. Ask Derek for a one-time reset code. Then tap "Set a new password" below and enter the code.');
       } else {
         await api.resetPassword(token.trim(), password);
         setInfo('Password updated. Sign in with your new password.');
@@ -63,7 +63,7 @@ export default function Auth({ onAuth }: { onAuth: (a: { email: string; displayN
         <h2>Free plan</h2>
         <p>The assessment and Week 1 are free. After that, a {TRIAL_DAYS}-day trial, then paid coaching. No one is charged in beta.</p>
         <p className="small muted">
-          Have a code from Derek? Enter it here after you sign up. The code is ACTIVEBETA for beta testers.
+          Have a code from Derek? Enter it here after you sign up.
         </p>
         <table>
           <tbody>

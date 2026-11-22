@@ -3,7 +3,7 @@ import type { Ctx } from '../App';
 import * as api from '../lib/api';
 import Switch from './Switch';
 import { GOAL_TYPES, BADGES } from '../lib/data';
-import { levelForXp, titleForLevel, metCompanionIds } from '../lib/store';
+import { levelForXp, titleForLevel, metCompanionIds, loggedToday, daysInMonthSet, streakDaysForDoc } from '../lib/store';
 
 export default function Progress({ ctx }: { ctx: Ctx }) {
   const { doc, update } = ctx;
@@ -32,8 +32,13 @@ export default function Progress({ ctx }: { ctx: Ctx }) {
   const [photoMsg, setPhotoMsg] = useState('');
   const [photoError, setPhotoError] = useState('');
   const [showGoals, setShowGoals] = useState(true);
+  const [cardioMsg, setCardioMsg] = useState('');
+  const [weighMsg, setWeighMsg] = useState('');
 
   const level = levelForXp(doc.xp);
+  // Streak is worked out from the dates of workouts and check-ins, so it
+  // can never sit at 0 forever the way the stored field did.
+  const streak = streakDaysForDoc(doc);
   const cardioTotal = cardioArr.reduce((s, c) => s + Number(c.minutes || 0), 0);
   const workoutsThisWeek = workouts.filter((w) => {
     const d = new Date(String(w.date));
@@ -44,11 +49,17 @@ export default function Progress({ ctx }: { ctx: Ctx }) {
   const latestPr = prs[prs.length - 1];
   const latestMeasure = [...measurements].reverse()[0] as { waist?: string; weight?: number } | undefined;
 
-  // Simple month calendar: trained days this month
+  // Simple month calendar: trained days this month. Only entries from
+  // this month light up: a workout on the 15th last month must not light
+  // up the 15th now.
   const now = new Date();
   const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-  const trained = new Set(workouts.map((w) => new Date(String(w.date)).getDate()));
-  const restDays = new Set(doc.quests.filter((q) => (q as { kind?: string }).kind === 'rest-day').map((q) => new Date(String(q.date)).getDate()));
+  const trained = daysInMonthSet(workouts, now.getFullYear(), now.getMonth());
+  const restDays = daysInMonthSet(
+    doc.quests.filter((q) => (q as { kind?: string }).kind === 'rest-day'),
+    now.getFullYear(),
+    now.getMonth(),
+  );
   const activeDays = new Set([
     ...workouts.map((w) => new Date(String(w.date)).toDateString()),
     ...checkins.map((w) => new Date(String(w.date)).toDateString()),
@@ -58,7 +69,7 @@ export default function Progress({ ctx }: { ctx: Ctx }) {
     <div>
       <div className="card">
         <h2>Progress</h2>
-        <p>Level {level} · {titleForLevel(level)} · {doc.xp} XP · Streak {doc.streakDays} days</p>
+        <p>Level {level} · {titleForLevel(level)} · {doc.xp} XP · Streak {streak} {streak === 1 ? 'day' : 'days'}</p>
         <p>Workouts this week: {workoutsThisWeek} · Cardio logged: {cardioTotal} min · Check-ins: {checkins.length}</p>
         {last && <p className="muted small">Last workout: {last.title} on {new Date(String(last.date)).toLocaleDateString()}.</p>}
         <div className="switch-row">
@@ -122,7 +133,7 @@ export default function Progress({ ctx }: { ctx: Ctx }) {
                 <p>Your numbers: {cardioTotal} minutes of cardio logged. Target 150 to 300 minutes a week, Zone 2.</p>
               )}
               {g.type === 'consistency' && (
-                <p>Your numbers: {workoutsThisWeek} {workoutsThisWeek === 1 ? 'workout' : 'workouts'} this week, {checkins.length} check-ins, streak {doc.streakDays} {doc.streakDays === 1 ? 'day' : 'days'}.</p>
+                <p>Your numbers: {workoutsThisWeek} {workoutsThisWeek === 1 ? 'workout' : 'workouts'} this week, {checkins.length} check-ins, streak {streak} {streak === 1 ? 'day' : 'days'}.</p>
               )}
               {g.type === 'sleep' && (
                 <p>Your numbers: last night {lastSleep?.hours ?? 'not logged yet'} hours of sleep. Sleep logs: {sleepArr.length}. Recovery is part of training for every class.</p>
@@ -163,19 +174,34 @@ export default function Progress({ ctx }: { ctx: Ctx }) {
           Log measurement
         </button>
         <label htmlFor="p-weigh" style={{ marginTop: 14 }}>Optional once-a-week weigh-in (lb, same day and time)</label>
-        <input id="p-weigh" inputMode="decimal" value={weigh} onChange={(e) => setWeigh(e.target.value)} placeholder="e.g. 188" />
+        <input id="p-weigh" inputMode="decimal" value={weigh} onChange={(e) => { setWeigh(e.target.value); setWeighMsg(''); }} placeholder="e.g. 188" />
         <button
           style={{ marginTop: 8 }}
           onClick={() => {
-            if (!weigh) return;
+            if (!weigh || Number.isNaN(Number(weigh)) || Number(weigh) <= 0) {
+              setWeighMsg('Enter your weight in pounds.');
+              return;
+            }
+            // Once a week, same day and time: a weigh-in in the last 6 days
+            // is already this week's one.
+            const sixDaysAgo = Date.now() - 6 * 24 * 60 * 60 * 1000;
+            const recent = measurements.some(
+              (m) => (m as { kind?: string }).kind === 'weigh-in' && new Date(String(m.date)).getTime() >= sixDaysAgo,
+            );
+            if (recent) {
+              setWeighMsg('You already weighed in this week. Same day and time next week, and only the trend over weeks matters.');
+              return;
+            }
             update((d) => {
               d.measurements.push({ id: `m${Date.now()}`, date: new Date().toISOString(), weight: Number(weigh), kind: 'weigh-in' });
             });
             setWeigh('');
+            setWeighMsg('Weigh-in logged.');
           }}
         >
           Log weigh-in
         </button>
+        {weighMsg && <p className={weighMsg.startsWith('You already') || weighMsg.startsWith('Enter') ? 'error' : 'ok'}>{weighMsg}</p>}
         {measurements.slice(-5).reverse().map((m) => (
           <p key={m.id as string} className="small">
             {new Date(String(m.date)).toLocaleDateString()}: {m.waist ? `waist ${m.waist} in` : ''} {m.weight ? `weight ${m.weight} lb` : ''} {m.clothesFit ? `, ${m.clothesFit}` : ''}
@@ -187,21 +213,28 @@ export default function Progress({ ctx }: { ctx: Ctx }) {
       <div className="card">
         <h3>Log cardio</h3>
         <div className="row">
-          <input inputMode="numeric" value={cardioMin} onChange={(e) => setCardioMin(e.target.value)} placeholder="Minutes" style={{ maxWidth: 140 }} aria-label="Cardio minutes" />
+          <input inputMode="numeric" value={cardioMin} onChange={(e) => { setCardioMin(e.target.value); setCardioMsg(''); }} placeholder="Minutes" style={{ maxWidth: 140 }} aria-label="Cardio minutes" />
           <button
             className="primary"
             onClick={() => {
-              if (!cardioMin) return;
+              const mins = Number(cardioMin);
+              if (!cardioMin || Number.isNaN(mins) || mins <= 0 || mins > 600) {
+                setCardioMsg('Enter minutes from 1 to 600.');
+                return;
+              }
+              const xpToday = !loggedToday(doc.cardio);
               update((d) => {
-                d.cardio.push({ id: `k${Date.now()}`, date: new Date().toISOString(), minutes: Number(cardioMin), zone: 'Zone 2' });
-                d.xp += metCompanionIds(doc).has('sylva') ? 15 : 10;
+                d.cardio.push({ id: `k${Date.now()}`, date: new Date().toISOString(), minutes: mins, zone: 'Zone 2' });
+                if (xpToday) d.xp += metCompanionIds(doc).has('sylva') ? 15 : 10;
               });
+              setCardioMsg(`Cardio logged: ${mins} minutes${xpToday ? ` (+10 XP${metCompanionIds(doc).has('sylva') ? ', +5 from Sylva' : ''})` : ' (already earned cardio XP today)'}.`);
               setCardioMin('');
             }}
           >
             Log cardio (+10 XP{metCompanionIds(doc).has('sylva') ? ', +5 from Sylva' : ''})
           </button>
         </div>
+        {cardioMsg && <p className={cardioMsg.startsWith('Enter') ? 'error' : 'ok'}>{cardioMsg}</p>}
         <p className="small muted">Zone 2, easy enough to talk. High intensity counts double: log the doubled minutes.</p>
       </div>
 
@@ -301,13 +334,11 @@ export default function Progress({ ctx }: { ctx: Ctx }) {
 
       <div className="card">
         <h3>Badges</h3>
-        <div className="row">
-          {BADGES.map((b) => (
-            <span key={b.id} className="pill" style={badges.includes(b.id) ? {} : { opacity: 0.45 }}>
-              {b.name}
-            </span>
-          ))}
-        </div>
+        {BADGES.map((b) => (
+          <p key={b.id} className="small" style={{ margin: '6px 0', opacity: badges.includes(b.id) ? 1 : 0.55 }}>
+            <strong>{badges.includes(b.id) ? '✓ ' : ''}{b.name}</strong> · {b.how}
+          </p>
+        ))}
         <p className="small muted">Earned: {badges.length} of {BADGES.length}. Tap a workout, check-in, or PR to earn more.</p>
       </div>
 
