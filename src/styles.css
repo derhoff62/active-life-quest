@@ -46,10 +46,10 @@ input, select, textarea {
   min-height: 48px;
 }
 label { display: block; font-weight: 600; margin: 12px 0 4px; }
-/* Bottom padding must clear the fixed nav, which wraps to two rows on
-   phones (9 tabs in 6 columns, about 120px tall) plus the safe area. */
-.app { max-width: 720px; margin: 0 auto; padding: 0 12px calc(210px + env(safe-area-inset-bottom)); }
-html { scroll-padding-bottom: calc(210px + env(safe-area-inset-bottom)); }
+/* Bottom padding must clear the fixed nav, which is now a big 3-column,
+   3-row grid (9 tabs, each at least 64px tall) plus the safe area. */
+.app { max-width: 720px; margin: 0 auto; padding: 0 12px calc(280px + env(safe-area-inset-bottom)); }
+html { scroll-padding-bottom: calc(280px + env(safe-area-inset-bottom)); }
 @media (min-width: 900px) { .app { max-width: 860px; } }
 .banner {
   background: linear-gradient(135deg, var(--navy), var(--blue));
@@ -71,18 +71,39 @@ html { scroll-padding-bottom: calc(210px + env(safe-area-inset-bottom)); }
   border: 1px solid var(--gold); border-radius: 999px; padding: 2px 10px;
   font-size: 0.85rem; font-weight: 600;
 }
+/* Bottom nav: big, obvious, miss-proof. 3 columns x 3 rows, every tab at
+   least 64px tall with a clear icon above a bold label. Solid white bar
+   with a thick navy top border and a strong shadow, so it stands out
+   from page content. Inactive tabs are dark navy on white, never grey
+   on grey. Active tab is solid navy with white text, a gold border,
+   and a gold dot underneath the label. */
 .nav {
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 20;
-  background: #fff; border-top: 1px solid var(--line);
-  display: grid; grid-template-columns: repeat(6, 1fr); gap: 2px;
-  padding: 6px 4px calc(6px + env(safe-area-inset-bottom));
+  background: #fff; border-top: 3px solid var(--navy);
+  box-shadow: 0 -6px 20px rgba(18, 69, 113, 0.25);
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px;
+  padding: 10px 8px calc(10px + env(safe-area-inset-bottom));
 }
 .nav button {
-  border: none; background: none; min-height: 52px; padding: 6px 2px;
-  font-size: 0.72rem; color: var(--muted); border-radius: 10px;
+  position: relative; border: 1px solid var(--line); background: #fff; min-height: 64px;
+  padding: 8px 4px 7px; font-size: 0.88rem; color: var(--navy);
+  font-weight: 700; border-radius: 12px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
 }
-.nav button.active { background: var(--blue-light); color: var(--navy); font-weight: 700; }
+.nav button .nav-icon { font-size: 1.35rem; line-height: 1; color: var(--blue); }
+.nav button .nav-label { line-height: 1.1; }
+.nav button.active {
+  background: linear-gradient(135deg, var(--navy), var(--blue));
+  color: #fff; font-weight: 800; border: 2px solid var(--gold);
+  box-shadow: 0 0 14px rgba(11, 85, 146, 0.45);
+}
+.nav button.active .nav-icon { color: var(--gold); }
+.nav button.active .nav-label::after {
+  content: ''; display: block; width: 8px; height: 8px; margin: 3px auto 0;
+  border-radius: 50%; background: var(--gold);
+}
 .nav button .badge {
+  position: absolute; top: 4px; right: 6px;
   background: var(--red); color: #fff; border-radius: 999px;
   font-size: 0.7rem; padding: 0 6px; margin-left: 2px;
 }

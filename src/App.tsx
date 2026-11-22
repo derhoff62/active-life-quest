@@ -16,16 +16,16 @@ import Coach from './components/Coach';
 
 export type Tab = 'today' | 'assessment' | 'workouts' | 'journey' | 'nutrition' | 'progress' | 'armor' | 'faq' | 'coach';
 
-const TABS: { id: Tab; label: string }[] = [
-  { id: 'today', label: 'Today' },
-  { id: 'assessment', label: 'Assessment' },
-  { id: 'workouts', label: 'Workouts' },
-  { id: 'journey', label: 'Journey' },
-  { id: 'nutrition', label: 'Nutrition' },
-  { id: 'progress', label: 'Progress' },
-  { id: 'armor', label: 'Armor' },
-  { id: 'faq', label: 'FAQ' },
-  { id: 'coach', label: 'Coach' },
+const TABS: { id: Tab; label: string; icon: string }[] = [
+  { id: 'today', label: 'Today', icon: '☀' },
+  { id: 'assessment', label: 'Assessment', icon: '✓' },
+  { id: 'workouts', label: 'Workouts', icon: '◆' },
+  { id: 'journey', label: 'Journey', icon: '✦' },
+  { id: 'nutrition', label: 'Nutrition', icon: '●' },
+  { id: 'progress', label: 'Progress', icon: '▲' },
+  { id: 'armor', label: 'Armor', icon: '⬢' },
+  { id: 'faq', label: 'FAQ', icon: '?' },
+  { id: 'coach', label: 'Coach', icon: '★' },
 ];
 
 export interface Ctx {
@@ -256,13 +256,15 @@ export default function App() {
 
         <nav className="nav" aria-label="Sections">
           {TABS.filter((t) => t.id !== 'coach').map((t) => (
-            <button key={t.id} className={tab === t.id ? 'active' : ''} onClick={() => go(t.id)}>
-              {t.label}
+            <button key={t.id} className={tab === t.id ? 'active' : ''} onClick={() => go(t.id)} aria-current={tab === t.id ? 'page' : undefined}>
+              <span className="nav-icon" aria-hidden="true">{t.icon}</span>
+              <span className="nav-label">{t.label}</span>
               {t.id === 'today' && unread > 0 && <span className="badge">{unread}</span>}
             </button>
           ))}
-          <button className={tab === 'coach' ? 'active' : ''} onClick={() => go('coach')}>
-            Coach
+          <button className={tab === 'coach' ? 'active' : ''} onClick={() => go('coach')} aria-current={tab === 'coach' ? 'page' : undefined}>
+            <span className="nav-icon" aria-hidden="true">★</span>
+            <span className="nav-label">Coach</span>
           </button>
         </nav>
       </div>
