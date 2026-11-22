@@ -1530,20 +1530,20 @@ export const CORE_MOBILITY_IDS: string[] = [
 
 export const CLASS_WORKOUT_FOCUS: Record<string, { line: string; detail: string; cardioLine?: string }> = {
   Guardian: {
-    line: 'Guardian focus: extra set on main lifts, one less set on core and balance moves.',
+    line: 'Guardian focus: getting stronger.',
     detail:
-      'Main compound lifts get one extra set, up to the top of your phase range. Core and balance moves get one less set, never less than one set. You still do the same strength work, phases, and compound lifts first.',
+      'Your Guardian focuses on getting stronger. You still do the same strength work, phases, and compound lifts first.',
   },
   Ranger: {
-    line: 'Ranger focus: extra set on balance, single-leg, and core moves, plus more cardio.',
+    line: 'Ranger focus: moving better.',
     detail:
-      'Balance, single-leg, and core moves get one extra set, up to the top of your phase range. Aim for the top of your cardio range, 150 to 300 minutes a week, Zone 2.',
+      'Your Ranger focuses on moving better, with balance and steady cardio. Aim for 150 to 300 minutes of cardio a week, Zone 2.',
     cardioLine: 'Aim for the top of your cardio range, 150 to 300 minutes a week.',
   },
   Spellweaver: {
-    line: 'Spellweaver focus: extra set on core and mobility moves, with the same strength work.',
+    line: 'Spellweaver focus: rest, recovery, and steady habits.',
     detail:
-      'Core and mobility moves get one extra set, up to the top of your phase range. Main lifts stay the same. Strength first, recovery built in, not instead of it.',
+      'Your Spellweaver focuses on rest and recovery, with steady habits. Strength first, recovery built in, not instead of it.',
   },
 };
 
@@ -1578,23 +1578,23 @@ export function applyClassFocus(
   if (classId === 'Guardian') {
     if (MAIN_LIFT_IDS.includes(ex.id)) {
       delta = 1;
-      reason = 'Guardian focus: +1 set on main lifts';
+      reason = 'guardian-main-lift';
     } else if (BALANCE_SINGLE_LEG_IDS.includes(ex.id) || CORE_MOBILITY_IDS.includes(ex.id)) {
       delta = -1;
-      reason = 'Guardian focus: 1 less set on core and balance moves';
+      reason = 'guardian-core-balance';
     }
   } else if (classId === 'Ranger') {
     if (BALANCE_SINGLE_LEG_IDS.includes(ex.id)) {
       delta = 1;
-      reason = 'Ranger focus: +1 set on balance and single-leg moves';
+      reason = 'ranger-balance-single-leg';
     } else if (CORE_MOBILITY_IDS.includes(ex.id)) {
       delta = 1;
-      reason = 'Ranger focus: +1 set on core moves';
+      reason = 'ranger-core';
     }
   } else if (classId === 'Spellweaver') {
     if (CORE_MOBILITY_IDS.includes(ex.id)) {
       delta = 1;
-      reason = 'Spellweaver focus: +1 set on core and mobility moves';
+      reason = 'spellweaver-core-mobility';
     }
   }
   if (delta === 0) return { exercise: ex, delta: 0, reason: '' };

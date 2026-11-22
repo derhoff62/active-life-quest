@@ -296,9 +296,6 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
         <div className="card">
           <h3>{ex.name}</h3>
           <p>{ex.sets} sets x {ex.reps}{ex.tempo ? ` · Tempo ${ex.tempo}` : ''} · Rest {ex.restSec}s</p>
-          {focused.delta !== 0 && (
-            <p className="small"><strong>{focused.reason}</strong> ({focused.delta > 0 ? '+' : ''}{focused.delta} set).</p>
-          )}
           <details open={showHow === ex.id} onToggle={(e) => setShowHow((e.target as HTMLDetailsElement).open ? ex.id : null)}>
             <summary>How to do it</summary>
             <ol>{ex.howTo.map((h, i) => <li key={i}>{h}</li>)}</ol>
@@ -626,7 +623,7 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
         <h3>Reference tracks</h3>
         <p className="small muted">Extra tracks to try, built from the same moves. No brand credit, just the workout.</p>
         {classFocus && (
-          <p className="small"><strong>{classFocus.line}</strong> Your class focus changes the sets in these tracks too.</p>
+          <p className="small"><strong>{classFocus.line}</strong></p>
         )}
         <details>
           <summary>Show reference tracks</summary>
