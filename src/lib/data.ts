@@ -1091,6 +1091,34 @@ export const CREATURES: Creature[] = [
     place: 'Journey',
     line: 'Ember is a small friendly dragon you befriend after your first boss round. She is not a boss. She keeps your fire lit and cheers your wins.',
   },
+  {
+    id: 'rowan',
+    name: 'Rowan',
+    kind: 'Retired knight',
+    place: 'Journey',
+    line: 'Rowan is a retired knight you befriend on the road. He walks beside you and shows you how to pace yourself, never rushing a set.',
+  },
+  {
+    id: 'mara',
+    name: 'Mara',
+    kind: 'Healer',
+    place: 'Recovery',
+    line: 'Mara is a healer you befriend after a hard week. She helps you rest and recover, and reminds you that sleep counts as training.',
+  },
+  {
+    id: 'quill',
+    name: 'Quill',
+    kind: 'Raven',
+    place: 'Journey',
+    line: 'Quill is a raven you befriend with a few crumbs and a kind word. He carries your messages to Derek and brings back the replies.',
+  },
+  {
+    id: 'miso',
+    name: 'Miso',
+    kind: 'Cat',
+    place: 'Rest days',
+    line: 'Miso is a cat you befriend at the inn. She keeps you company on rest days and naps beside you while you stretch.',
+  },
 ];
 
 // -------------------------------------------------------------------- STORY
@@ -1102,7 +1130,7 @@ export const STORY: { firstLine: string; expanded: string[] } = {
     'The road runs through three lands. Sapphire Forest comes first, green and quiet, where the Forest Castle stands. Then Crystal Shores, where the Lake Castle shines. Then Navy Peaks, where the Navy Castle waits at the top of the climb. Each land has its own monsters, and each monster guards a lesson.',
     'In Weeks 1 to 4, the guardian meets The Slump and the Stiff Hips Goblin. In Weeks 5 to 8, the Achy Knees Troll and the Tired Back Beast block the road. In Weeks 9 to 12, the Wobbly Balance Sprite dances on the mountain path. At the end of each stretch, in Week 4, Week 8, and Week 12, a boss round tests everything the guardian has learned.',
     'The monsters are challenges, not friends. When you beat a monster with steady work, it is done and you move on. The Slump clears. The goblin is gone. The troll stays behind you. The beast is beaten. The sprite is gone, and you stay standing. Every win is yours, and the road ahead is open.',
-    'Along the road you befriend people and animals: Bram, Sylva, Tilda, Pip, Hoot, Kaelith, Ash the dire wolf, and Ember the small dragon. They walk with you. The monsters do not.',
+    'Along the road you befriend people and animals: Bram, Sylva, Tilda, Pip, Hoot, Kaelith, Ash the dire wolf, Ember the small dragon, Rowan the retired knight, Mara the healer, Quill the raven, and Miso the cat. They walk with you. The monsters do not.',
     'Mana is the fuel for your spells. You earn mana by finishing workouts, checking in, and beating boss rounds. Spend it on spells that fit your class, or save it for the big rounds. A guardian who rests well earns more than a guardian who grinds without sleep.',
     'The journey follows five phases, from slow and steady control to real strength and then power. Each phase unlocks new gear, new moves, and new ground. After Week 12, the retest shows how far you have come, and Week 13 starts a new loop. Nothing resets. The phases cycle back to 1, 2, or 3 based on your retest and your new goal, and the story keeps going with you in it.',
   ],

@@ -5,7 +5,7 @@ import { phaseForDoc, levelForXp } from '../lib/store';
 import GuardianAvatar from './GuardianAvatar';
 
 const AVATAR: Record<string, string> = {
-  Bram: '🧔', Sylva: '🧝', Kaelith: '🐉', Tilda: '🧑‍🍳', Pip: '🧙', Hoot: '🦉', Ash: '🐺', Ember: '🐲',
+  Bram: '🧔', Sylva: '🧝', Kaelith: '🐉', Tilda: '🧑‍🍳', Pip: '🧙', Hoot: '🦉', Ash: '🐺', Ember: '🐲', Rowan: '🛡️', Mara: '💚', Quill: '🐦‍⬛', Miso: '🐱',
   'The Slump': '😴', 'Stiff Hips Goblin': '👺', 'Achy Knees Troll': '🧌', 'Tired Back Beast': '🐻', 'Wobbly Balance Sprite': '🧚',
 };
 
