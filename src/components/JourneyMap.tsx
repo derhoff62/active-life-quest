@@ -114,6 +114,10 @@ export default function JourneyMap({
   ];
   const hereY = weekToY(Math.min(12, Math.max(1, currentWeek)));
   const hereLand = lands.find((l) => currentWeek >= l.from && currentWeek <= l.to) ?? lands[0];
+  // The shield marks the current week, but it must never sit on the land
+  // title pills at the top of its land. If the week point falls in the
+  // title band (top 80px of the land), drop the shield just below it.
+  const shieldY = hereY <= hereLand.y + 80 ? hereLand.y + 84 : hereY;
 
   return (
     <div>
@@ -179,20 +183,14 @@ export default function JourneyMap({
         {lands.map((l) => {
           const state = landState(l.from, l.to);
           return (
-            <g key={l.label} opacity={state === 'future' ? 0.55 : 1}>
-              <rect x="8" y={l.y} width="344" height={l.h} rx="16" fill={l.fill} stroke={state === 'current' ? '#c9a227' : '#d7e3ee'} strokeWidth={state === 'current' ? 3 : 1.5} />
+            <g key={l.label}>
+              {/* Only the land itself is dimmed when it is in the future.
+                  The title pills are drawn in a separate top layer below,
+                  at full strength, so a future land stays readable. */}
+              <rect x="8" y={l.y} width="344" height={l.h} rx="16" fill={l.fill} stroke={state === 'current' ? '#c9a227' : '#d7e3ee'} strokeWidth={state === 'current' ? 3 : 1.5} opacity={state === 'future' ? 0.55 : 1} />
               {state === 'current' && (
                 <rect className="map-land-glow" x="8" y={l.y} width="344" height={l.h} rx="16" fill="none" stroke="#c9a227" strokeWidth="3" />
               )}
-              {/* Land title and subtitle on solid white pills, centred at the
-                  top of the land. The pills are opaque, so the gold path
-                  passing behind them never shows through the text. */}
-              <MapLabel x={180} y={l.y + 10} w={190} h={24} fontSize={15}>
-                {l.label}
-              </MapLabel>
-              <MapLabel x={180} y={l.y + 38} w={230} h={20} fontSize={11.5}>
-                {l.sub}
-              </MapLabel>
               {state === 'done' && (
                 <g>
                   <circle cx="330" cy={l.y + 22} r="10" fill="#1e7a46" stroke="#fff" strokeWidth="2" />
@@ -306,14 +304,30 @@ export default function JourneyMap({
           );
         })}
 
-        {/* You are here: the shield is centered on the path point, so it
-            can never be cut off at the top of the map. The words live in
+        {/* You are here: the shield is centered on the path point, unless
+            that point falls in the land's title band, in which case it is
+            dropped just below the titles (see shieldY). The words live in
             the HTML pill above the map, not inside the SVG. */}
         <g className="map-you">
-          <circle cx="180" cy={hereY} r="22" fill="#c9a227" opacity="0.35" />
-          <path d="M180 0 L196 6 L196 20 Q196 34 180 42 Q164 34 164 20 L164 6 Z" transform={`translate(0 ${hereY - 21})`} fill="#124571" stroke="#c9a227" strokeWidth="2" />
-          <text x="180" y={hereY + 5} textAnchor="middle" fontSize="13" fontWeight="700" fill="#fff">★</text>
+          <circle cx="180" cy={shieldY} r="22" fill="#c9a227" opacity="0.35" />
+          <path d="M180 0 L196 6 L196 20 Q196 34 180 42 Q164 34 164 20 L164 6 Z" transform={`translate(0 ${shieldY - 21})`} fill="#124571" stroke="#c9a227" strokeWidth="2" />
+          <text x="180" y={shieldY + 5} textAnchor="middle" fontSize="13" fontWeight="700" fill="#fff">★</text>
         </g>
+
+        {/* Land titles, drawn LAST and at full strength, so no path,
+            marker, castle, companion dot, or shield can ever cover them.
+            The pills are opaque white with dark navy text, even on a
+            dimmed future land, so every land stays readable. */}
+        {lands.map((l) => (
+          <g key={l.label}>
+            <MapLabel x={180} y={l.y + 10} w={190} h={24} fontSize={15}>
+              {l.label}
+            </MapLabel>
+            <MapLabel x={180} y={l.y + 38} w={230} h={20} fontSize={11.5}>
+              {l.sub}
+            </MapLabel>
+          </g>
+        ))}
       </svg>
       <div className="map-legend">
         <div><strong>Gold line:</strong> your path</div>

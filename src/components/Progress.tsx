@@ -7,6 +7,19 @@ import { levelForXp, titleForLevel, metCompanionIds } from '../lib/store';
 
 export default function Progress({ ctx }: { ctx: Ctx }) {
   const { doc, update } = ctx;
+  // Old accounts saved before a field existed have it as undefined.
+  // App normalizes on load, but never crash this tab on a missing list.
+  const workouts = doc.workouts || [];
+  const cardioArr = doc.cardio || [];
+  const checkins = doc.checkins || [];
+  const sleepArr = doc.sleep || [];
+  const prs = doc.prs || [];
+  const measurements = doc.measurements || [];
+  const stepsArr = doc.steps || [];
+  const badges = doc.badges || [];
+  const goals = doc.goals || [];
+  const progressPhotos = doc.progressPhotos || [];
+  const retests = doc.retests || [];
   const [waist, setWaist] = useState('');
   const [clothes, setClothes] = useState('');
   const [weigh, setWeigh] = useState('');
@@ -21,23 +34,23 @@ export default function Progress({ ctx }: { ctx: Ctx }) {
   const [showGoals, setShowGoals] = useState(true);
 
   const level = levelForXp(doc.xp);
-  const cardioTotal = doc.cardio.reduce((s, c) => s + Number(c.minutes || 0), 0);
-  const workoutsThisWeek = doc.workouts.filter((w) => {
+  const cardioTotal = cardioArr.reduce((s, c) => s + Number(c.minutes || 0), 0);
+  const workoutsThisWeek = workouts.filter((w) => {
     const d = new Date(String(w.date));
     return Date.now() - d.getTime() < 7 * 24 * 60 * 60 * 1000;
   }).length;
-  const last = doc.workouts[doc.workouts.length - 1] as { title?: string; date?: string } | undefined;
-  const lastSleep = doc.sleep[doc.sleep.length - 1] as { hours?: number } | undefined;
-  const latestPr = doc.prs[doc.prs.length - 1];
-  const latestMeasure = [...doc.measurements].reverse()[0] as { waist?: string; weight?: number } | undefined;
+  const last = workouts[workouts.length - 1] as { title?: string; date?: string } | undefined;
+  const lastSleep = sleepArr[sleepArr.length - 1] as { hours?: number } | undefined;
+  const latestPr = prs[prs.length - 1];
+  const latestMeasure = [...measurements].reverse()[0] as { waist?: string; weight?: number } | undefined;
 
   // Simple month calendar: trained days this month
   const now = new Date();
   const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-  const trained = new Set(doc.workouts.map((w) => new Date(String(w.date)).getDate()));
+  const trained = new Set(workouts.map((w) => new Date(String(w.date)).getDate()));
   const activeDays = new Set([
-    ...doc.workouts.map((w) => new Date(String(w.date)).toDateString()),
-    ...doc.checkins.map((w) => new Date(String(w.date)).toDateString()),
+    ...workouts.map((w) => new Date(String(w.date)).toDateString()),
+    ...checkins.map((w) => new Date(String(w.date)).toDateString()),
   ]);
 
   return (
@@ -45,7 +58,7 @@ export default function Progress({ ctx }: { ctx: Ctx }) {
       <div className="card">
         <h2>Progress</h2>
         <p>Level {level} · {titleForLevel(level)} · {doc.xp} XP · Streak {doc.streakDays} days</p>
-        <p>Workouts this week: {workoutsThisWeek} · Cardio logged: {cardioTotal} min · Check-ins: {doc.checkins.length}</p>
+        <p>Workouts this week: {workoutsThisWeek} · Cardio logged: {cardioTotal} min · Check-ins: {checkins.length}</p>
         {last && <p className="muted small">Last workout: {last.title} on {new Date(String(last.date)).toLocaleDateString()}.</p>}
         <div className="switch-row">
           <span><strong>Bigger text</strong></span>
@@ -82,8 +95,8 @@ export default function Progress({ ctx }: { ctx: Ctx }) {
           <h3 style={{ margin: 0 }}>Per-goal progress</h3>
           <button onClick={() => setShowGoals((v) => !v)}>{showGoals ? 'Hide' : 'Show'}</button>
         </div>
-        {showGoals && doc.goals.length === 0 && <p className="muted">No goals yet. Pick one in the assessment or on Today.</p>}
-        {showGoals && doc.goals.map((g, i) => {
+        {showGoals && goals.length === 0 && <p className="muted">No goals yet. Pick one in the assessment or on Today.</p>}
+        {showGoals && goals.map((g, i) => {
           const info = GOAL_TYPES.find((x) => x.id === g.type);
           return (
             <details key={i} open>
@@ -94,10 +107,10 @@ export default function Progress({ ctx }: { ctx: Ctx }) {
               {/* Live numbers for this goal. Progress is driven by the goal,
                   never by the class, so any class can make progress on any goal. */}
               {g.type === 'stronger' && (
-                <p>Your numbers: {doc.prs.length} personal {doc.prs.length === 1 ? 'record' : 'records'}. {latestPr ? `Latest: ${latestPr.exercise}, ${latestPr.weight} lb x ${latestPr.reps}.` : 'Log a heavier weight or more reps than last time and it shows here.'}</p>
+                <p>Your numbers: {prs.length} personal {prs.length === 1 ? 'record' : 'records'}. {latestPr ? `Latest: ${latestPr.exercise}, ${latestPr.weight} lb x ${latestPr.reps}.` : 'Log a heavier weight or more reps than last time and it shows here.'}</p>
               )}
               {g.type === 'move-better' && (
-                <p>Your numbers: {doc.retests.length} {doc.retests.length === 1 ? 'retest' : 'retests'} done. Balance baseline: {doc.balanceBaseline ? `${doc.balanceBaseline.left}s left, ${doc.balanceBaseline.right}s right.` : 'not set yet.'} Workouts finished: {doc.workouts.length}.</p>
+                <p>Your numbers: {retests.length} {retests.length === 1 ? 'retest' : 'retests'} done. Balance baseline: {doc.balanceBaseline ? `${doc.balanceBaseline.left}s left, ${doc.balanceBaseline.right}s right.` : 'not set yet.'} Workouts finished: {workouts.length}.</p>
               )}
               {g.type === 'balance' && (
                 <p>Your numbers: balance baseline {doc.balanceBaseline ? `${doc.balanceBaseline.left}s left, ${doc.balanceBaseline.right}s right.` : 'not set yet. Do the assessment to set it.'} Next milestone: hold 30 seconds on each leg.</p>
@@ -106,16 +119,16 @@ export default function Progress({ ctx }: { ctx: Ctx }) {
                 <p>Your numbers: {cardioTotal} minutes of cardio logged. Target 150 to 300 minutes a week, Zone 2.</p>
               )}
               {g.type === 'consistency' && (
-                <p>Your numbers: {workoutsThisWeek} {workoutsThisWeek === 1 ? 'workout' : 'workouts'} this week, {doc.checkins.length} check-ins, streak {doc.streakDays} {doc.streakDays === 1 ? 'day' : 'days'}.</p>
+                <p>Your numbers: {workoutsThisWeek} {workoutsThisWeek === 1 ? 'workout' : 'workouts'} this week, {checkins.length} check-ins, streak {doc.streakDays} {doc.streakDays === 1 ? 'day' : 'days'}.</p>
               )}
               {g.type === 'sleep' && (
-                <p>Your numbers: last night {lastSleep?.hours ?? 'not logged yet'} hours of sleep. Sleep logs: {doc.sleep.length}. Recovery is part of training for every class.</p>
+                <p>Your numbers: last night {lastSleep?.hours ?? 'not logged yet'} hours of sleep. Sleep logs: {sleepArr.length}. Recovery is part of training for every class.</p>
               )}
               {g.type === 'weight-loss' && (
-                <p>Your numbers: {doc.measurements.length} measurements logged. {latestMeasure ? `Latest: ${latestMeasure.waist ? `waist ${latestMeasure.waist} in` : ''}${latestMeasure.waist && latestMeasure.weight ? ', ' : ''}${latestMeasure.weight ? `weight ${latestMeasure.weight} lb` : ''}.` : 'Log a waist measurement or weigh-in below to start the trend.'}</p>
+                <p>Your numbers: {measurements.length} measurements logged. {latestMeasure ? `Latest: ${latestMeasure.waist ? `waist ${latestMeasure.waist} in` : ''}${latestMeasure.waist && latestMeasure.weight ? ', ' : ''}${latestMeasure.weight ? `weight ${latestMeasure.weight} lb` : ''}.` : 'Log a waist measurement or weigh-in below to start the trend.'}</p>
               )}
               {g.type === 'own-words' && (
-                <p>Your numbers: {doc.workouts.length} workouts finished, {doc.checkins.length} check-ins.</p>
+                <p>Your numbers: {workouts.length} workouts finished, {checkins.length} check-ins.</p>
               )}
               {g.type === 'endurance' && <p>Cardio this week: {cardioTotal} min of the 150 to 300 target. Milestones at 150, then 200, then 300.</p>}
               {g.type === 'weight-loss' && <p>Weight loss, the steady way: measurements, photos, strength, and how clothes fit first. The scale is last, once a week, same day and time, and only the trend over weeks matters.</p>}
@@ -159,7 +172,7 @@ export default function Progress({ ctx }: { ctx: Ctx }) {
         >
           Log weigh-in
         </button>
-        {doc.measurements.slice(-5).reverse().map((m) => (
+        {measurements.slice(-5).reverse().map((m) => (
           <p key={m.id as string} className="small">
             {new Date(String(m.date)).toLocaleDateString()}: {m.waist ? `waist ${m.waist} in` : ''} {m.weight ? `weight ${m.weight} lb` : ''} {m.clothesFit ? `, ${m.clothesFit}` : ''}
           </p>
@@ -206,8 +219,8 @@ export default function Progress({ ctx }: { ctx: Ctx }) {
             Log steps
           </button>
         </div>
-        {doc.steps.length > 0 && (
-          <p className="small">Last 7 days: {doc.steps.filter((s) => Date.now() - new Date(String(s.date)).getTime() < 7 * 24 * 60 * 60 * 1000).reduce((t, s) => t + Number((s as { steps?: number }).steps || 0), 0).toLocaleString()} steps.</p>
+        {stepsArr.length > 0 && (
+          <p className="small">Last 7 days: {stepsArr.filter((s) => Date.now() - new Date(String(s.date)).getTime() < 7 * 24 * 60 * 60 * 1000).reduce((t, s) => t + Number((s as { steps?: number }).steps || 0), 0).toLocaleString()} steps.</p>
         )}
       </div>
 
@@ -273,9 +286,9 @@ export default function Progress({ ctx }: { ctx: Ctx }) {
         )}
         {photoMsg && <p className="ok">{photoMsg}</p>}
         {photoError && <p className="error">{photoError}</p>}
-        {(doc.progressPhotos || []).length > 0 && (
+        {progressPhotos.length > 0 && (
           <div style={{ marginTop: 10 }}>
-            {(doc.progressPhotos || []).map((ph) => (
+            {progressPhotos.map((ph) => (
               <p key={ph.id} className="small">{new Date(ph.date).toLocaleDateString()}{ph.note ? ` · ${ph.note}` : ''} · {(ph.sizeBytes / 1024 / 1024).toFixed(1)} MB</p>
             ))}
           </div>
@@ -286,18 +299,18 @@ export default function Progress({ ctx }: { ctx: Ctx }) {
         <h3>Badges</h3>
         <div className="row">
           {BADGES.map((b) => (
-            <span key={b.id} className="pill" style={doc.badges.includes(b.id) ? {} : { opacity: 0.45 }}>
+            <span key={b.id} className="pill" style={badges.includes(b.id) ? {} : { opacity: 0.45 }}>
               {b.name}
             </span>
           ))}
         </div>
-        <p className="small muted">Earned: {doc.badges.length} of {BADGES.length}. Tap a workout, check-in, or PR to earn more.</p>
+        <p className="small muted">Earned: {badges.length} of {BADGES.length}. Tap a workout, check-in, or PR to earn more.</p>
       </div>
 
       <div className="card">
         <h3>Personal records</h3>
-        {doc.prs.length === 0 && <p className="muted">No PRs yet. Log a heavier weight or more reps than last time and it counts here.</p>}
-        {doc.prs.map((p, i) => (
+        {prs.length === 0 && <p className="muted">No PRs yet. Log a heavier weight or more reps than last time and it counts here.</p>}
+        {prs.map((p, i) => (
           <p key={i}>{p.exercise}: {p.weight} lb x {p.reps} on {new Date(p.date).toLocaleDateString()}</p>
         ))}
       </div>

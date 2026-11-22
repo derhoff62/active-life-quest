@@ -182,6 +182,40 @@ export function defaultProfile(email = '', displayName = ''): ProfileDoc {
   };
 }
 
+/** Fill in any field missing from a profile saved by an older version of
+ * the app, so old accounts never crash a tab that touches a newer field.
+ * Profiles are saved whole, so a field added later (steps, prs, progress
+ * photos, retests, ...) stays undefined forever on an old account unless
+ * it is filled in here. Idempotent: a complete profile comes back unchanged. */
+export function normalizeProfile(raw: unknown): ProfileDoc {
+  const base = defaultProfile();
+  if (!raw || typeof raw !== 'object') return base;
+  const r = raw as Partial<ProfileDoc>;
+  const out: ProfileDoc = { ...base, ...r };
+  const arrFields = [
+    'healthFlags', 'contraindications', 'equipment', 'goals', 'badges',
+    'armorEarned', 'rarityEarned', 'prs', 'workouts', 'cardio', 'checkins',
+    'sleep', 'measurements', 'photos', 'quests', 'retests',
+    'assessmentVideos', 'progressPhotos', 'messages', 'nudges',
+    'dislikedExercises', 'hurtExercises', 'steps',
+  ] as const;
+  for (const f of arrFields) {
+    if (!Array.isArray((r as Record<string, unknown>)[f])) (out as unknown as Record<string, unknown>)[f] = [];
+  }
+  out.body = { ...base.body, ...((r.body as object) || {}) };
+  out.reminderTimes = { ...base.reminderTimes, ...((r.reminderTimes as object) || {}) };
+  if (!out.bossHp || typeof out.bossHp !== 'object') out.bossHp = {};
+  if (!out.focus || typeof out.focus !== 'object') out.focus = {};
+  if (!out.cesStep || typeof out.cesStep !== 'object') out.cesStep = {};
+  if (!out.guardian) out.guardian = null;
+  if (typeof out.xp !== 'number') out.xp = 0;
+  if (typeof out.mana !== 'number') out.mana = 10;
+  if (typeof out.level !== 'number') out.level = 1;
+  if (typeof out.streakDays !== 'number') out.streakDays = 0;
+  if (typeof out.trainingDays !== 'number') out.trainingDays = 3;
+  return out;
+}
+
 export function levelForXp(xp: number): number {
   // Level thresholds: roughly 100 XP per level, growing slowly.
   let level = 1;
@@ -290,8 +324,9 @@ export function refillMana(doc: ProfileDoc): void {
 
 /** Last logged weight/reps for an exercise, from workout history. */
 export function lastTimeFor(doc: ProfileDoc, exerciseId: string): { w: string; r: string } | null {
-  for (let i = doc.workouts.length - 1; i >= 0; i -= 1) {
-    const w = doc.workouts[i] as { log?: Record<string, { w?: string; r?: string }> };
+  const workouts = doc.workouts || [];
+  for (let i = workouts.length - 1; i >= 0; i -= 1) {
+    const w = workouts[i] as { log?: Record<string, { w?: string; r?: string }> };
     const entry = w.log?.[exerciseId];
     if (entry && (entry.w || entry.r)) return { w: entry.w || '', r: entry.r || '' };
   }
@@ -304,15 +339,20 @@ export function lastTimeFor(doc: ProfileDoc, exerciseId: string): { w: string; r
 export function earnedArmorIds(doc: ProfileDoc): string[] {
   const level = levelForXp(doc.xp);
   const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
-  const cardioWeek = doc.cardio
+  const cardio = doc.cardio || [];
+  const workouts = doc.workouts || [];
+  const prs = doc.prs || [];
+  const badges = doc.badges || [];
+  const checkins = doc.checkins || [];
+  const cardioWeek = cardio
     .filter((c) => new Date(String(c.date)).getTime() >= weekAgo)
     .reduce((s, c) => s + Number(c.minutes || 0), 0);
   const bossesBeaten = Object.values(doc.bossHp || {}).filter((hp) => hp <= 0).length;
   const balanceBest = Math.max(doc.balanceBaseline?.left || 0, doc.balanceBaseline?.right || 0);
-  const checkinStreak = doc.checkins.length;
+  const checkinStreak = checkins.length;
   const out = new Set<string>();
   const add = (id: string, ok: boolean) => { if (ok) out.add(id); };
-  add('travelers-boots', doc.workouts.length >= 1);
+  add('travelers-boots', workouts.length >= 1);
   add('apprentice-gloves', level >= 2);
   add('sturdy-belt', level >= 3);
   add('trail-cloak', level >= 4);
@@ -323,24 +363,24 @@ export function earnedArmorIds(doc: ProfileDoc): string[] {
   add('guardians-tabard', level >= 9);
   add('veterans-chestplate', level >= 10);
   add('peakforged-helm', phaseForDoc(doc) >= 4);
-  add('peakforged-chestplate', doc.workouts.some((w) => Number((w as { phase?: number }).phase || 0) === 4 || String(w.workoutId || '').startsWith('p4')));
-  add('peakforged-greaves', doc.workouts.filter((w) => String(w.workoutId || '').startsWith('p4')).length >= 4);
-  add('peakforged-gauntlets', doc.prs.length >= 1 && phaseForDoc(doc) >= 4);
+  add('peakforged-chestplate', workouts.some((w) => Number((w as { phase?: number }).phase || 0) === 4 || String(w.workoutId || '').startsWith('p4')));
+  add('peakforged-greaves', workouts.filter((w) => String(w.workoutId || '').startsWith('p4')).length >= 4);
+  add('peakforged-gauntlets', prs.length >= 1 && phaseForDoc(doc) >= 4);
   add('stormforged-helm', phaseForDoc(doc) >= 5);
-  add('stormforged-chestplate', doc.workouts.some((w) => String(w.workoutId || '').startsWith('p5')));
-  add('stormforged-greaves', doc.workouts.filter((w) => String(w.workoutId || '').startsWith('p5')).length >= 4);
-  add('stormforged-gauntlets', doc.prs.length >= 1 && phaseForDoc(doc) >= 5);
-  add('blade-long-game', doc.guardian?.classId === 'Guardian' && doc.prs.length >= 3);
+  add('stormforged-chestplate', workouts.some((w) => String(w.workoutId || '').startsWith('p5')));
+  add('stormforged-greaves', workouts.filter((w) => String(w.workoutId || '').startsWith('p5')).length >= 4);
+  add('stormforged-gauntlets', prs.length >= 1 && phaseForDoc(doc) >= 5);
+  add('blade-long-game', doc.guardian?.classId === 'Guardian' && prs.length >= 3);
   add('bow-steady-steps', doc.guardian?.classId === 'Ranger' && balanceBest >= 30);
   add('staff-deep-rest', doc.guardian?.classId === 'Spellweaver' && checkinStreak >= 7);
-  add('trailwarden-cloak', doc.workouts.length >= 3);
-  add('ember-shortblade', doc.prs.length >= 3);
+  add('trailwarden-cloak', workouts.length >= 3);
+  add('ember-shortblade', prs.length >= 3);
   add('riverstep-boots', cardioWeek >= 150);
   add('sunforged-chestplate', phaseForDoc(doc) >= 2);
   add('stormcaller-longbow', bossesBeaten >= 1);
-  add('gauntlets-many-wins', doc.badges.length >= 8);
+  add('gauntlets-many-wins', badges.length >= 8);
   add('voidforged-greatblade', bossesBeaten >= 3);
-  add('mantle-long-road', doc.workouts.length >= 25);
+  add('mantle-long-road', workouts.length >= 25);
   add('circlet-full-journey', phaseForDoc(doc) >= 5);
   return [...out];
 }
@@ -349,24 +389,30 @@ export function earnedArmorIds(doc: ProfileDoc): string[] {
  * check-ins, cardio, PRs, and retests. Never removes a badge. */
 export function awardBadges(doc: ProfileDoc): string[] {
   const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
-  const workoutsWeek = doc.workouts.filter((w) => new Date(String(w.date)).getTime() >= weekAgo).length;
-  const cardioWeek = doc.cardio
+  const workouts = doc.workouts || [];
+  const cardio = doc.cardio || [];
+  const prs = doc.prs || [];
+  const checkins = doc.checkins || [];
+  const retests = doc.retests || [];
+  if (!Array.isArray(doc.badges)) doc.badges = [];
+  const workoutsWeek = workouts.filter((w) => new Date(String(w.date)).getTime() >= weekAgo).length;
+  const cardioWeek = cardio
     .filter((c) => new Date(String(c.date)).getTime() >= weekAgo)
     .reduce((s, c) => s + Number(c.minutes || 0), 0);
   const balanceBest = Math.max(doc.balanceBaseline?.left || 0, doc.balanceBaseline?.right || 0);
   const add = (id: string, ok: boolean) => { if (ok && !doc.badges.includes(id)) doc.badges.push(id); };
-  add('week1', doc.workouts.length >= 1);
+  add('week1', workouts.length >= 1);
   add('three-in-a-row', workoutsWeek >= 3);
   add('two-to-three-strength', workoutsWeek >= 2 && workoutsWeek <= 3);
   add('150-club', cardioWeek >= 150);
-  add('first-pr', doc.prs.length >= 1);
-  add('five-prs', doc.prs.length >= 5);
+  add('first-pr', prs.length >= 1);
+  add('five-prs', prs.length >= 5);
   add('balance-breakthrough', balanceBest >= 30);
   add('phase-1-finisher', phaseForDoc(doc) >= 2);
   add('phase-2-finisher', phaseForDoc(doc) >= 3);
-  add('phase-3-finisher', doc.retests.some((r) => (r as { week?: number }).week === 12));
-  add('three-day-checkin', doc.checkins.length >= 3);
-  add('week-1-finished', doc.workouts.length >= 2);
+  add('phase-3-finisher', retests.some((r) => (r as { week?: number }).week === 12));
+  add('three-day-checkin', checkins.length >= 3);
+  add('week-1-finished', workouts.length >= 2);
   return doc.badges;
 }
 
@@ -374,7 +420,7 @@ export function awardBadges(doc: ProfileDoc): string[] {
 // Companions are met gradually by this week, and companion effects only
 // apply once the companion is met. One place, so every tab agrees.
 export function currentWeekForDoc(doc: ProfileDoc): number {
-  const weeks = doc.retests.map((r) => (r as { week?: number }).week || 0);
+  const weeks = (doc.retests || []).map((r) => (r as { week?: number }).week || 0);
   const max = Math.max(0, ...weeks);
   const phase = phaseForDoc(doc);
   return max > 0 ? Math.min(12, max + 1) : phase >= 4 ? 12 : phase === 3 ? 9 : phase === 2 ? 5 : 1;

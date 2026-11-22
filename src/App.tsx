@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Component, type ReactNode } from 'react';
 import type { ProfileDoc } from './lib/store';
-import { defaultProfile, loadLocal, saveLocal, clearLocal, loadLocalAuth, saveLocalAuth, hasFullAccess, levelForXp, titleForLevel , normalizeCheckinFrequency } from './lib/store';
+import { defaultProfile, loadLocal, saveLocal, clearLocal, loadLocalAuth, saveLocalAuth, hasFullAccess, levelForXp, titleForLevel , normalizeCheckinFrequency, normalizeProfile } from './lib/store';
 import * as api from './lib/api';
 import Auth from './components/Auth';
 import Onboarding from './components/Onboarding';
@@ -15,6 +15,29 @@ import Faq from './components/Faq';
 import Coach from './components/Coach';
 
 export type Tab = 'today' | 'assessment' | 'workouts' | 'journey' | 'nutrition' | 'progress' | 'armor' | 'faq' | 'coach';
+
+/** If one tab throws while rendering, show a small card for that tab
+ * instead of blanking the whole app. The header and nav stay up, so the
+ * client can tap another tab or reload. */
+class TabErrorBoundary extends Component<{ tab: Tab; children: ReactNode }, { failed: boolean }> {
+  state = { failed: false };
+  static getDerivedStateFromError() { return { failed: true }; }
+  componentDidUpdate(prevProps: { tab: Tab }) {
+    if (prevProps.tab !== this.props.tab && this.state.failed) this.setState({ failed: false });
+  }
+  render() {
+    if (this.state.failed) {
+      return (
+        <div className="card">
+          <h3>This tab had a problem</h3>
+          <p>It did not load. Your progress is saved. Try another tab, or reload the page.</p>
+          <button className="primary" onClick={() => window.location.reload()}>Reload the page</button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 const TABS: { id: Tab; label: string; icon: string }[] = [
   { id: 'today', label: 'Today', icon: '☀' },
@@ -60,8 +83,11 @@ export default function App() {
             setAuth(meRes.user);
             const remote = await api.loadProfile();
             if (remote) {
-              setDoc(remote);
-              saveLocal(remote);
+              // Old accounts may be missing fields added later (steps,
+              // prs, progress photos, ...). Fill them in, or tabs that
+              // touch a missing field crash the whole app.
+              setDoc(normalizeProfile(remote));
+              saveLocal(normalizeProfile(remote));
               setLoading(false);
               return;
             }
@@ -72,22 +98,26 @@ export default function App() {
       }
       const localAuth = loadLocalAuth();
       if (localAuth) setAuth(localAuth);
-      setDoc(loadLocal() || defaultProfile(localAuth?.email || '', localAuth?.displayName || ''));
+      const localDoc = normalizeProfile(loadLocal());
+      localDoc.email = localDoc.email || localAuth?.email || '';
+      localDoc.displayName = localDoc.displayName || localAuth?.displayName || '';
+      setDoc(localDoc);
       setLoading(false);
     })();
   }, []);
 
   const save = (next: ProfileDoc) => {
+    const fixed = normalizeProfile(next);
     // Migrate old check-in picks: recorded video was never a check-in type,
     // and live video calls are 1 to 4 times a month, never weekly.
-    if ((next.checkinMode as string) === 'recorded-video') next.checkinMode = 'text';
-    next.checkinFrequency = normalizeCheckinFrequency(next.checkinMode, next.checkinFrequency);
-    next.lastActive = new Date().toISOString();
-    next.level = levelForXp(next.xp);
-    setDoc(next);
-    saveLocal(next);
+    if ((fixed.checkinMode as string) === 'recorded-video') fixed.checkinMode = 'text';
+    fixed.checkinFrequency = normalizeCheckinFrequency(fixed.checkinMode, fixed.checkinFrequency);
+    fixed.lastActive = new Date().toISOString();
+    fixed.level = levelForXp(fixed.xp);
+    setDoc(fixed);
+    saveLocal(fixed);
     if (serverMode && auth) {
-      api.saveProfile(next).catch(() => undefined);
+      api.saveProfile(fixed).catch(() => undefined);
     }
   };
 
@@ -156,15 +186,17 @@ export default function App() {
         {!doc.guardianPicked && tab !== 'assessment' && (
           <Onboarding ctx={ctx} />
         )}
-        {doc.guardianPicked && tab === 'today' && <Today ctx={ctx} />}
-        {tab === 'assessment' && <Assessment ctx={ctx} />}
-        {tab === 'workouts' && <Workouts ctx={ctx} />}
-        {tab === 'journey' && <Journey ctx={ctx} />}
-        {tab === 'nutrition' && <Nutrition ctx={ctx} />}
-        {tab === 'progress' && <Progress ctx={ctx} />}
-        {tab === 'armor' && <Armor ctx={ctx} />}
-        {tab === 'faq' && <Faq ctx={ctx} />}
-        {tab === 'coach' && <Coach ctx={ctx} />}
+        <TabErrorBoundary tab={tab}>
+          {doc.guardianPicked && tab === 'today' && <Today ctx={ctx} />}
+          {tab === 'assessment' && <Assessment ctx={ctx} />}
+          {tab === 'workouts' && <Workouts ctx={ctx} />}
+          {tab === 'journey' && <Journey ctx={ctx} />}
+          {tab === 'nutrition' && <Nutrition ctx={ctx} />}
+          {tab === 'progress' && <Progress ctx={ctx} />}
+          {tab === 'armor' && <Armor ctx={ctx} />}
+          {tab === 'faq' && <Faq ctx={ctx} />}
+          {tab === 'coach' && <Coach ctx={ctx} />}
+        </TabErrorBoundary>
 
         {!full && doc.guardianPicked && tab !== 'coach' && (
           <div className="card gold-frame">

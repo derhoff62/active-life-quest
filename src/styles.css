@@ -46,10 +46,10 @@ input, select, textarea {
   min-height: 48px;
 }
 label { display: block; font-weight: 600; margin: 12px 0 4px; }
-/* Bottom padding must clear the fixed nav, which is now a big 3-column,
-   3-row grid (9 tabs, each at least 64px tall) plus the safe area. */
-.app { max-width: 720px; margin: 0 auto; padding: 0 12px calc(280px + env(safe-area-inset-bottom)); }
-html { scroll-padding-bottom: calc(280px + env(safe-area-inset-bottom)); }
+/* Bottom padding must clear the fixed nav: 9 tabs in a 6-column wrap
+   (2 rows of 52px buttons) plus the safe area. */
+.app { max-width: 720px; margin: 0 auto; padding: 0 12px calc(150px + env(safe-area-inset-bottom)); }
+html { scroll-padding-bottom: calc(150px + env(safe-area-inset-bottom)); }
 @media (min-width: 900px) { .app { max-width: 860px; } }
 .banner {
   background: linear-gradient(135deg, var(--navy), var(--blue));
@@ -71,26 +71,27 @@ html { scroll-padding-bottom: calc(280px + env(safe-area-inset-bottom)); }
   border: 1px solid var(--gold); border-radius: 999px; padding: 2px 10px;
   font-size: 0.85rem; font-weight: 600;
 }
-/* Bottom nav: big, obvious, miss-proof. 3 columns x 3 rows, every tab at
-   least 64px tall with a clear icon above a bold label. Solid white bar
-   with a thick navy top border and a strong shadow, so it stands out
-   from page content. Inactive tabs are dark navy on white, never grey
-   on grey. Active tab is solid navy with white text, a gold border,
-   and a gold dot underneath the label. */
+/* Bottom nav: original size, 6-column wrap, 52px buttons. The size was
+   fine; the problem was the tabs were easy to ignore. They are obvious
+   now: dark navy bold text on solid white cards with a visible border,
+   never muted grey. Active tab is solid navy with white text, a gold
+   border, and a gold dot. Thick navy top border and a strong shadow, so
+   the bar stands out from page content. */
 .nav {
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 20;
   background: #fff; border-top: 3px solid var(--navy);
   box-shadow: 0 -6px 20px rgba(18, 69, 113, 0.25);
-  display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px;
-  padding: 10px 8px calc(10px + env(safe-area-inset-bottom));
+  display: flex; flex-wrap: wrap; gap: 6px;
+  padding: 8px 8px calc(8px + env(safe-area-inset-bottom));
 }
 .nav button {
-  position: relative; border: 1px solid var(--line); background: #fff; min-height: 64px;
-  padding: 8px 4px 7px; font-size: 0.88rem; color: var(--navy);
-  font-weight: 700; border-radius: 12px;
-  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+  position: relative; border: 1.5px solid #b9cfe2; background: #fff; min-height: 52px;
+  flex: 1 1 calc(16.666% - 6px);
+  padding: 6px 2px 5px; font-size: 0.8rem; color: var(--navy);
+  font-weight: 700; border-radius: 10px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;
 }
-.nav button .nav-icon { font-size: 1.35rem; line-height: 1; color: var(--blue); }
+.nav button .nav-icon { font-size: 1.1rem; line-height: 1; color: var(--blue); }
 .nav button .nav-label { line-height: 1.1; }
 .nav button.active {
   background: linear-gradient(135deg, var(--navy), var(--blue));
