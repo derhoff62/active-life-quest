@@ -24,11 +24,14 @@ export interface ProgressPhoto {
 
 export interface ClientMessage {
   id: string;
-  kind: 'question' | 'message';
+  kind: 'question' | 'message' | 'video-call-request';
   body: string;
   date: string;
   coachReply?: string;
   repliedAt?: string;
+  video?: AssessmentVideo;
+  callStatus?: 'requested' | 'confirmed';
+  callTime?: string;
 }
 
 export interface LogEntry {
@@ -89,7 +92,8 @@ export interface ProfileDoc {
   calorieCalcEnabled: boolean;
   largeText: boolean;
   reminderTimes: { workout: string; checkin: string; streak: string };
-  checkinFrequency: 'daily' | '3x-week' | 'weekly';
+  checkinFrequency: 'daily' | '3x-week' | 'weekly' | 'biweekly' | '1x-month' | '2x-month' | '3x-month' | '4x-month';
+  checkinMode: 'text' | 'live-call';
   trainingDays: number;
   dislikedExercises: string[];
   hurtExercises: string[];
@@ -99,6 +103,7 @@ export interface ProfileDoc {
   cesStep: Record<string, number>;
   phaseOverride: number | null;
   phase5Approved: boolean;
+  cesSheet?: { marks: string[]; notes: string; date: string };
   manaLastRefill: string;
   week13Goal: string | null;
   week13PlanRequested: boolean;
@@ -155,6 +160,7 @@ export function defaultProfile(email = '', displayName = ''): ProfileDoc {
     largeText: false,
     reminderTimes: { workout: '07:30', checkin: '20:00', streak: '18:00' },
     checkinFrequency: 'daily',
+    checkinMode: 'text',
     trainingDays: 3,
     dislikedExercises: [],
     hurtExercises: [],
@@ -213,6 +219,59 @@ export function fiberTarget(sex: string): string {
   if (sex === 'female') return 'about 25 g a day';
   if (sex === 'male') return 'about 38 g a day';
   return 'about 25 to 38 g a day';
+}
+
+export function normalizeCheckinMode(mode: string | undefined): 'text' | 'live-call' {
+  return mode === 'live-call' ? 'live-call' : 'text';
+}
+
+export function checkinModeLabel(mode: string | undefined): string {
+  if (mode === 'live-call') return 'live video call';
+  return 'text check-in in the app';
+}
+
+export function checkinFrequencyLabel(freq: string | undefined): string {
+  if (freq === '3x-week') return '3 times a week';
+  if (freq === 'weekly') return 'once a week';
+  if (freq === 'biweekly') return 'once every two weeks';
+  if (freq === '1x-month') return '1 time a month';
+  if (freq === '2x-month') return '2 times a month';
+  if (freq === '3x-month') return '3 times a month';
+  if (freq === '4x-month') return '4 times a month';
+  return 'daily';
+}
+
+/** Live video calls are 1 to 4 times a month. Text check-ins can be
+ * daily, 3 times a week, or once a week. Recorded video is NOT a check-in
+ * type: it stays only for form-check clips (assessment, and attached to a
+ * message to Derek about form). */
+export type CheckinFrequency = 'daily' | '3x-week' | 'weekly' | 'biweekly' | '1x-month' | '2x-month' | '3x-month' | '4x-month';
+export function checkinFrequenciesForMode(mode: string | undefined): { value: CheckinFrequency; label: string }[] {
+  if (mode === 'live-call') {
+    return [
+      { value: '1x-month', label: '1 time a month' },
+      { value: '2x-month', label: '2 times a month' },
+      { value: '3x-month', label: '3 times a month' },
+      { value: '4x-month', label: '4 times a month' },
+    ];
+  }
+  return [
+    { value: 'daily', label: 'Daily' },
+    { value: '3x-week', label: '3 times a week' },
+    { value: 'weekly', label: 'Once a week' },
+  ];
+}
+
+export function normalizeCheckinFrequency(mode: string | undefined, freq: string | undefined): CheckinFrequency {
+  const allowed = checkinFrequenciesForMode(mode).map((f) => f.value);
+  if (freq && allowed.includes(freq as CheckinFrequency)) return freq as CheckinFrequency;
+  return mode === 'live-call' ? '1x-month' : 'daily';
+}
+
+export function checkinPreferenceText(doc: ProfileDoc): string {
+  const mode = normalizeCheckinMode(doc.checkinMode);
+  const freq = normalizeCheckinFrequency(mode, doc.checkinFrequency);
+  return `Your check-ins: ${checkinModeLabel(mode)}, ${checkinFrequencyLabel(freq)}.`;
 }
 
 export function phaseForDoc(doc: ProfileDoc): number {

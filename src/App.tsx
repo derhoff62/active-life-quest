@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { ProfileDoc } from './lib/store';
-import { defaultProfile, loadLocal, saveLocal, clearLocal, loadLocalAuth, saveLocalAuth, hasFullAccess, levelForXp, titleForLevel } from './lib/store';
+import { defaultProfile, loadLocal, saveLocal, clearLocal, loadLocalAuth, saveLocalAuth, hasFullAccess, levelForXp, titleForLevel , normalizeCheckinFrequency } from './lib/store';
 import * as api from './lib/api';
 import Auth from './components/Auth';
 import Onboarding from './components/Onboarding';
@@ -78,6 +78,10 @@ export default function App() {
   }, []);
 
   const save = (next: ProfileDoc) => {
+    // Migrate old check-in picks: recorded video was never a check-in type,
+    // and live video calls are 1 to 4 times a month, never weekly.
+    if ((next.checkinMode as string) === 'recorded-video') next.checkinMode = 'text';
+    next.checkinFrequency = normalizeCheckinFrequency(next.checkinMode, next.checkinFrequency);
     next.lastActive = new Date().toISOString();
     next.level = levelForXp(next.xp);
     setDoc(next);

@@ -713,6 +713,317 @@ app.delete("/api/coach/videos/:userId/:key", async (c) => {
   return c.json({ ok: true });
 });
 
+// ---------- check-in / message videos ----------
+// Same R2 path as assessment videos, but for Daily check-ins and Message
+// Derek. The file goes to R2 only, never into Neon. The client attaches
+// the returned record to the check-in or message in the profile doc.
+
+function checkinVideoKeyFor(userId: string, fileName: string): string {
+  const safe = fileName.replace(/[^A-Za-z0-9._-]+/g, "-").slice(-60) || "video";
+  const ext = safe.includes(".") ? safe.slice(safe.lastIndexOf(".")) : "";
+  const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+  return `checkin/${userId}/${stamp}-${randomHex(8)}${ext}`;
+}
+
+function isOwnCheckinVideoKey(userId: string, key: string): boolean {
+  return (
+    key.startsWith(`checkin/${userId}/`) &&
+    !key.includes("..") &&
+    !key.slice(`checkin/${userId}/`.length).includes("/")
+  );
+}
+
+app.post("/api/checkin/video", async (c) => {
+  const db = getDb(c);
+  if (!db) {
+    return dbMissing(c);
+  }
+  const user = await requireSession(c, db);
+  if (!user) {
+    return c.json({ error: "You are not signed in." }, 401);
+  }
+  const bucket = c.env.VIDEOS;
+  if (!bucket) {
+    return c.json(
+      {
+        error:
+          "Video storage is not set up yet. Derek needs to enable R2 in Cloudflare and create the active-life-quest-videos bucket, then redeploy. You can still send the check-in or message without a video.",
+      },
+      503,
+    );
+  }
+  let form: FormData;
+  try {
+    form = await c.req.formData();
+  } catch {
+    return c.json({ error: "No video was attached." }, 400);
+  }
+  const file = form.get("video");
+  if (!(file instanceof File)) {
+    return c.json({ error: "No video was attached." }, 400);
+  }
+  if (!file.type.startsWith("video/")) {
+    return c.json({ error: "That file is not a video. Pick a video file." }, 400);
+  }
+  if (file.size === 0) {
+    return c.json({ error: "That video is empty. Pick a different video." }, 400);
+  }
+  if (file.size > MAX_VIDEO_BYTES) {
+    return c.json(
+      { error: "That video is over 100 MB. Pick a shorter clip." },
+      400,
+    );
+  }
+  const label =
+    typeof form.get("label") === "string" && (form.get("label") as string).trim()
+      ? (form.get("label") as string).trim().slice(0, 100)
+      : "Check-in video";
+  const weekRaw = Number(form.get("week"));
+  const week = Number.isFinite(weekRaw) && weekRaw >= 1 && weekRaw <= 13 ? Math.floor(weekRaw) : 1;
+  const key = checkinVideoKeyFor(user.id, file.name || "video.mp4");
+  try {
+    await bucket.put(key, file, {
+      httpMetadata: { contentType: file.type || "video/mp4" },
+    });
+  } catch {
+    return c.json(
+      {
+        error:
+          "The video could not be saved. Video storage may not be set up yet. You can still send the check-in or message without a video.",
+      },
+      503,
+    );
+  }
+  const video = {
+    id: randomHex(16),
+    key,
+    label,
+    date: new Date().toISOString(),
+    week,
+    sizeBytes: file.size,
+    contentType: file.type || "video/mp4",
+  };
+  return c.json({ ok: true, video }, 201);
+});
+
+// Coach-only: stream one client's check-in or message video from R2.
+app.get("/api/coach/checkin-videos/:userId/:key", async (c) => {
+  const db = getDb(c);
+  if (!db) {
+    return dbMissing(c);
+  }
+  if (!(await hasCoachSession(c, db))) {
+    return c.json({ error: "Coach sign-in is required." }, 401);
+  }
+  const userId = c.req.param("userId");
+  const fileName = c.req.param("key");
+  const key = `checkin/${userId}/${fileName}`;
+  if (!isOwnCheckinVideoKey(userId, key)) {
+    return c.json({ error: "Video not found." }, 404);
+  }
+  const bucket = c.env.VIDEOS;
+  if (!bucket) {
+    return c.json({ error: "Video storage is not set up yet." }, 503);
+  }
+  const obj = await bucket.get(key);
+  if (!obj) {
+    return c.json({ error: "Video not found." }, 404);
+  }
+  return new Response(obj.body, {
+    headers: {
+      "Content-Type": obj.httpMetadata?.contentType || "video/mp4",
+      "Content-Length": String(obj.size),
+      "Cache-Control": "private, max-age=3600",
+    },
+  });
+});
+
+// Coach-only: delete one client's check-in or message video (R2 + any
+// check-in or message record that points at it).
+app.delete("/api/coach/checkin-videos/:userId/:key", async (c) => {
+  const db = getDb(c);
+  if (!db) {
+    return dbMissing(c);
+  }
+  if (!(await hasCoachSession(c, db))) {
+    return c.json({ error: "Coach sign-in is required." }, 401);
+  }
+  const userId = c.req.param("userId");
+  const fileName = c.req.param("key");
+  const key = `checkin/${userId}/${fileName}`;
+  if (!isOwnCheckinVideoKey(userId, key)) {
+    return c.json({ error: "Video not found." }, 404);
+  }
+  const bucket = c.env.VIDEOS;
+  if (bucket) {
+    await bucket.delete(key);
+  }
+  const doc = await getProfileDoc(db, userId);
+  if (doc) {
+    const strip = (arr: Array<Record<string, unknown>> | undefined) =>
+      (arr || []).map((e) =>
+        e && typeof e === "object" && (e as Record<string, unknown>).video &&
+        ((e as Record<string, unknown>).video as Record<string, unknown>).key === key
+          ? { ...e, video: undefined }
+          : e,
+      );
+    doc.checkins = strip(doc.checkins as Array<Record<string, unknown>> | undefined) as typeof doc.checkins;
+    doc.messages = strip(doc.messages as Array<Record<string, unknown>> | undefined) as typeof doc.messages;
+    await saveProfileDoc(db, userId, doc);
+  }
+  return c.json({ ok: true });
+});
+
+// ---------- progress photos ----------
+// Optional progress photos, same R2 bucket as videos, prefix progress/.
+// Photo bytes go to R2 only, never into Neon. Metadata lives in the
+// profile doc (progressPhotos) and is Coach-visible.
+
+const MAX_PHOTO_BYTES = 10 * 1024 * 1024; // 10 MB
+
+function photoKeyFor(userId: string, fileName: string): string {
+  const safe = fileName.replace(/[^A-Za-z0-9._-]+/g, "-").slice(-60) || "photo";
+  const ext = safe.includes(".") ? safe.slice(safe.lastIndexOf(".")) : "";
+  const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+  return `progress/${userId}/${stamp}-${randomHex(8)}${ext}`;
+}
+
+function isOwnPhotoKey(userId: string, key: string): boolean {
+  return (
+    key.startsWith(`progress/${userId}/`) &&
+    !key.includes("..") &&
+    !key.slice(`progress/${userId}/`.length).includes("/")
+  );
+}
+
+app.post("/api/progress/photo", async (c) => {
+  const db = getDb(c);
+  if (!db) {
+    return dbMissing(c);
+  }
+  const user = await requireSession(c, db);
+  if (!user) {
+    return c.json({ error: "You are not signed in." }, 401);
+  }
+  const bucket = c.env.VIDEOS;
+  if (!bucket) {
+    return c.json(
+      {
+        error:
+          "Photo storage is not set up yet. Derek needs to enable R2 in Cloudflare and create the active-life-quest-videos bucket, then redeploy. You can still track progress without a photo.",
+      },
+      503,
+    );
+  }
+  let form: FormData;
+  try {
+    form = await c.req.formData();
+  } catch {
+    return c.json({ error: "No photo was attached." }, 400);
+  }
+  const file = form.get("photo");
+  if (!(file instanceof File)) {
+    return c.json({ error: "No photo was attached." }, 400);
+  }
+  if (!file.type.startsWith("image/")) {
+    return c.json({ error: "That file is not a photo. Pick an image file." }, 400);
+  }
+  if (file.size === 0) {
+    return c.json({ error: "That photo is empty. Pick a different photo." }, 400);
+  }
+  if (file.size > MAX_PHOTO_BYTES) {
+    return c.json({ error: "That photo is over 10 MB. Pick a smaller one." }, 400);
+  }
+  const note =
+    typeof form.get("note") === "string" ? (form.get("note") as string).trim().slice(0, 200) : "";
+  const key = photoKeyFor(user.id, file.name || "photo.jpg");
+  try {
+    await bucket.put(key, file, {
+      httpMetadata: { contentType: file.type || "image/jpeg" },
+    });
+  } catch {
+    return c.json({ error: "The photo could not be saved. Photo storage may not be set up yet." }, 503);
+  }
+  const doc = await getProfileDoc(db, user.id);
+  if (!doc) {
+    await bucket.delete(key);
+    return c.json({ error: "Client not found." }, 404);
+  }
+  const photo = {
+    id: randomHex(16),
+    key,
+    date: new Date().toISOString(),
+    note,
+    sizeBytes: file.size,
+    contentType: file.type || "image/jpeg",
+  };
+  const photos = Array.isArray(doc.progressPhotos) ? doc.progressPhotos : [];
+  photos.unshift(photo);
+  doc.progressPhotos = photos;
+  await saveProfileDoc(db, user.id, doc);
+  return c.json({ ok: true, photo }, 201);
+});
+
+app.get("/api/coach/photos/:userId/:key", async (c) => {
+  const db = getDb(c);
+  if (!db) {
+    return dbMissing(c);
+  }
+  if (!(await hasCoachSession(c, db))) {
+    return c.json({ error: "Coach sign-in is required." }, 401);
+  }
+  const userId = c.req.param("userId");
+  const fileName = c.req.param("key");
+  const key = `progress/${userId}/${fileName}`;
+  if (!isOwnPhotoKey(userId, key)) {
+    return c.json({ error: "Photo not found." }, 404);
+  }
+  const bucket = c.env.VIDEOS;
+  if (!bucket) {
+    return c.json({ error: "Photo storage is not set up yet." }, 503);
+  }
+  const obj = await bucket.get(key);
+  if (!obj) {
+    return c.json({ error: "Photo not found." }, 404);
+  }
+  return new Response(obj.body, {
+    headers: {
+      "Content-Type": obj.httpMetadata?.contentType || "image/jpeg",
+      "Content-Length": String(obj.size),
+      "Cache-Control": "private, max-age=3600",
+    },
+  });
+});
+
+app.delete("/api/coach/photos/:userId/:key", async (c) => {
+  const db = getDb(c);
+  if (!db) {
+    return dbMissing(c);
+  }
+  if (!(await hasCoachSession(c, db))) {
+    return c.json({ error: "Coach sign-in is required." }, 401);
+  }
+  const userId = c.req.param("userId");
+  const fileName = c.req.param("key");
+  const key = `progress/${userId}/${fileName}`;
+  if (!isOwnPhotoKey(userId, key)) {
+    return c.json({ error: "Photo not found." }, 404);
+  }
+  const bucket = c.env.VIDEOS;
+  if (bucket) {
+    await bucket.delete(key);
+  }
+  const doc = await getProfileDoc(db, userId);
+  if (doc) {
+    const photos = Array.isArray(doc.progressPhotos) ? doc.progressPhotos : [];
+    doc.progressPhotos = photos.filter(
+      (v) => v === null || typeof v !== "object" || (v as Record<string, unknown>).key !== key,
+    );
+    await saveProfileDoc(db, userId, doc);
+  }
+  return c.json({ ok: true });
+});
+
 // ---------- beta ----------
 
 app.post("/api/beta/redeem", async (c) => {
@@ -823,6 +1134,86 @@ app.post("/api/coach/pin", async (c) => {
     sessionId,
     cookieOptions(c, COACH_HOURS * 60 * 60),
   );
+  return c.json({ ok: true });
+});
+
+// Coach-only: change a client's check-in mode and frequency. Live video
+// calls are 1 to 4 times a month, never weekly.
+app.post("/api/coach/checkin-preference", async (c) => {
+  const db = getDb(c);
+  if (!db) {
+    return dbMissing(c);
+  }
+  if (!(await hasCoachSession(c, db))) {
+    return c.json({ error: "Coach sign-in is required." }, 401);
+  }
+  const body = await readJson(c);
+  const userId = body && typeof body.userId === "string" ? body.userId : "";
+  const rawMode = body && typeof body.mode === "string" ? body.mode : "";
+  const mode = rawMode === "live-call" ? "live-call" : "text";
+  const frequency = body && typeof body.frequency === "string" ? body.frequency : "";
+  if (!userId) {
+    return c.json({ error: "Pick a check-in type." }, 400);
+  }
+  const allowed = mode === "live-call" ? ["1x-month", "2x-month", "3x-month", "4x-month"] : ["daily", "3x-week", "weekly"];
+  const freq = allowed.includes(frequency) ? frequency : mode === "live-call" ? "1x-month" : "daily";
+  const doc = await getProfileDoc(db, userId);
+  if (!doc) {
+    return c.json({ error: "Client not found." }, 404);
+  }
+  doc.checkinMode = mode;
+  doc.checkinFrequency = freq;
+  await saveProfileDoc(db, userId, doc);
+  return c.json({ ok: true, mode, frequency: freq });
+});
+
+// Coach-only: approve or revoke Phase 5 for a client. Phase 5 also needs
+// a clean form retest, checked in the app.
+app.post("/api/coach/phase5", async (c) => {
+  const db = getDb(c);
+  if (!db) {
+    return dbMissing(c);
+  }
+  if (!(await hasCoachSession(c, db))) {
+    return c.json({ error: "Coach sign-in is required." }, 401);
+  }
+  const body = await readJson(c);
+  const userId = body && typeof body.userId === "string" ? body.userId : "";
+  const approved = body && body.approved === true;
+  if (!userId) {
+    return c.json({ error: "Client not found." }, 404);
+  }
+  const doc = await getProfileDoc(db, userId);
+  if (!doc) {
+    return c.json({ error: "Client not found." }, 404);
+  }
+  doc.phase5Approved = approved;
+  await saveProfileDoc(db, userId, doc);
+  return c.json({ ok: true, approved });
+});
+
+// Coach-only: save the CES assessment check sheet to the client file.
+app.post("/api/coach/ces-sheet", async (c) => {
+  const db = getDb(c);
+  if (!db) {
+    return dbMissing(c);
+  }
+  if (!(await hasCoachSession(c, db))) {
+    return c.json({ error: "Coach sign-in is required." }, 401);
+  }
+  const body = await readJson(c);
+  const userId = body && typeof body.userId === "string" ? body.userId : "";
+  const marks = Array.isArray(body?.marks) ? body.marks.filter((m: unknown) => typeof m === "string") : [];
+  const notes = body && typeof body.notes === "string" ? body.notes.trim().slice(0, 1000) : "";
+  if (!userId) {
+    return c.json({ error: "Client not found." }, 404);
+  }
+  const doc = await getProfileDoc(db, userId);
+  if (!doc) {
+    return c.json({ error: "Client not found." }, 404);
+  }
+  doc.cesSheet = { marks, notes, date: new Date().toISOString() };
+  await saveProfileDoc(db, userId, doc);
   return c.json({ ok: true });
 });
 

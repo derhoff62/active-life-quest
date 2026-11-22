@@ -145,6 +145,82 @@ export async function coachDeleteVideo(userId: string, key: string) {
   });
 }
 
+// --- Check-in / message videos (same R2 bucket, checkin/ prefix) ---
+export async function uploadCheckinVideo(file: File, label: string, week: number) {
+  const form = new FormData();
+  form.append("video", file);
+  form.append("label", label);
+  form.append("week", String(week));
+  const res = await fetch("/api/checkin/video", {
+    method: "POST",
+    body: form,
+    credentials: "same-origin",
+  });
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error((body as { error?: string }).error || `Upload failed (${res.status})`);
+  return body as {
+    ok: boolean;
+    video: { id: string; key: string; label: string; date: string; week: number; sizeBytes: number; contentType: string };
+  };
+}
+export function coachCheckinVideoUrl(userId: string, key: string) {
+  const fileName = key.split("/").pop() || "";
+  return `/api/coach/checkin-videos/${encodeURIComponent(userId)}/${encodeURIComponent(fileName)}`;
+}
+export async function coachDeleteCheckinVideo(userId: string, key: string) {
+  const fileName = key.split("/").pop() || "";
+  return req<{ ok: boolean }>(`/api/coach/checkin-videos/${encodeURIComponent(userId)}/${encodeURIComponent(fileName)}`, {
+    method: "DELETE",
+  });
+}
+
+export async function uploadProgressPhoto(file: File, note: string) {
+  const form = new FormData();
+  form.append("photo", file);
+  form.append("note", note);
+  const res = await fetch("/api/progress/photo", {
+    method: "POST",
+    body: form,
+    credentials: "same-origin",
+  });
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error((body as { error?: string }).error || `Upload failed (${res.status})`);
+  return body as {
+    ok: boolean;
+    photo: { id: string; key: string; date: string; note: string; sizeBytes: number; contentType: string };
+  };
+}
+export function coachPhotoUrl(userId: string, key: string) {
+  const fileName = key.split("/").pop() || "";
+  return `/api/coach/photos/${encodeURIComponent(userId)}/${encodeURIComponent(fileName)}`;
+}
+export async function coachDeletePhoto(userId: string, key: string) {
+  const fileName = key.split("/").pop() || "";
+  return req<{ ok: boolean }>(`/api/coach/photos/${encodeURIComponent(userId)}/${encodeURIComponent(fileName)}`, {
+    method: "DELETE",
+  });
+}
+
+export async function coachSetPhase5(userId: string, approved: boolean) {
+  return req<{ ok: boolean; approved: boolean }>('/api/coach/phase5', {
+    method: 'POST',
+    body: JSON.stringify({ userId, approved }),
+  });
+}
+export async function coachSaveCesSheet(userId: string, marks: string[], notes: string) {
+  return req<{ ok: boolean }>('/api/coach/ces-sheet', {
+    method: 'POST',
+    body: JSON.stringify({ userId, marks, notes }),
+  });
+}
+
+export async function coachSetCheckinPreference(userId: string, mode: string, frequency: string) {
+  return req<{ ok: boolean; mode: string; frequency: string }>('/api/coach/checkin-preference', {
+    method: 'POST',
+    body: JSON.stringify({ userId, mode, frequency }),
+  });
+}
+
 // --- Coach ---
 export async function coachUnlock(pin: string) {
   return req<{ ok: boolean; firstSet?: boolean }>('/api/coach/pin', {
