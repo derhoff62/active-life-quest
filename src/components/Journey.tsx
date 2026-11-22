@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import type { Ctx } from '../App';
 import { PHASES, MONSTERS, CREATURES, STORY, SPELLS, CLASSES, BOSS_ROUNDS } from '../lib/data';
-import { phaseForDoc, levelForXp, metCompanionIds } from '../lib/store';
+import { phaseForDoc, levelForXp, metCompanionIds, currentWeekForDoc } from '../lib/store';
 import GuardianAvatar from './GuardianAvatar';
+import JourneyMap from './JourneyMap';
 import CompanionAvatar, { BossAvatar } from './CompanionAvatar';
 
 const BOSS_AVATAR: Record<string, string> = {
@@ -33,6 +34,7 @@ export default function Journey({ ctx }: { ctx: Ctx }) {
     <div>
       <div className="card gold-frame">
         <h2>Your journey</h2>
+        <JourneyMap currentWeek={currentWeekForDoc(doc)} met={met} bossHp={doc.bossHp || {}} />
         <div className="map">
           <p><span className="land">Land 1: Sapphire Forest, Forest Castle, Weeks 1 to 4.</span> {phase >= 1 ? 'You are here, or past here.' : ''}</p>
           <p className={phase < 2 ? 'locked' : ''}><span className="land">Land 2: Crystal Shores, Lake Castle, Weeks 5 to 8.</span> {phase < 2 ? 'Locked until your Week 4 retest.' : 'Open.'}</p>

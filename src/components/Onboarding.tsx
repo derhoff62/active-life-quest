@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { Ctx } from '../App';
-import { CLASSES, CLASS_GOOD_FOR, CLASS_SUGGESTED_GOALS, DEFAULT_EQUIPMENT, EQUIPMENT_OPTIONS, GOAL_TYPES } from '../lib/data';
+import { CLASSES, CLASS_GOOD_FOR, CLASS_SUGGESTED_GOALS, DEFAULT_EQUIPMENT, EQUIPMENT_NOTES, EQUIPMENT_OPTIONS, GOAL_TYPES } from '../lib/data';
 import type { ClassId } from '../lib/types';
 
 const COLORS = ['Navy', 'Forest', 'Crimson', 'Gold', 'Teal'];
@@ -100,16 +100,19 @@ export default function Onboarding({ ctx }: { ctx: Ctx }) {
       <label htmlFor="g-why">Why does it matter to you? (optional)</label>
       <input id="g-why" value={why} onChange={(e) => setWhy(e.target.value)} placeholder="In your own words" />
       <label>What equipment do you have?</label>
-      <div className="row">
+      <div className="equip-list">
         {EQUIP.map((e) => (
-          <button
-            key={e}
-            type="button"
-            onClick={() => setEquipment((prev) => (prev.includes(e) ? prev.filter((x) => x !== e) : [...prev, e]))}
-            style={equipment.includes(e) ? { background: '#124571', color: '#fff' } : {}}
-          >
-            {e}
-          </button>
+          <label key={e}>
+            <input
+              type="checkbox"
+              checked={equipment.includes(e)}
+              onChange={() => setEquipment((prev) => (prev.includes(e) ? prev.filter((x) => x !== e) : [...prev, e]))}
+            />
+            <span>
+              <span className="equip-name">{e}</span>{' '}
+              <span className="equip-note">{EQUIPMENT_NOTES[e] || ''}</span>
+            </span>
+          </label>
         ))}
       </div>
       <div className="row" style={{ marginTop: 14 }}>

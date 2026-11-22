@@ -577,6 +577,23 @@ export const EQUIPMENT_OPTIONS: string[] = [
 
 export const DEFAULT_EQUIPMENT: string[] = ['Bodyweight only', 'Dumbbells'];
 
+export const EQUIPMENT_NOTES: Record<string, string> = {
+  'Bodyweight only': 'No gear needed.',
+  Dumbbells: 'Hand weights.',
+  'Resistance bands': 'Stretchy bands.',
+  Kettlebell: 'A handled weight.',
+  Barbell: 'A long bar with plates.',
+  'Cable machine': 'Pulley machine at a gym.',
+  Bench: 'A flat workout bench.',
+  'Step platform': 'A low step.',
+  'Stability ball': 'A big exercise ball.',
+  'Foam roller': 'For rolling tight muscles.',
+  'Suspension trainer': 'Straps that hang, like TRX.',
+  'Pull-up bar': 'A bar to hang from.',
+  'Leg press machine': 'A gym machine for legs.',
+  'Gym full access': 'You have everything.',
+};
+
 /** Equipment already saved, or the default for accounts made before this question existed. */
 export function effectiveEquipment(equipment: string[] | undefined | null): string[] {
   return equipment && equipment.length > 0 ? equipment : [...DEFAULT_EQUIPMENT];

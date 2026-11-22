@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Ctx } from '../App';
-import { WORKOUTS, PHASES, CES_TEMPLATES, effectiveEquipment, resolveExercise } from '../lib/data';
+import { WORKOUTS, PHASES, CES_TEMPLATES, EQUIPMENT_NOTES, effectiveEquipment, resolveExercise } from '../lib/data';
 import { phaseForDoc, hasFullAccess, metCompanionIds } from '../lib/store';
 import type { Workout } from '../lib/types';
 
@@ -268,7 +268,17 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
 
       <div className="card">
         <h3>Your equipment</h3>
-        <p>{effectiveEquipment(doc.equipment).join(', ')}. Moves you cannot do with this gear are swapped for one you can, and the swap is shown in the workout.</p>
+        <div className="equip-list">
+          {effectiveEquipment(doc.equipment).map((e) => (
+            <label key={e}>
+              <span>
+                <span className="equip-name">{e}</span>{' '}
+                <span className="equip-note">{EQUIPMENT_NOTES[e] || ''}</span>
+              </span>
+            </label>
+          ))}
+        </div>
+        <p className="small muted">Moves you cannot do with this gear are swapped for one you can, and the swap is shown in the workout.</p>
         <button onClick={() => ctx.go('assessment')}>Change my equipment in the assessment</button>
       </div>
 
