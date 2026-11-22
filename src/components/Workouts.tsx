@@ -20,7 +20,7 @@ function resolveForDoc(ex: Parameters<typeof resolveExercise>[0], doc: { equipme
 }
 
 export default function Workouts({ ctx }: { ctx: Ctx }) {
-  const { doc, update } = ctx;
+  const { doc, update, toast } = ctx;
   const [activeId, setActiveId] = useState<string | null>(doc.sessions?.workoutId || null);
   const [step, setStep] = useState(doc.sessions?.step || 0);
   const [log, setLog] = useState<Record<string, { w: string; s: string; r: string }>>(
@@ -80,6 +80,7 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
       d.xp += xp;
     });
     setNotice(`Rest day logged. +${xp} XP.${names.length ? ` Includes +5 XP from ${names.join(' and ')}.` : ''}`);
+    toast(`Rest day logged. +${xp} XP.`);
   }
 
   // Month calendar, same as Progress: navy days are trained days, green
@@ -247,7 +248,9 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
     });
     setActiveId(null);
     setLog({});
-    setNotice(`Workout saved. ${minutes} minutes, +${50 + bonus + prCount * 10} XP.${bonusNames.length ? ` Includes +5 XP from ${bonusNames.join(' and ')}.` : ''}${prCount ? ` New PR${prCount === 1 ? '' : 's'}: ${prNames.join(', ')} (+10 XP each).` : ''} Mana +2.`);
+    const savedText = `Workout saved. ${minutes} minutes, +${50 + bonus + prCount * 10} XP.${bonusNames.length ? ` Includes +5 XP from ${bonusNames.join(' and ')}.` : ''}${prCount ? ` New PR${prCount === 1 ? '' : 's'}: ${prNames.join(', ')} (+10 XP each).` : ''} Mana +2.`;
+    setNotice(savedText);
+    toast(`Workout saved. ${minutes} minutes, +${50 + bonus + prCount * 10} XP.`);
   }
 
   if (active) {
@@ -342,6 +345,7 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
                   if (!d.dislikedExercises.includes(rawEx.id)) d.dislikedExercises.push(rawEx.id);
                 });
                 setNotice(`Got it. ${rawEx.name} will be swapped out from now on.`);
+                toast(`${rawEx.name} swapped out from now on.`);
               }}
             >
               I don&apos;t like this move
@@ -352,6 +356,7 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
                   if (!d.hurtExercises.includes(rawEx.id)) d.hurtExercises.push(rawEx.id);
                 });
                 setNotice(`${rawEx.name} flagged as hurting. It will be swapped out. Sharp, new, or worsening pain: see a doctor or physical therapist, and tell Derek.`);
+                toast(`${rawEx.name} flagged. It will be swapped out.`);
               }}
             >
               This hurts
@@ -614,6 +619,7 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
                 if (xpToday) d.xp += metCompanionIds(doc).has('sylva') ? 15 : 10;
               });
               setCardioMsg(`Cardio logged: ${mins} minutes${xpToday ? ` (+10 XP${metCompanionIds(doc).has('sylva') ? ', +5 from Sylva' : ''})` : ' (already earned cardio XP today)'}.`);
+              toast(`Cardio logged: ${mins} minutes${xpToday ? ', +10 XP' : ''}.`);
               setCardioMin('');
             }}
           >
@@ -744,6 +750,7 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
                       if (x) { x.minutes = Number(editMinutes); x.duration_minutes = Number(editMinutes); }
                     });
                     setEditId(null);
+                    toast('Workout time saved.');
                   }}
                 >
                   Save time

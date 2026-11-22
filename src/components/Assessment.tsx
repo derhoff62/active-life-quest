@@ -9,7 +9,7 @@ import ExampleVideo from './ExampleVideo';
 const FINDING_LABELS: { id: FindingId; label: string }[] = CES_TEMPLATES.map((t) => ({ id: t.id, label: t.plainName }));
 
 export default function Assessment({ ctx }: { ctx: Ctx }) {
-  const { doc, update } = ctx;
+  const { doc, update, toast } = ctx;
   const [step, setStep] = useState(0);
   const [parq, setParq] = useState<string[]>([]);
   const [flags, setFlags] = useState<string[]>([]);
@@ -76,6 +76,7 @@ export default function Assessment({ ctx }: { ctx: Ctx }) {
         d.assessmentVideos = [r.video, ...videos];
       });
       setVideoMsg('Video uploaded. Derek can watch it in Coach.');
+      toast('Video uploaded. Derek can watch it in Coach.');
       if (videoPreview) URL.revokeObjectURL(videoPreview);
       setVideoPreview('');
       setVideoFile(null);
@@ -138,6 +139,7 @@ export default function Assessment({ ctx }: { ctx: Ctx }) {
     });
     setDone(true);
     setRetaking(false);
+    toast(firstTime ? 'Assessment done. +60 XP.' : 'Assessment updated.');
   }
 
   function startRetake() {
@@ -249,6 +251,7 @@ export default function Assessment({ ctx }: { ctx: Ctx }) {
                 awardBadges(d);
               });
               setRetestMsg(retestClean ? `Retest saved. You move to Phase ${nextPhase}. Your corrective steps moved one step forward. +20 XP.` : 'Retest saved. Keep working on your patterns. You stay in your current phase until a clean retest.');
+              toast(retestClean ? `Retest saved. You move to Phase ${nextPhase}. +20 XP.` : 'Retest saved.');
             }}
           >
             Save my retest
@@ -266,12 +269,13 @@ export default function Assessment({ ctx }: { ctx: Ctx }) {
                 onClick={() => {
                   update((d) => { d.phaseOverride = ph; d.week13Goal = `Cycle back to Phase ${ph}`; });
                   setRetestMsg(`Week 13 plan saved. You are back in Phase ${ph}.`);
+                  toast(`Week 13 plan saved. You are back in Phase ${ph}.`);
                 }}
               >
                 Cycle back to Phase {ph}
               </button>
             ))}
-            <button type="button" onClick={() => { update((d) => { d.week13Goal = 'Keep going in Phase 4 or 5'; }); setRetestMsg('Week 13 plan saved. Keep going in Phase 4 or 5.'); }}>Stay in Phase 4 or 5</button>
+            <button type="button" onClick={() => { update((d) => { d.week13Goal = 'Keep going in Phase 4 or 5'; }); setRetestMsg('Week 13 plan saved. Keep going in Phase 4 or 5.'); toast('Week 13 plan saved. Keep going in Phase 4 or 5.'); }}>Stay in Phase 4 or 5</button>
           </div>
           {doc.week13Goal && <p className="small">Your Week 13 plan: {doc.week13Goal}</p>}
         </div>

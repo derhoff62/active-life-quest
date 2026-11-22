@@ -7,7 +7,7 @@ import type { AssessmentVideo } from '../lib/store';
 import GuardianAvatar from './GuardianAvatar';
 
 export default function Today({ ctx }: { ctx: Ctx }) {
-  const { doc, update, go } = ctx;
+  const { doc, update, go, toast } = ctx;
   const [msgMode, setMsgMode] = useState<'question' | 'message'>('question');
   const [msgBody, setMsgBody] = useState('');
   const [checkinNote, setCheckinNote] = useState('');
@@ -28,6 +28,13 @@ export default function Today({ ctx }: { ctx: Ctx }) {
   const [callWhen, setCallWhen] = useState('');
   const [callTopic, setCallTopic] = useState('');
   const [callMsg, setCallMsg] = useState('');
+  // Short busy guard on the once-a-day XP buttons: the form disappears
+  // after the first tap, but a fast double-tap before React re-renders
+  // could log twice. Disabled + "Saving…" also tells the client the tap
+  // landed, instead of the button sitting still.
+  const [checkinBusy, setCheckinBusy] = useState(false);
+  const [sleepBusy, setSleepBusy] = useState(false);
+  const [questBusy, setQuestBusy] = useState(false);
 
   const phase = phaseForDoc(doc);
   const phaseInfo = PHASES.find((p) => p.phase === phase);
@@ -78,6 +85,7 @@ export default function Today({ ctx }: { ctx: Ctx }) {
       });
       d.xp += quillBonus ? 10 : 5;
     });
+    toast(quillBonus ? 'Message sent. +10 XP.' : 'Message sent. +5 XP.');
     setMsgBody('');
     setMsgVideo(null);
   }
@@ -110,6 +118,7 @@ export default function Today({ ctx }: { ctx: Ctx }) {
       const r = await api.uploadCheckinVideo(msgVideoFile, 'Form-check video', currentWeekForDoc(doc));
       setMsgVideo(r.video);
       setMsgVideoMsg('Video uploaded. It will go with your message.');
+      toast('Video uploaded. It will go with your message.');
       if (msgVideoPreview) URL.revokeObjectURL(msgVideoPreview);
       setMsgVideoPreview('');
       setMsgVideoFile(null);
@@ -141,6 +150,7 @@ export default function Today({ ctx }: { ctx: Ctx }) {
     setCallWhen('');
     setCallTopic('');
     setCallMsg('Request sent. Derek will reply within one business day to set a time and send the call link.');
+    toast('Video call request sent.');
   }
 
   return (
@@ -173,7 +183,7 @@ export default function Today({ ctx }: { ctx: Ctx }) {
       {doc.nudges.filter((n) => !n.read).map((n) => (
         <div className="notice" key={n.id}>
           <strong>From Derek:</strong> {n.text}
-          <div><button onClick={() => update((d) => { const x = d.nudges.find((y) => y.id === n.id); if (x) x.read = true; })}>Got it</button></div>
+          <div><button onClick={() => { update((d) => { const x = d.nudges.find((y) => y.id === n.id); if (x) x.read = true; }); toast('Noted.'); }}>Got it</button></div>
         </div>
       ))}
 
@@ -182,7 +192,7 @@ export default function Today({ ctx }: { ctx: Ctx }) {
           <strong>Unfinished workout:</strong> you left a workout partway. Pick it back up where you left off.
           <div className="row" style={{ marginTop: 8 }}>
             <button className="primary" onClick={() => go('workouts')}>Resume workout</button>
-            <button onClick={() => update((d) => { d.sessions = null; })}>Discard it</button>
+            <button onClick={() => { update((d) => { d.sessions = null; }); toast('Unfinished workout discarded.'); }}>Discard it</button>
           </div>
         </div>
       )}
@@ -193,7 +203,7 @@ export default function Today({ ctx }: { ctx: Ctx }) {
           <p>{WEEK13.text}</p>
           <div className="row">
             {WEEK13.options.map((o) => (
-              <button key={o} onClick={() => update((d) => { d.week13Goal = o; d.week13PlanRequested = true; })}>{o}</button>
+              <button key={o} onClick={() => { update((d) => { d.week13Goal = o; d.week13PlanRequested = true; }); toast('Week 13 plan saved. Derek has your request.'); }}>{o}</button>
             ))}
           </div>
           <p className="small muted">Nothing resets. Your streak, level, badges, and PRs stay.</p>
@@ -251,7 +261,11 @@ export default function Today({ ctx }: { ctx: Ctx }) {
             <button
               className="primary"
               style={{ marginTop: 10 }}
+              disabled={checkinBusy}
               onClick={() => {
+                if (checkinBusy) return;
+                setCheckinBusy(true);
+                window.setTimeout(() => setCheckinBusy(false), 700);
                 // One check-in a day earns XP. Tapping again tomorrow earns
                 // again. Tapping twice today does not.
                 update((d) => {
@@ -261,9 +275,10 @@ export default function Today({ ctx }: { ctx: Ctx }) {
                 });
                 setCheckinNote('');
                 setCheckinMsg('Check-in logged. +10 XP, and +1 mana for checking in.');
+                toast(met.has('hoot') ? 'Check-in logged. +15 XP.' : 'Check-in logged. +10 XP.');
               }}
             >
-              Log check-in (+10 XP{met.has('hoot') ? ', +5 from Hoot' : ''})
+              {checkinBusy ? 'Saving…' : `Log check-in (+10 XP${met.has('hoot') ? ', +5 from Hoot' : ''})`}
             </button>
             {checkinMsg && <p className="ok">{checkinMsg}</p>}
           </div>
@@ -280,14 +295,19 @@ export default function Today({ ctx }: { ctx: Ctx }) {
           return (
             <button
               className="primary"
+              disabled={questBusy}
               onClick={() => {
+                if (questBusy) return;
+                setQuestBusy(true);
+                window.setTimeout(() => setQuestBusy(false), 700);
                 update((d) => {
                   d.quests.push({ id: `q${Date.now()}`, date: new Date().toISOString(), kind: 'balance-quest' });
                   d.xp += 15;
                 });
+                toast('Balance quest done. +15 XP.');
               }}
             >
-              I did my 2-minute balance quest
+              {questBusy ? 'Saving…' : 'I did my 2-minute balance quest'}
             </button>
           );
         })()}
@@ -336,16 +356,21 @@ export default function Today({ ctx }: { ctx: Ctx }) {
             <button
               className="primary"
               style={{ marginTop: 10 }}
+              disabled={sleepBusy}
               onClick={() => {
+                if (sleepBusy) return;
+                setSleepBusy(true);
+                window.setTimeout(() => setSleepBusy(false), 700);
                 update((d) => {
                   d.sleep.push({ id: `s${Date.now()}`, date: new Date().toISOString(), hours: sleepH });
                   d.xp += met.has('mara') ? 10 : 5;
                   d.mana = Math.min(10, d.mana + 1);
                 });
                 setSleepMsg('Sleep logged. +5 XP, and +1 mana for resting well.');
+                toast(met.has('mara') ? 'Sleep logged. +10 XP.' : 'Sleep logged. +5 XP.');
               }}
             >
-              Log sleep (+5 XP{met.has('mara') ? ', +5 from Mara' : ''})
+              {sleepBusy ? 'Saving…' : `Log sleep (+5 XP${met.has('mara') ? ', +5 from Mara' : ''})`}
             </button>
             {sleepMsg && <p className="ok">{sleepMsg}</p>}
           </div>
@@ -456,6 +481,7 @@ export default function Today({ ctx }: { ctx: Ctx }) {
               d.mainGoal = gt?.label || '';
             });
             setGoalMsg(`Goal saved: ${gt?.label || 'your goal'}.`);
+            toast(`Goal saved: ${gt?.label || 'your goal'}.`);
             setGoalWhy('');
           }}
         >

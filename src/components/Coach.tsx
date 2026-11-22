@@ -14,7 +14,7 @@ interface ClientRow {
 }
 
 export default function Coach({ ctx }: { ctx: Ctx }) {
-  const { doc, update } = ctx;
+  const { doc, update, toast } = ctx;
   const [pin, setPin] = useState('');
   const [unlocked, setUnlocked] = useState(false);
   const [firstSet, setFirstSet] = useState(false);
@@ -41,6 +41,19 @@ export default function Coach({ ctx }: { ctx: Ctx }) {
   const [betaMsg, setBetaMsg] = useState('');
   const [resetToken, setResetToken] = useState('');
   const [resetMsg, setResetMsg] = useState('');
+  // Busy key for server calls: the button shows "Saving…" / "Sending…"
+  // and cannot be double-tapped while the request is in flight. Without
+  // this a tap on a slow call looks dead, and a second tap double-saves.
+  const [busy, setBusy] = useState('');
+  async function withBusy(key: string, fn: () => Promise<void>) {
+    if (busy) return;
+    setBusy(key);
+    try {
+      await fn();
+    } finally {
+      setBusy('');
+    }
+  }
 
   useEffect(() => {
     if (unlocked && api.getMode() === 'server') {
@@ -86,8 +99,8 @@ export default function Coach({ ctx }: { ctx: Ctx }) {
         {error && <div className="error">{error}</div>}
         <label htmlFor="coach-pin">Coach PIN (4 to 8 digits)</label>
         <input id="coach-pin" inputMode="numeric" value={pin} onChange={(e) => setPin(e.target.value)} maxLength={8} />
-        <button className="primary" style={{ marginTop: 12, width: '100%' }} onClick={unlock}>
-          Unlock Coach
+        <button className="primary" style={{ marginTop: 12, width: '100%' }} onClick={() => withBusy('unlock', unlock)} disabled={busy === 'unlock'}>
+          {busy === 'unlock' ? 'Unlocking…' : 'Unlock Coach'}
         </button>
         <p className="small muted">First time here? Enter a new PIN and it becomes your Coach PIN.</p>
       </div>
@@ -144,18 +157,20 @@ export default function Coach({ ctx }: { ctx: Ctx }) {
             <button
               className="primary"
               style={{ marginTop: 10 }}
-              onClick={async () => {
+              onClick={() => withBusy('beta', async () => {
                 try {
                   await api.coachSetBeta(newBetaCode.trim().toUpperCase() || betaInfo?.code || 'ACTIVEBETA', Number(newBetaUses) || 25, newBetaExpires);
                   const s = await api.coachSettings();
                   setBetaInfo(s);
                   setBetaMsg('Beta code updated.');
+                  toast('Beta code updated.');
                 } catch {
                   setBetaMsg('That could not be saved. Check the code, uses, and expiry.');
                 }
-              }}
+              })}
+              disabled={busy === 'beta'}
             >
-              Save beta code
+              {busy === 'beta' ? 'Saving…' : 'Save beta code'}
             </button>
             {betaMsg && <p className="ok">{betaMsg}</p>}
           </div>
@@ -204,6 +219,7 @@ export default function Coach({ ctx }: { ctx: Ctx }) {
                       setClients((prev) => prev.map((cl) => (cl.id === selected.id ? { ...cl, data: patch(cl.data) } : cl)));
                       setSelected((prev) => (prev ? { ...prev, data: patch(prev.data) } : prev));
                       setPrefMsg('Check-in preference saved.');
+                      toast('Check-in preference saved.');
                     } catch { setPrefMsg('That could not be saved. Try again.'); }
                   }}
                   style={selected.data.checkinMode === v ? { background: '#124571', color: '#fff' } : {}}
@@ -229,6 +245,7 @@ export default function Coach({ ctx }: { ctx: Ctx }) {
                           setClients((prev) => prev.map((cl) => (cl.id === selected.id ? { ...cl, data: patch(cl.data) } : cl)));
                           setSelected((prev) => (prev ? { ...prev, data: patch(prev.data) } : prev));
                           setPrefMsg('Check-in preference saved.');
+                          toast('Check-in preference saved.');
                         } catch { setPrefMsg('That could not be saved. Try again.'); }
                       }}
                       style={selected.data.checkinFrequency === v ? { background: '#124571', color: '#fff' } : {}}
@@ -279,7 +296,8 @@ export default function Coach({ ctx }: { ctx: Ctx }) {
             <div className="row">
               <button
                 className="primary"
-                onClick={async () => {
+                disabled={busy === 'phase5'}
+                onClick={() => withBusy('phase5', async () => {
                   try {
                     if (api.getMode() === 'server') await api.coachSetPhase5(selected.id, true);
                     if (api.getMode() === 'local') update((d) => { d.phase5Approved = true; });
@@ -287,13 +305,15 @@ export default function Coach({ ctx }: { ctx: Ctx }) {
                     setClients((prev) => prev.map((cl) => (cl.id === selected.id ? { ...cl, data: patch(cl.data) } : cl)));
                     setSelected((prev) => (prev ? { ...prev, data: patch(prev.data) } : prev));
                     setPhase5Msg('Phase 5 approved. The client also needs a clean retest to open it.');
+                    toast('Phase 5 approved.');
                   } catch { setPhase5Msg('That could not be saved. Try again.'); }
-                }}
+                })}
               >
-                Approve Phase 5
+                {busy === 'phase5' ? 'Saving…' : 'Approve Phase 5'}
               </button>
               <button
-                onClick={async () => {
+                disabled={busy === 'phase5'}
+                onClick={() => withBusy('phase5', async () => {
                   try {
                     if (api.getMode() === 'server') await api.coachSetPhase5(selected.id, false);
                     if (api.getMode() === 'local') update((d) => { d.phase5Approved = false; });
@@ -301,10 +321,11 @@ export default function Coach({ ctx }: { ctx: Ctx }) {
                     setClients((prev) => prev.map((cl) => (cl.id === selected.id ? { ...cl, data: patch(cl.data) } : cl)));
                     setSelected((prev) => (prev ? { ...prev, data: patch(prev.data) } : prev));
                     setPhase5Msg('Phase 5 approval removed.');
+                    toast('Phase 5 approval removed.');
                   } catch { setPhase5Msg('That could not be saved. Try again.'); }
-                }}
+                })}
               >
-                Remove approval
+                {busy === 'phase5' ? 'Saving…' : 'Remove approval'}
               </button>
             </div>
             {phase5Msg && <p className="ok">{phase5Msg}</p>}
@@ -317,7 +338,8 @@ export default function Coach({ ctx }: { ctx: Ctx }) {
             <div className="row">
               <button
                 className="primary"
-                onClick={async () => {
+                disabled={busy === 'calorie'}
+                onClick={() => withBusy('calorie', async () => {
                   try {
                     if (api.getMode() === 'server') await api.coachSetCalorieCalc(selected.id, true);
                     if (api.getMode() === 'local') update((d) => { d.calorieCalcEnabled = true; });
@@ -325,13 +347,15 @@ export default function Coach({ ctx }: { ctx: Ctx }) {
                     setClients((prev) => prev.map((cl) => (cl.id === selected.id ? { ...cl, data: patch(cl.data) } : cl)));
                     setSelected((prev) => (prev ? { ...prev, data: patch(prev.data) } : prev));
                     setPhase5Msg('Calorie calculator turned on for this client.');
+                    toast('Calorie calculator turned on.');
                   } catch { setPhase5Msg('That could not be saved. Try again.'); }
-                }}
+                })}
               >
-                Turn calculator on
+                {busy === 'calorie' ? 'Saving…' : 'Turn calculator on'}
               </button>
               <button
-                onClick={async () => {
+                disabled={busy === 'calorie'}
+                onClick={() => withBusy('calorie', async () => {
                   try {
                     if (api.getMode() === 'server') await api.coachSetCalorieCalc(selected.id, false);
                     if (api.getMode() === 'local') update((d) => { d.calorieCalcEnabled = false; });
@@ -339,10 +363,11 @@ export default function Coach({ ctx }: { ctx: Ctx }) {
                     setClients((prev) => prev.map((cl) => (cl.id === selected.id ? { ...cl, data: patch(cl.data) } : cl)));
                     setSelected((prev) => (prev ? { ...prev, data: patch(prev.data) } : prev));
                     setPhase5Msg('Calorie calculator turned off for this client.');
+                    toast('Calorie calculator turned off.');
                   } catch { setPhase5Msg('That could not be saved. Try again.'); }
-                }}
+                })}
               >
-                Turn calculator off
+                {busy === 'calorie' ? 'Saving…' : 'Turn calculator off'}
               </button>
             </div>
           </div>
@@ -354,17 +379,19 @@ export default function Coach({ ctx }: { ctx: Ctx }) {
               <>
                 <button
                   className="primary"
-                  onClick={async () => {
+                  disabled={busy === 'reset'}
+                  onClick={() => withBusy('reset', async () => {
                     try {
                       const r = await api.coachResetToken(selected.id);
                       setResetToken(r.token);
                       setResetMsg('Code made. Send it to the client. It works for 1 hour, once.');
+                      toast('Reset code made.');
                     } catch {
                       setResetMsg('That could not be made. Try again.');
                     }
-                  }}
+                  })}
                 >
-                  Make a reset code
+                  {busy === 'reset' ? 'Making a code…' : 'Make a reset code'}
                 </button>
                 {resetToken && <p className="notice" style={{ wordBreak: 'break-all' }}>Reset code: <strong>{resetToken}</strong></p>}
                 {resetMsg && <p className="ok">{resetMsg}</p>}
@@ -531,7 +558,8 @@ export default function Coach({ ctx }: { ctx: Ctx }) {
                   <input value={callFor === m.id ? callTime : ''} onChange={(e) => { setCallFor(m.id); setCallTime(e.target.value); }} placeholder="e.g. Tue Nov 24 at 10:00 AM" />
                   <button
                     className="primary"
-                    onClick={async () => {
+                    disabled={busy === 'call'}
+                    onClick={() => withBusy('call', async () => {
                       if (!callTime.trim()) return;
                       if (api.getMode() === 'server') await api.coachReply(selected.id, m.id, `Video call confirmed for ${callTime.trim()}. I will send the call link before then.`);
                       if (api.getMode() === 'local') {
@@ -545,9 +573,10 @@ export default function Coach({ ctx }: { ctx: Ctx }) {
                       setSelected((prev) => (prev ? { ...prev, data: { ...prev.data, messages: patch(prev.data.messages) } } : prev));
                       setCallTime('');
                       setCallFor('');
-                    }}
+                      toast('Video call confirmed.');
+                    })}
                   >
-                    Confirm this call
+                    {busy === 'call' ? 'Confirming…' : 'Confirm this call'}
                   </button>
                 </div>
               )}
@@ -556,7 +585,8 @@ export default function Coach({ ctx }: { ctx: Ctx }) {
                   <input value={replyFor === m.id ? reply : ''} onChange={(e) => { setReplyFor(m.id); setReply(e.target.value); }} placeholder="Reply to this client" />
                   <button
                     className="primary"
-                    onClick={async () => {
+                    disabled={busy === 'reply'}
+                    onClick={() => withBusy('reply', async () => {
                       if (!reply.trim()) return;
                       if (api.getMode() === 'server') await api.coachReply(selected.id, m.id, reply.trim());
                       if (api.getMode() === 'local') {
@@ -568,9 +598,10 @@ export default function Coach({ ctx }: { ctx: Ctx }) {
                       setClients((prev) => prev.map((c) => (c.id === selected.id ? { ...c, data: { ...c.data, messages: c.data.messages.map((x) => (x.id === m.id ? { ...x, coachReply: reply.trim(), repliedAt: new Date().toISOString() } : x)) } } : c)));
                       setReply('');
                       setReplyFor('');
-                    }}
+                      toast('Reply sent.');
+                    })}
                   >
-                    Send reply
+                    {busy === 'reply' ? 'Sending…' : 'Send reply'}
                   </button>
                 </div>
               )}
@@ -581,7 +612,8 @@ export default function Coach({ ctx }: { ctx: Ctx }) {
           <div className="row">
             <input value={nudge} onChange={(e) => setNudge(e.target.value)} placeholder="e.g. Nice work this week, keep the streak going" />
             <button
-              onClick={async () => {
+              disabled={busy === 'nudge'}
+              onClick={() => withBusy('nudge', async () => {
                 if (!nudge.trim()) return;
                 if (api.getMode() === 'server') await api.coachNudge(selected.id, nudge.trim());
                 if (api.getMode() === 'local') {
@@ -591,9 +623,10 @@ export default function Coach({ ctx }: { ctx: Ctx }) {
                 }
                 setNudge('');
                 setNudgeMsg('Nudge sent. It shows on the client Today screen.');
-              }}
+                toast('Nudge sent.');
+              })}
             >
-              Send nudge
+              {busy === 'nudge' ? 'Sending…' : 'Send nudge'}
             </button>
           </div>
           {nudgeMsg && <p className="ok">{nudgeMsg}</p>}
@@ -617,7 +650,8 @@ export default function Coach({ ctx }: { ctx: Ctx }) {
           <button
             className="primary"
             style={{ marginTop: 10 }}
-            onClick={async () => {
+            disabled={busy === 'ces'}
+            onClick={() => withBusy('ces', async () => {
               if (cesMarks.length === 0) {
                 setCesSaved('Mark at least one finding first.');
                 return;
@@ -629,12 +663,13 @@ export default function Coach({ ctx }: { ctx: Ctx }) {
                 setClients((prev) => prev.map((cl) => (cl.id === selected.id ? { ...cl, data: { ...cl.data, cesSheet: sheet } } : cl)));
                 setSelected((prev) => (prev ? { ...prev, data: { ...prev.data, cesSheet: sheet } } : prev));
                 setCesSaved(`Saved ${cesMarks.length} ${cesMarks.length === 1 ? 'finding' : 'findings'} to ${selected.displayName || selected.email}'s file.`);
+                toast('Check sheet saved.');
               } catch {
                 setCesSaved('That could not be saved. Try again.');
               }
-            }}
+            })}
           >
-            Save check sheet
+            {busy === 'ces' ? 'Saving…' : 'Save check sheet'}
           </button>
           {cesSaved && <p className="ok">{cesSaved}</p>}
           {selected.data.cesSheet && <p className="small muted">Last saved check sheet: {new Date(selected.data.cesSheet.date).toLocaleDateString()} · {selected.data.cesSheet.marks.length} findings.</p>}

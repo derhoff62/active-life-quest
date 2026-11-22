@@ -6,7 +6,7 @@ import { GOAL_TYPES, BADGES } from '../lib/data';
 import { levelForXp, titleForLevel, metCompanionIds, loggedToday, daysInMonthSet, streakDaysForDoc } from '../lib/store';
 
 export default function Progress({ ctx }: { ctx: Ctx }) {
-  const { doc, update } = ctx;
+  const { doc, update, toast } = ctx;
   // Old accounts saved before a field existed have it as undefined.
   // App normalizes on load, but never crash this tab on a missing list.
   const workouts = doc.workouts || [];
@@ -34,6 +34,7 @@ export default function Progress({ ctx }: { ctx: Ctx }) {
   const [showGoals, setShowGoals] = useState(true);
   const [cardioMsg, setCardioMsg] = useState('');
   const [weighMsg, setWeighMsg] = useState('');
+  const [cardioBusy, setCardioBusy] = useState(false);
 
   const level = levelForXp(doc.xp);
   // Streak is worked out from the dates of workouts and check-ins, so it
@@ -76,7 +77,7 @@ export default function Progress({ ctx }: { ctx: Ctx }) {
           <span><strong>Bigger text</strong></span>
           <Switch
             checked={doc.largeText}
-            onChange={() => update((d) => { d.largeText = !d.largeText; })}
+            onChange={() => { update((d) => { d.largeText = !d.largeText; }); toast(doc.largeText ? 'Bigger text turned off.' : 'Bigger text turned on.'); }}
             label="Bigger text on or off"
             hint="Tap to turn bigger text on or off"
           />
@@ -167,6 +168,7 @@ export default function Progress({ ctx }: { ctx: Ctx }) {
             update((d) => {
               d.measurements.push({ id: `m${Date.now()}`, date: new Date().toISOString(), waist: waist || undefined, clothesFit: clothes });
             });
+            toast('Measurement logged.');
             setWaist('');
             setClothes('');
           }}
@@ -197,6 +199,7 @@ export default function Progress({ ctx }: { ctx: Ctx }) {
             });
             setWeigh('');
             setWeighMsg('Weigh-in logged.');
+            toast('Weigh-in logged.');
           }}
         >
           Log weigh-in
@@ -216,22 +219,27 @@ export default function Progress({ ctx }: { ctx: Ctx }) {
           <input inputMode="numeric" value={cardioMin} onChange={(e) => { setCardioMin(e.target.value); setCardioMsg(''); }} placeholder="Minutes" style={{ maxWidth: 140 }} aria-label="Cardio minutes" />
           <button
             className="primary"
+            disabled={cardioBusy}
             onClick={() => {
+              if (cardioBusy) return;
               const mins = Number(cardioMin);
               if (!cardioMin || Number.isNaN(mins) || mins <= 0 || mins > 600) {
                 setCardioMsg('Enter minutes from 1 to 600.');
                 return;
               }
+              setCardioBusy(true);
+              window.setTimeout(() => setCardioBusy(false), 700);
               const xpToday = !loggedToday(doc.cardio);
               update((d) => {
                 d.cardio.push({ id: `k${Date.now()}`, date: new Date().toISOString(), minutes: mins, zone: 'Zone 2' });
                 if (xpToday) d.xp += metCompanionIds(doc).has('sylva') ? 15 : 10;
               });
               setCardioMsg(`Cardio logged: ${mins} minutes${xpToday ? ` (+10 XP${metCompanionIds(doc).has('sylva') ? ', +5 from Sylva' : ''})` : ' (already earned cardio XP today)'}.`);
+              toast(`Cardio logged: ${mins} minutes${xpToday ? ', +10 XP' : ''}.`);
               setCardioMin('');
             }}
           >
-            Log cardio (+10 XP{metCompanionIds(doc).has('sylva') ? ', +5 from Sylva' : ''})
+            {cardioBusy ? 'Saving…' : `Log cardio (+10 XP${metCompanionIds(doc).has('sylva') ? ', +5 from Sylva' : ''})`}
           </button>
         </div>
         {cardioMsg && <p className={cardioMsg.startsWith('Enter') ? 'error' : 'ok'}>{cardioMsg}</p>}
@@ -250,6 +258,7 @@ export default function Progress({ ctx }: { ctx: Ctx }) {
               update((d) => {
                 d.steps.push({ id: `s${Date.now()}`, date: new Date().toISOString(), steps: Number(stepsToday) });
               });
+              toast(`Steps logged: ${stepsToday}.`);
               setStepsToday('');
             }}
           >
@@ -304,6 +313,7 @@ export default function Progress({ ctx }: { ctx: Ctx }) {
                       d.progressPhotos = [r.photo, ...(d.progressPhotos || [])];
                     });
                     setPhotoMsg('Photo uploaded. Derek can see it in Coach.');
+                    toast('Photo uploaded. Derek can see it in Coach.');
                     if (photoPreview) URL.revokeObjectURL(photoPreview);
                     setPhotoPreview('');
                     setPhotoFile(null);

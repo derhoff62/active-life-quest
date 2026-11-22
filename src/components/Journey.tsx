@@ -13,7 +13,7 @@ const BOSS_AVATAR: Record<string, string> = {
 };
 
 export default function Journey({ ctx }: { ctx: Ctx }) {
-  const { doc, update } = ctx;
+  const { doc, update, toast } = ctx;
   const [showStory, setShowStory] = useState(false);
   const [bossHit, setBossHit] = useState('');
   const phase = phaseForDoc(doc);
@@ -99,6 +99,7 @@ export default function Journey({ ctx }: { ctx: Ctx }) {
                     ? `${boss.name} beaten. You move on to the next land.`
                     : `${s.name} dealt ${s.damage} damage. Boss took ${s.damage} damage, ${newHp} of ${boss.maxHp} HP left.${emberBonus ? ' Ember cheers you on (+5 XP).' : ''}`,
                 );
+                toast(newHp === 0 ? `${boss.name} beaten.` : `${s.name} hit. ${newHp} of ${boss.maxHp} HP left.`);
               }}
             >
               {s.name} ({s.cost} mana)

@@ -12,6 +12,8 @@ import Nutrition from './components/Nutrition';
 import Progress from './components/Progress';
 import Armor from './components/Armor';
 import Faq from './components/Faq';
+import ToastHost from './components/Toast';
+import { showToast } from './lib/toast';
 import Coach from './components/Coach';
 
 export type Tab = 'today' | 'assessment' | 'workouts' | 'journey' | 'nutrition' | 'progress' | 'armor' | 'faq' | 'coach';
@@ -58,6 +60,8 @@ export interface Ctx {
   go: (t: Tab) => void;
   auth: { email: string; displayName: string } | null;
   serverMode: boolean;
+  /** Show a short toast at the top of the screen ("Saved", "+10 XP"). */
+  toast: (msg: string) => void;
 }
 
 export default function App() {
@@ -83,16 +87,35 @@ export default function App() {
           const meRes = await api.me();
           if (meRes.user) {
             setAuth(meRes.user);
-            const remote = await api.loadProfile();
+            // Load the server profile, with one retry. A single failed
+            // fetch used to fall straight through to an empty local
+            // profile, so right after sign-in the app flashed 0 XP with
+            // "Pick my guardian" and assessment-not-done, even though
+            // the real profile (60 XP, guardian picked) was on the
+            // server. Never render an empty default as if it were the
+            // user's real profile: stay on the loading screen until the
+            // server profile has actually answered.
+            let remote = await api.loadProfile();
+            if (!remote) {
+              await new Promise((r) => window.setTimeout(r, 900));
+              remote = await api.loadProfile();
+            }
             if (remote) {
-              // Old accounts may be missing fields added later (steps,
-              // prs, progress photos, ...). Fill them in, or tabs that
-              // touch a missing field crash the whole app.
               setDoc(normalizeProfile(remote));
               saveLocal(normalizeProfile(remote));
               setLoading(false);
               return;
             }
+            // No server profile yet (a brand-new account): only use the
+            // local copy if it actually holds progress. Otherwise start
+            // from a fresh default, which is the correct first-run state.
+            const local = normalizeProfile(loadLocal());
+            const hasLocal = local.guardianPicked || local.xp > 0 || local.assessmentDone || local.workouts.length > 0;
+            local.email = local.email || meRes.user.email;
+            local.displayName = local.displayName || meRes.user.displayName;
+            setDoc(hasLocal ? local : { ...local, email: meRes.user.email, displayName: meRes.user.displayName });
+            setLoading(false);
+            return;
           }
         } catch {
           /* fall through to local */
@@ -155,12 +178,13 @@ export default function App() {
     );
   }
 
-  const ctx: Ctx = { doc, save, update, go, auth, serverMode };
+  const ctx: Ctx = { doc, save, update, go, auth, serverMode, toast: showToast };
 
   if (!auth) {
     return (
       <div className={doc.largeText ? 'large-text' : ''}>
         <div className="app">
+          <ToastHost />
           <Auth
             onAuth={(a) => {
               setAuth(a);
@@ -186,6 +210,7 @@ export default function App() {
   return (
     <div className={doc.largeText ? 'large-text' : ''}>
       <div className="app">
+        <ToastHost />
         <div className="banner">
           <h1>Active Life Quest</h1>
           <p>
@@ -220,6 +245,7 @@ export default function App() {
                   update((d) => {
                     d.trialStartedAt = d.trialStartedAt || new Date().toISOString();
                   });
+                  showToast('Trial started. 14 days free.');
                 }}
               >
                 Start my 14-day trial
@@ -252,6 +278,7 @@ export default function App() {
                         d.betaRedeemed = true;
                       });
                       setBetaMsg('Beta access unlocked. Welcome to the quest.');
+                      showToast('Beta access unlocked. Welcome to the quest.');
                       setShowBeta(false);
                       setBetaCode('');
                     } else {

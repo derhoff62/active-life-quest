@@ -18,7 +18,7 @@ const MACRO_ICONS: Record<string, string> = {
 };
 
 export default function Nutrition({ ctx }: { ctx: Ctx }) {
-  const { doc, update } = ctx;
+  const { doc, update, toast } = ctx;
   const gw = doc.body.goalWeightLb;
   const enabled = doc.nutritionEnabled;
 
@@ -30,7 +30,7 @@ export default function Nutrition({ ctx }: { ctx: Ctx }) {
           <h2 style={{ margin: 0 }}>Nutrition, optional, always</h2>
           <Switch
             checked={enabled}
-            onChange={() => update((d) => { d.nutritionEnabled = !d.nutritionEnabled; })}
+            onChange={() => { update((d) => { d.nutritionEnabled = !d.nutritionEnabled; }); toast(enabled ? 'Nutrition turned off.' : 'Nutrition turned on.'); }}
             label="Nutrition on or off"
             hint="Tap to turn Nutrition on or off"
           />

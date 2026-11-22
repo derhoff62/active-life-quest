@@ -111,7 +111,7 @@ export default function Auth({ onAuth }: { onAuth: (a: { email: string; displayN
           )}
           <div style={{ marginTop: 14 }}>
             <button className="primary" type="submit" disabled={busy} style={{ width: '100%' }}>
-              {busy ? 'Please wait...' : mode === 'signup' ? 'Create account' : mode === 'login' ? 'Sign in' : mode === 'forgot' ? 'Request a reset code' : 'Set new password'}
+              {busy ? (mode === 'signup' ? 'Creating your account…' : mode === 'login' ? 'Signing you in…' : mode === 'forgot' ? 'Requesting a reset code…' : 'Setting your new password…') : mode === 'signup' ? 'Create account' : mode === 'login' ? 'Sign in' : mode === 'forgot' ? 'Request a reset code' : 'Set new password'}
             </button>
           </div>
         </form>
