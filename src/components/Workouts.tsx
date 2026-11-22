@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Ctx } from '../App';
 import { WORKOUTS, CORE_BALANCE_WORKOUT, REFERENCE_TRACKS, PHASES, PHASE_WEEKLY_SETS, daysForTime, splitForDays, CES_TEMPLATES, EQUIPMENT_NOTES, effectiveEquipment, resolveExercise, findExerciseByName, CLASS_WORKOUT_FOCUS, applyClassFocus, GOAL_FINISHERS } from '../lib/data';
-import { phaseForDoc, hasFullAccess, metCompanionIds, lastTimeFor, awardBadges } from '../lib/store';
+import { phaseForDoc, hasFullAccess, metCompanionIds, lastTimeFor, awardBadges, loggedToday, daysInMonthSet } from '../lib/store';
 import type { Workout } from '../lib/types';
+import ExampleVideo from './ExampleVideo';
 
 function resolveForDoc(ex: Parameters<typeof resolveExercise>[0], doc: { equipment: string[]; dislikedExercises?: string[]; hurtExercises?: string[] }) {
   const disliked = (doc.dislikedExercises || []).includes(ex.id) || (doc.hurtExercises || []).includes(ex.id);
@@ -22,7 +23,9 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
   const { doc, update } = ctx;
   const [activeId, setActiveId] = useState<string | null>(doc.sessions?.workoutId || null);
   const [step, setStep] = useState(doc.sessions?.step || 0);
-  const [log, setLog] = useState<Record<string, { w: string; s: string; r: string }>>({});
+  const [log, setLog] = useState<Record<string, { w: string; s: string; r: string }>>(
+    (doc.sessions?.log as Record<string, { w: string; s: string; r: string }>) || {},
+  );
   const [restLeft, setRestLeft] = useState(0);
   const [restRunning, setRestRunning] = useState(false);
   const [showHow, setShowHow] = useState<string | null>(null);
@@ -62,6 +65,11 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
   const weeklySets = PHASE_WEEKLY_SETS[phase] || '6 to 10';
 
   function logRestDay() {
+    // One rest day logged a day. Tapping again does not earn again.
+    if (restLoggedToday) {
+      setNotice('Rest day already logged today.');
+      return;
+    }
     const m = metCompanionIds(doc);
     let xp = 5;
     const names: string[] = [];
@@ -75,11 +83,16 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
   }
 
   // Month calendar, same as Progress: navy days are trained days, green
-  // days are active rest days.
+  // days are active rest days. Only entries from this month light up:
+  // a workout on the 15th last month must not light up the 15th now.
   const nowCal = new Date();
   const daysInMonth = new Date(nowCal.getFullYear(), nowCal.getMonth() + 1, 0).getDate();
-  const trainedDays = new Set(doc.workouts.map((w) => new Date(String(w.date)).getDate()));
-  const restDays = new Set(doc.quests.filter((q) => (q as { kind?: string }).kind === 'rest-day').map((q) => new Date(String(q.date)).getDate()));
+  const trainedDays = daysInMonthSet(doc.workouts, nowCal.getFullYear(), nowCal.getMonth());
+  const restDays = daysInMonthSet(
+    doc.quests.filter((q) => (q as { kind?: string }).kind === 'rest-day'),
+    nowCal.getFullYear(),
+    nowCal.getMonth(),
+  );
   const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
   const cardioThisWeek = doc.cardio
     .filter((c) => new Date(String(c.date)).getTime() >= weekAgo)
@@ -161,12 +174,16 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
       return;
     }
     setNotice('');
+    // Resume where the client left off: keep the saved step and the
+    // weights and reps already logged, instead of starting over.
+    const saved = doc.sessions?.workoutId === w.id ? doc.sessions : null;
     setActiveId(w.id);
     setFinisherDone(false);
-    setStep(doc.sessions?.workoutId === w.id ? doc.sessions.step : 0);
+    setStep(saved ? saved.step : 0);
+    setLog((saved?.log as Record<string, { w: string; s: string; r: string }>) || {});
     startedAt.current = Date.now();
     update((d) => {
-      d.sessions = { workoutId: w.id, step: 0, log: {}, startedAt: new Date().toISOString() };
+      d.sessions = { workoutId: w.id, step: saved ? saved.step : 0, log: saved ? saved.log : {}, startedAt: new Date().toISOString() };
     });
   }
 
@@ -182,9 +199,10 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
     if (met.has('bram') && workoutsThisWeek === 0) { bonus += 5; bonusNames.push('Bram'); }
     if (met.has('ash') && workoutsThisWeek >= 1) { bonus += 5; bonusNames.push('Ash'); }
     if (met.has('rowan') && minutes >= active.minutes * 0.8) { bonus += 5; bonusNames.push('Rowan'); }
-    // Personal records: heavier weight or more reps than the last time on
-    // the same move. Each new PR is +10 XP and shows on Progress. A PR
-    // counts every time you beat your last logged weight, not just once.
+    // Personal records: heavier weight, or the same weight for more reps,
+    // than the last time on the same move. Each new PR is +10 XP and shows
+    // on Progress. A PR counts every time you beat your last logged weight,
+    // not just once.
     let prCount = 0;
     const prNames: string[] = [];
     for (const ex of active.exercises) {
@@ -193,7 +211,9 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
       const prev = lastTimeFor(doc, ex.id);
       const w = Number(entry.w);
       const prevW = prev ? Number(prev.w) : 0;
-      if (w > prevW) {
+      const r = Number(entry.r) || 0;
+      const prevR = prev ? Number(prev.r) : 0;
+      if (w > prevW || (w === prevW && w > 0 && r > prevR)) {
         prCount += 1;
         prNames.push(ex.name);
       }
@@ -217,7 +237,8 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
         const w = Number(entry.w);
         const prev = doc.prs.filter((pr) => pr.exercise === ex.name);
         const best = prev.length ? Math.max(...prev.map((pr) => pr.weight)) : 0;
-        if (w > best) {
+        const bestRepsAtBest = prev.filter((pr) => pr.weight === best).reduce((m, pr) => Math.max(m, pr.reps), 0);
+        if (w > best || (w === best && w > 0 && (Number(entry.r) || 0) > bestRepsAtBest)) {
           d.prs.push({ exercise: ex.name, weight: w, reps: Number(entry.r) || 0, date: new Date().toISOString() });
         }
       }
@@ -310,10 +331,7 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
             )}
             {ex.swap && <p><strong>Swap:</strong> {ex.swap}</p>}
             {ex.videoUrl && (
-              <>
-                <video src={ex.videoUrl} controls playsInline preload="metadata" style={{ width: '100%', maxHeight: 320, borderRadius: 8 }} />
-                {ex.videoLabel && <p className="small muted">Video: {ex.videoLabel}</p>}
-              </>
+              <ExampleVideo src={ex.videoUrl} label={ex.videoLabel} />
             )}
           </details>
           {last && <p className="small">Last time: {last.w ? `${last.w} lb` : ''}{last.w && last.r ? ' x ' : ''}{last.r ? `${last.r} reps` : ''}</p>}
@@ -378,7 +396,7 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
             <div className="timer">{Math.floor(restLeft / 60)}:{String(restLeft % 60).padStart(2, '0')}</div>
             <div className="row" style={{ justifyContent: 'center' }}>
               <button onClick={() => { setRestLeft(ex.restSec); setRestRunning(true); }}>Start ({ex.restSec}s)</button>
-              <button onClick={() => setRestRunning((v) => !v)}>{restRunning ? 'Pause' : 'Resume'}</button>
+              <button disabled={!restRunning && restLeft === 0} onClick={() => setRestRunning((v) => !v)}>{restRunning ? 'Pause' : 'Resume'}</button>
               <button onClick={() => setRestLeft((v) => v + 30)}>+30s</button>
               <button onClick={() => { setRestLeft(0); setRestRunning(false); }}>Skip</button>
             </div>
@@ -510,8 +528,22 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
       {doc.sessions && (
         <div className="card gold-frame">
           <h3>Resume your workout</h3>
-          <p>You left {WORKOUTS.find((w) => w.id === doc.sessions?.workoutId)?.title || 'a workout'} partway.</p>
-          <button className="primary" onClick={() => startWorkout(WORKOUTS.find((w) => w.id === doc.sessions?.workoutId) || WORKOUTS[0])}>Resume</button>
+          <p>You left {(() => {
+            const sid = doc.sessions?.workoutId || '';
+            return ALL_WORKOUTS.find((w) => w.id === sid)?.title || REFERENCE_TRACKS.find((t) => t.id === sid)?.name || 'a workout';
+          })()} partway.</p>
+          <button
+            className="primary"
+            onClick={() => {
+              const sid = doc.sessions?.workoutId || '';
+              const w = ALL_WORKOUTS.find((x) => x.id === sid);
+              if (w) { startWorkout(w); return; }
+              const track = REFERENCE_TRACKS.find((t) => t.id === sid);
+              if (track) startWorkout({ id: track.id, title: track.name, phase, day: 'Reference track', minutes: track.minutes, exercises: track.exercises, note: track.blurb });
+            }}
+          >
+            Resume
+          </button>
         </div>
       )}
 
@@ -565,23 +597,30 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
         <div className="progress-bar"><div style={{ width: `${Math.min(100, (cardioThisWeek / 300) * 100)}%` }} /></div>
         <p className="small muted">Milestones at 150, then 200, then 300 minutes. Zone 2, easy enough to talk. High intensity counts double: log the doubled minutes.</p>
         <div className="row">
-          <input inputMode="numeric" value={cardioMin} onChange={(e) => setCardioMin(e.target.value)} placeholder="Minutes" style={{ maxWidth: 140 }} aria-label="Cardio minutes" />
+          <input inputMode="numeric" value={cardioMin} onChange={(e) => { setCardioMin(e.target.value); setCardioMsg(''); }} placeholder="Minutes" style={{ maxWidth: 140 }} aria-label="Cardio minutes" />
           <button
             className="primary"
             onClick={() => {
-              if (!cardioMin) return;
+              const mins = Number(cardioMin);
+              if (!cardioMin || Number.isNaN(mins) || mins <= 0 || mins > 600) {
+                setCardioMsg('Enter minutes from 1 to 600.');
+                return;
+              }
+              // Minutes always count. XP is once a day: logging twice does
+              // not earn twice.
+              const xpToday = !loggedToday(doc.cardio);
               update((d) => {
-                d.cardio.push({ id: `k${Date.now()}`, date: new Date().toISOString(), minutes: Number(cardioMin), zone: 'Zone 2' });
-                d.xp += metCompanionIds(doc).has('sylva') ? 15 : 10;
+                d.cardio.push({ id: `k${Date.now()}`, date: new Date().toISOString(), minutes: mins, zone: 'Zone 2' });
+                if (xpToday) d.xp += metCompanionIds(doc).has('sylva') ? 15 : 10;
               });
-              setCardioMsg(`Cardio logged: ${cardioMin} minutes (+10 XP${metCompanionIds(doc).has('sylva') ? ', +5 from Sylva' : ''}).`);
+              setCardioMsg(`Cardio logged: ${mins} minutes${xpToday ? ` (+10 XP${metCompanionIds(doc).has('sylva') ? ', +5 from Sylva' : ''})` : ' (already earned cardio XP today)'}.`);
               setCardioMin('');
             }}
           >
             Log cardio (+10 XP)
           </button>
         </div>
-        {cardioMsg && <p className="ok">{cardioMsg}</p>}
+        {cardioMsg && <p className={cardioMsg.startsWith('Enter') ? 'error' : 'ok'}>{cardioMsg}</p>}
       </div>
 
       <div className="card">
@@ -604,10 +643,9 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
             </button>
           ))}
         </div>
-        <p><strong>{splitForDays(doc.trainingDays || 3).label}</strong></p>
-        {splitForDays(doc.trainingDays || 3).days.map((day) => {
-          const wid = day.workoutId === 'core-balance-mobility' ? day.workoutId : `p${Math.min(phase, 5)}${day.workoutId.slice(2)}`;
-          const w = ALL_WORKOUTS.find((x) => x.id === wid) || ALL_WORKOUTS.find((x) => x.id === day.workoutId);
+        <p><strong>{splitForDays(doc.trainingDays || 3, phase).label}</strong></p>
+        {splitForDays(doc.trainingDays || 3, phase).days.map((day) => {
+          const w = ALL_WORKOUTS.find((x) => x.id === day.workoutId);
           return (
             <p key={day.name} className="small" style={{ margin: '4px 0' }}>
               {day.name}: {w ? w.title : day.workoutId}

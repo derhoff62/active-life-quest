@@ -634,52 +634,59 @@ export const FOCUS_AREAS: { id: string; label: string }[] = [
 // ------------------------------------------------- WEEKLY SPLITS
 // Training days per week, 2 to 6, with real splits. The split only
 // names the day. The workouts themselves are the phase workouts, the
-// 15-minute track, and the Core, Balance and Mobility day.
+// 15-minute track, and the Core, Balance and Mobility day. The labels
+// are honest about what actually runs: phase workouts are full-body A
+// and B, so a 4-day week alternates A and B, it is not an Upper / Lower
+// split (no upper-only or lower-only workout exists in the app). The
+// workout ids follow the client's phase.
 
 export interface SplitDay { name: string; workoutId: string; }
-export function splitForDays(days: number): { label: string; days: SplitDay[] } {
+export function splitForDays(days: number, phase = 1): { label: string; days: SplitDay[] } {
+  const p = Math.min(Math.max(phase, 1), 5);
+  const a = `p${p}a`;
+  const b = `p${p}b`;
   if (days <= 3) {
     return {
       label: 'Full-body, 2 to 3 days a week',
       days: [
-        { name: 'Day 1: Full-body A', workoutId: 'p1a' },
-        { name: 'Day 2: Full-body B', workoutId: 'p1b' },
-        ...(days >= 3 ? [{ name: 'Day 3: Full-body A', workoutId: 'p1a' }] : []),
+        { name: 'Day 1: Full-body A', workoutId: a },
+        { name: 'Day 2: Full-body B', workoutId: b },
+        ...(days >= 3 ? [{ name: 'Day 3: Full-body A', workoutId: a }] : []),
       ],
     };
   }
   if (days === 4) {
     return {
-      label: 'Upper / Lower, 4 days a week',
+      label: 'Full-body A and B, 4 days a week',
       days: [
-        { name: 'Day 1: Upper body', workoutId: 'p1a' },
-        { name: 'Day 2: Lower body', workoutId: 'p1b' },
-        { name: 'Day 3: Upper body', workoutId: 'p1a' },
-        { name: 'Day 4: Lower body', workoutId: 'p1b' },
+        { name: 'Day 1: Full-body A', workoutId: a },
+        { name: 'Day 2: Full-body B', workoutId: b },
+        { name: 'Day 3: Full-body A', workoutId: a },
+        { name: 'Day 4: Full-body B', workoutId: b },
       ],
     };
   }
   if (days === 5) {
     return {
-      label: 'Upper / Lower plus Core, Balance and Mobility, 5 days a week',
+      label: 'Full-body A and B plus Core, Balance and Mobility, 5 days a week',
       days: [
-        { name: 'Day 1: Upper body', workoutId: 'p1a' },
-        { name: 'Day 2: Lower body', workoutId: 'p1b' },
-        { name: 'Day 3: Upper body', workoutId: 'p1a' },
-        { name: 'Day 4: Lower body', workoutId: 'p1b' },
+        { name: 'Day 1: Full-body A', workoutId: a },
+        { name: 'Day 2: Full-body B', workoutId: b },
+        { name: 'Day 3: Full-body A', workoutId: a },
+        { name: 'Day 4: Full-body B', workoutId: b },
         { name: 'Day 5: Core, Balance and Mobility', workoutId: 'core-balance-mobility' },
       ],
     };
   }
   return {
-    label: 'Push / Pull / Legs twice, 6 days a week',
+    label: 'Full-body A and B, 6 days a week',
     days: [
-      { name: 'Day 1: Push', workoutId: 'p1a' },
-      { name: 'Day 2: Pull', workoutId: 'p1b' },
-      { name: 'Day 3: Legs', workoutId: 'p1a' },
-      { name: 'Day 4: Push', workoutId: 'p1b' },
-      { name: 'Day 5: Pull', workoutId: 'p1a' },
-      { name: 'Day 6: Legs', workoutId: 'p1b' },
+      { name: 'Day 1: Full-body A', workoutId: a },
+      { name: 'Day 2: Full-body B', workoutId: b },
+      { name: 'Day 3: Full-body A', workoutId: a },
+      { name: 'Day 4: Full-body B', workoutId: b },
+      { name: 'Day 5: Full-body A', workoutId: a },
+      { name: 'Day 6: Full-body B', workoutId: b },
     ],
   };
 }

@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import type { Ctx } from '../App';
 import * as api from '../lib/api';
-import { PHASES, WORKOUTS, WEEK13, CLASS_GOOD_FOR } from '../lib/data';
-import { phaseForDoc, hasFullAccess, recoveryScore, levelForXp, titleForLevel, metCompanionIds, currentWeekForDoc, checkinPreferenceText, checkinFrequenciesForMode, normalizeCheckinFrequency } from '../lib/store';
+import { PHASES, WORKOUTS, WEEK13, CLASS_GOOD_FOR, GOAL_TYPES } from '../lib/data';
+import { phaseForDoc, recoveryScore, levelForXp, titleForLevel, metCompanionIds, currentWeekForDoc, checkinPreferenceText, checkinFrequenciesForMode, normalizeCheckinFrequency, loggedToday } from '../lib/store';
 import type { AssessmentVideo } from '../lib/store';
 import GuardianAvatar from './GuardianAvatar';
 
@@ -11,11 +11,14 @@ export default function Today({ ctx }: { ctx: Ctx }) {
   const [msgMode, setMsgMode] = useState<'question' | 'message'>('question');
   const [msgBody, setMsgBody] = useState('');
   const [checkinNote, setCheckinNote] = useState('');
+  const [checkinMsg, setCheckinMsg] = useState('');
   const [energy, setEnergy] = useState(7);
   const [sleepH, setSleepH] = useState(7);
   const [soreness, setSoreness] = useState(3);
-  const [showCheckin, setShowCheckin] = useState(false);
-  const [showSleep, setShowSleep] = useState(false);
+  const [sleepMsg, setSleepMsg] = useState('');
+  const [goalPick, setGoalPick] = useState('');
+  const [goalWhy, setGoalWhy] = useState('');
+  const [goalMsg, setGoalMsg] = useState('');
   const [msgVideoFile, setMsgVideoFile] = useState<File | null>(null);
   const [msgVideoPreview, setMsgVideoPreview] = useState('');
   const [msgVideoUploading, setMsgVideoUploading] = useState(false);
@@ -28,12 +31,28 @@ export default function Today({ ctx }: { ctx: Ctx }) {
 
   const phase = phaseForDoc(doc);
   const phaseInfo = PHASES.find((p) => p.phase === phase);
-  const full = hasFullAccess(doc);
-  const nextWorkout = WORKOUTS.find((w) => w.id === 'day1-first') || WORKOUTS.find((w) => w.phase === phase);
+  // Next workout rotates through the phase workouts instead of always
+  // showing Day 1, even after many workouts.
+  const phaseWorkouts = WORKOUTS.filter((w) => w.phase === phase && (w.id === 'day1-first' || w.id.startsWith(`p${phase}`)));
+  const lastWorkoutId = doc.workouts.length ? String(doc.workouts[doc.workouts.length - 1].workoutId || '') : '';
+  const lastIdx = phaseWorkouts.findIndex((w) => w.id === lastWorkoutId);
+  const nextWorkout =
+    doc.workouts.length === 0
+      ? WORKOUTS.find((w) => w.id === 'day1-first')
+      : phaseWorkouts[(lastIdx + 1) % Math.max(1, phaseWorkouts.length)] || WORKOUTS.find((w) => w.phase === phase);
   const unfinished = doc.sessions;
   const week12Done = doc.retests.some((r) => (r as { week?: number }).week === 12);
   const lastSleep = doc.sleep[doc.sleep.length - 1] as { hours?: number } | undefined;
-  const rec = recoveryScore(lastSleep?.hours ?? 7, soreness, energy, true);
+  // Recovery score comes from the last check-in you actually logged, not
+  // from the slider positions. Until the first check-in, it uses last
+  // night's sleep and a neutral middle for energy and soreness.
+  const lastCheckin = doc.checkins[doc.checkins.length - 1] as { energy?: number; sleepHours?: number; soreness?: number } | undefined;
+  const rec = recoveryScore(
+    lastCheckin?.sleepHours ?? lastSleep?.hours ?? 7,
+    lastCheckin?.soreness ?? 3,
+    lastCheckin?.energy ?? 7,
+    !!lastCheckin,
+  );
   const level = levelForXp(doc.xp);
   // XP into the current level: thresholds are 100, 125, 150, ... per level.
   let xpIntoLevel = doc.xp;
@@ -103,6 +122,12 @@ export default function Today({ ctx }: { ctx: Ctx }) {
 
   function sendCallRequest() {
     if (!callWhen.trim() && !callTopic.trim()) return;
+    // One open request at a time: a second request while Derek has not
+    // answered the first one just makes a pile in Coach.
+    if (doc.messages.some((m) => m.kind === 'video-call-request' && m.callStatus !== 'confirmed')) {
+      setCallMsg('You already have a video call request waiting. Derek will reply within one business day.');
+      return;
+    }
     update((d) => {
       d.messages.unshift({
         id: `m${Date.now()}`,
@@ -182,11 +207,10 @@ export default function Today({ ctx }: { ctx: Ctx }) {
       )}
 
       <div className="card">
-        <div className="row space">
-          <h3 style={{ margin: 0 }}>Daily check-in</h3>
-          <button onClick={() => setShowCheckin((v) => !v)}>{showCheckin ? 'Close' : 'Open'}</button>
-        </div>
-        <p className="muted small">Recovery score today: {rec}/100. Sleep 40, aches 25, energy 25, rest rhythm 10.</p>
+        <h3 style={{ margin: 0 }}>Daily check-in</h3>
+        <p className="muted small">
+          Recovery score from your last check-in: {lastCheckin ? `${rec}/100` : 'not set yet, log your first check-in below'}. Sleep 40, aches 25, energy 25, rest rhythm 10.
+        </p>
         <p className="small">Your daily check-in is in the app. Complete your tasks for the day, then log how it went here.</p>
         <p className="small"><strong>{checkinPreferenceText(doc)}</strong></p>
         <label>How do you want to check in with Derek?</label>
@@ -214,7 +238,9 @@ export default function Today({ ctx }: { ctx: Ctx }) {
         {doc.checkinMode === 'text' && (
           <p className="small muted">Daily only. Your check-in is in the app every day. There is nothing else to pick for text check-ins.</p>
         )}
-        {showCheckin && (
+        {loggedToday(doc.checkins) ? (
+          <p className="small ok">Check-in logged today. Come back tomorrow for the next one.</p>
+        ) : (
           <div>
             <label>Energy (1 to 10): {energy}</label>
             <input type="range" min={1} max={10} value={energy} onChange={(e) => setEnergy(Number(e.target.value))} />
@@ -226,16 +252,20 @@ export default function Today({ ctx }: { ctx: Ctx }) {
               className="primary"
               style={{ marginTop: 10 }}
               onClick={() => {
+                // One check-in a day earns XP. Tapping again tomorrow earns
+                // again. Tapping twice today does not.
                 update((d) => {
                   d.checkins.push({ id: `c${Date.now()}`, date: new Date().toISOString(), energy, sleepHours: sleepH, soreness, note: checkinNote });
                   d.xp += met.has('hoot') ? 15 : 10;
+                  d.mana = Math.min(10, d.mana + 1);
                 });
                 setCheckinNote('');
-                setShowCheckin(false);
+                setCheckinMsg('Check-in logged. +10 XP, and +1 mana for checking in.');
               }}
             >
               Log check-in (+10 XP{met.has('hoot') ? ', +5 from Hoot' : ''})
             </button>
+            {checkinMsg && <p className="ok">{checkinMsg}</p>}
           </div>
         )}
       </div>
@@ -295,12 +325,11 @@ export default function Today({ ctx }: { ctx: Ctx }) {
       </div>
 
       <div className="card">
-        <div className="row space">
-          <h3 style={{ margin: 0 }}>Sleep and recovery</h3>
-          <button onClick={() => setShowSleep((v) => !v)}>{showSleep ? 'Close' : 'Log sleep'}</button>
-        </div>
+        <h3>Sleep and recovery</h3>
         <p className="muted small">Last night: {lastSleep?.hours ?? 'not logged yet'} hours.</p>
-        {showSleep && (
+        {loggedToday(doc.sleep) ? (
+          <p className="small ok">Sleep logged today. Log again tomorrow morning.</p>
+        ) : (
           <div>
             <label>Hours slept: {sleepH}</label>
             <input type="range" min={0} max={12} step={0.5} value={sleepH} onChange={(e) => setSleepH(Number(e.target.value))} />
@@ -311,12 +340,14 @@ export default function Today({ ctx }: { ctx: Ctx }) {
                 update((d) => {
                   d.sleep.push({ id: `s${Date.now()}`, date: new Date().toISOString(), hours: sleepH });
                   d.xp += met.has('mara') ? 10 : 5;
+                  d.mana = Math.min(10, d.mana + 1);
                 });
-                setShowSleep(false);
+                setSleepMsg('Sleep logged. +5 XP, and +1 mana for resting well.');
               }}
             >
               Log sleep (+5 XP{met.has('mara') ? ', +5 from Mara' : ''})
             </button>
+            {sleepMsg && <p className="ok">{sleepMsg}</p>}
           </div>
         )}
       </div>
@@ -393,14 +424,45 @@ export default function Today({ ctx }: { ctx: Ctx }) {
         <button onClick={() => go('journey')}>Meet them on Journey</button>
       </div>
 
-      {!full && (
-        <div className="card">
-          <h3>Your plan</h3>
-          <p>Phase {phase}: {phaseInfo?.name}. {phaseInfo?.description}</p>
-          <p className="small muted">{phaseInfo?.why}</p>
-          {nextWorkout && <p className="small">Next workout: {nextWorkout.title}, about {nextWorkout.minutes} minutes.</p>}
-        </div>
-      )}
+      <div className="card">
+        <h3>Your plan</h3>
+        <p>Phase {phase}: {phaseInfo?.name}. {phaseInfo?.description}</p>
+        <p className="small muted">{phaseInfo?.why}</p>
+        {nextWorkout && <p className="small">Next workout: {nextWorkout.title}, about {nextWorkout.minutes} minutes.</p>}
+      </div>
+
+      <div className="card">
+        <h3>My goal</h3>
+        {doc.goals.length > 0 && (
+          <p className="small">Your main goal now: <strong>{doc.goals[0].label}</strong>{doc.goals[0].why ? `, ${doc.goals[0].why}` : ''}.</p>
+        )}
+        {doc.goals.length === 0 && <p className="small muted">No goal picked yet. Pick one here and it shapes your plan.</p>}
+        <label htmlFor="today-goal">What is your main goal?</label>
+        <select id="today-goal" value={goalPick || doc.goals[0]?.type || 'weight-loss'} onChange={(e) => setGoalPick(e.target.value)}>
+          {GOAL_TYPES.map((g) => (
+            <option key={g.id} value={g.id}>{g.label}</option>
+          ))}
+        </select>
+        <label htmlFor="today-why">Why does it matter to you? (optional)</label>
+        <input id="today-why" value={goalWhy} onChange={(e) => setGoalWhy(e.target.value)} placeholder="In your own words" />
+        <button
+          className="primary"
+          style={{ marginTop: 10 }}
+          onClick={() => {
+            const type = goalPick || doc.goals[0]?.type || 'weight-loss';
+            const gt = GOAL_TYPES.find((g) => g.id === type);
+            update((d) => {
+              d.goals = [{ type: type as never, label: gt?.label || 'My goal', why: goalWhy, started: new Date().toISOString() }];
+              d.mainGoal = gt?.label || '';
+            });
+            setGoalMsg(`Goal saved: ${gt?.label || 'your goal'}.`);
+            setGoalWhy('');
+          }}
+        >
+          Save my goal
+        </button>
+        {goalMsg && <p className="ok">{goalMsg}</p>}
+      </div>
     </div>
   );
 }

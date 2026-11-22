@@ -327,6 +327,59 @@ export function refillMana(doc: ProfileDoc): void {
   }
 }
 
+/** True when the list has an entry dated today (local date). Used to stop
+ * the same daily reward being earned over and over by tapping again. */
+export function loggedToday(entries: { date?: string }[] | undefined, kind?: string): boolean {
+  const today = new Date().toISOString().slice(0, 10);
+  return (entries || []).some((e) => {
+    if (kind && (e as { kind?: string }).kind !== kind) return false;
+    return String(e.date || '').slice(0, 10) === today;
+  });
+}
+
+/** Day numbers (1-31) of entries that fall in the given month and year.
+ * A calendar must never light up a day just because an old entry shares
+ * the same day number in a different month. */
+export function daysInMonthSet(entries: { date?: string }[] | undefined, year: number, month: number): Set<number> {
+  const out = new Set<number>();
+  for (const e of entries || []) {
+    const d = new Date(String(e.date || ''));
+    if (!Number.isNaN(d.getTime()) && d.getFullYear() === year && d.getMonth() === month) out.add(d.getDate());
+  }
+  return out;
+}
+
+/** Current streak: consecutive days ending today or yesterday with a
+ * workout or a check-in. Worked out from the dates, so it can never get
+ * stuck at 0 the way the stored streakDays field did. */
+export function streakDaysForDoc(doc: ProfileDoc): number {
+  const days = new Set<string>();
+  for (const w of doc.workouts || []) days.add(String(w.date || '').slice(0, 10));
+  for (const c of doc.checkins || []) days.add(String(c.date || '').slice(0, 10));
+  let streak = 0;
+  const d = new Date();
+  // A streak is still alive if the last active day was yesterday.
+  if (!days.has(d.toISOString().slice(0, 10))) d.setDate(d.getDate() - 1);
+  while (days.has(d.toISOString().slice(0, 10))) {
+    streak += 1;
+    d.setDate(d.getDate() - 1);
+  }
+  return streak;
+}
+
+/** Consecutive days of check-ins ending today or yesterday. */
+export function checkinStreakDays(doc: ProfileDoc): number {
+  const days = new Set((doc.checkins || []).map((c) => String(c.date || '').slice(0, 10)));
+  let streak = 0;
+  const d = new Date();
+  if (!days.has(d.toISOString().slice(0, 10))) d.setDate(d.getDate() - 1);
+  while (days.has(d.toISOString().slice(0, 10))) {
+    streak += 1;
+    d.setDate(d.getDate() - 1);
+  }
+  return streak;
+}
+
 /** Last logged weight/reps for an exercise, from workout history. */
 export function lastTimeFor(doc: ProfileDoc, exerciseId: string): { w: string; r: string } | null {
   const workouts = doc.workouts || [];
@@ -397,27 +450,36 @@ export function awardBadges(doc: ProfileDoc): string[] {
   const workouts = doc.workouts || [];
   const cardio = doc.cardio || [];
   const prs = doc.prs || [];
-  const checkins = doc.checkins || [];
   const retests = doc.retests || [];
   if (!Array.isArray(doc.badges)) doc.badges = [];
   const workoutsWeek = workouts.filter((w) => new Date(String(w.date)).getTime() >= weekAgo).length;
   const cardioWeek = cardio
     .filter((c) => new Date(String(c.date)).getTime() >= weekAgo)
     .reduce((s, c) => s + Number(c.minutes || 0), 0);
-  const balanceBest = Math.max(doc.balanceBaseline?.left || 0, doc.balanceBaseline?.right || 0);
   const add = (id: string, ok: boolean) => { if (ok && !doc.badges.includes(id)) doc.badges.push(id); };
-  add('week-1-finished', workouts.length >= 1);
+  // Week 1 Finished means a full first week has passed with at least one
+  // workout, not just the first workout logged.
+  const joinedMs = new Date(doc.joinedAt || Date.now()).getTime();
+  add('week-1-finished', workouts.length >= 1 && Date.now() - joinedMs >= 7 * 24 * 60 * 60 * 1000);
   add('three-in-a-row', workoutsWeek >= 3);
   add('full-sequence-week', workoutsWeek >= 2 && workoutsWeek >= (doc.trainingDays || 3));
   add('two-to-three-strength', workoutsWeek >= 2 && workoutsWeek <= 3);
   add('150-club', cardioWeek >= 150);
   add('first-pr', prs.length >= 1);
   add('five-prs', prs.length >= 5);
-  add('balance-breakthrough', balanceBest >= 30);
+  // Balance Breakthrough means a retest beat the assessment baseline, not
+  // just starting out with a long hold.
+  const baseBest = Math.max(doc.assessment?.balanceLeftSec || 0, doc.assessment?.balanceRightSec || 0);
+  const retestBest = Math.max(
+    0,
+    ...retests.map((r) => Math.max(Number((r as { balanceLeftSec?: number }).balanceLeftSec || 0), Number((r as { balanceRightSec?: number }).balanceRightSec || 0))),
+  );
+  add('balance-breakthrough', retests.length >= 1 && retestBest > baseBest);
   add('phase-1-finisher', phaseForDoc(doc) >= 2);
   add('phase-2-finisher', phaseForDoc(doc) >= 3);
   add('phase-3-finisher', retests.some((r) => (r as { week?: number }).week === 12));
-  add('three-day-checkin', checkins.length >= 3);
+  // 3-Day Check-In Streak means 3 check-in days in a row, not 3 total.
+  add('three-day-checkin', checkinStreakDays(doc) >= 3);
   return doc.badges;
 }
 
