@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Ctx } from '../App';
-import { WORKOUTS, CORE_BALANCE_WORKOUT, REFERENCE_TRACKS, PHASES, PHASE_WEEKLY_SETS, daysForTime, splitForDays, CES_TEMPLATES, EQUIPMENT_NOTES, effectiveEquipment, resolveExercise, findExerciseByName } from '../lib/data';
+import { WORKOUTS, CORE_BALANCE_WORKOUT, REFERENCE_TRACKS, PHASES, PHASE_WEEKLY_SETS, daysForTime, splitForDays, CES_TEMPLATES, EQUIPMENT_NOTES, effectiveEquipment, resolveExercise, findExerciseByName, CLASS_WORKOUT_FOCUS, applyClassFocus } from '../lib/data';
 import { phaseForDoc, hasFullAccess, metCompanionIds, lastTimeFor, awardBadges } from '../lib/store';
 import type { Workout } from '../lib/types';
 
@@ -33,9 +33,21 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
   const [cardioMsg, setCardioMsg] = useState('');
   const [editId, setEditId] = useState<string | null>(null);
   const [editMinutes, setEditMinutes] = useState('');
+  const [regressionPick, setRegressionPick] = useState<Record<string, string>>({});
   const timerRef = useRef<number | null>(null);
 
   const phase = phaseForDoc(doc);
+  // Class workout focus: Guardian, Ranger, and Spellweaver change volume,
+  // not just spells and looks. The focus line is shown in Best for you
+  // today, in the workout list, and in the player. Focus never overrides
+  // a swap: equipment, dislike, and hurt swaps are resolved first, and
+  // focus only adjusts the sets of the move that is actually done.
+  const classId = doc.guardian?.classId;
+  const classFocus = classId ? CLASS_WORKOUT_FOCUS[classId] : null;
+  const focusFor = (w: Workout) => {
+    const deltas = w.exercises.map((e) => applyClassFocus(resolveForDoc(e, doc).exercise, classId, w.phase));
+    return deltas.some((d) => d.delta !== 0);
+  };
   const full = hasFullAccess(doc);
   // Best workout for you today: picked from your main goal, your gear, and
   // the time you have. Every class gets a real strength workout, Spellweaver
@@ -216,10 +228,18 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
   }
 
   if (active) {
-    const rawEx = active.exercises[step];
+    const rawEx0 = active.exercises[step];
+    // Regression pick wins for this move: if the client tapped "Use the
+    // easier version", the easier move is the one they do. Then the
+    // equipment, dislike, and hurt swaps are resolved (the swap wins over
+    // class focus), and only then does class focus adjust the sets of the
+    // move that is actually done.
+    const regressionName = regressionPick[rawEx0.id];
+    const rawEx = regressionName ? (findExerciseByName(regressionName) || rawEx0) : rawEx0;
     const resolved = resolveForDoc(rawEx, doc);
-    const last = lastTimeFor(doc, rawEx.id);
-    const ex = resolved.exercise;
+    const focused = applyClassFocus(resolved.exercise, classId, active.phase);
+    const ex = focused.exercise;
+    const last = lastTimeFor(doc, ex.id);
     const isLast = step >= active.exercises.length - 1;
     return (
       <div>
@@ -228,6 +248,18 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
           <p className="muted small">
             Exercise {step + 1} of {active.exercises.length} · About {active.minutes} minutes · {active.note || ''}
           </p>
+          {classFocus && (
+            <p className="small"><strong>{classFocus.line}</strong></p>
+          )}
+          {regressionName && (
+            <p className="notice" style={{ marginTop: 10 }}>
+              Showing the easier version: {regressionName}, instead of {rawEx0.name}.
+              {' '}
+              <button onClick={() => setRegressionPick((p) => { const n = { ...p }; delete n[rawEx0.id]; return n; })}>
+                Back to the full move
+              </button>
+            </p>
+          )}
           <div className="progress-bar"><div style={{ width: `${((step + 1) / active.exercises.length) * 100}%` }} /></div>
           {resolved.swappedFrom && (
             <p className="notice" style={{ marginTop: 10 }}>
@@ -262,10 +294,21 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
         <div className="card">
           <h3>{ex.name}</h3>
           <p>{ex.sets} sets x {ex.reps}{ex.tempo ? ` · Tempo ${ex.tempo}` : ''} · Rest {ex.restSec}s</p>
+          {focused.delta !== 0 && (
+            <p className="small"><strong>{focused.reason}</strong> ({focused.delta > 0 ? '+' : ''}{focused.delta} set).</p>
+          )}
           <details open={showHow === ex.id} onToggle={(e) => setShowHow((e.target as HTMLDetailsElement).open ? ex.id : null)}>
             <summary>How to do it</summary>
             <ol>{ex.howTo.map((h, i) => <li key={i}>{h}</li>)}</ol>
             <p><strong>Easier version:</strong> {ex.regression}</p>
+            {findExerciseByName(ex.regression) && findExerciseByName(ex.regression)!.id !== ex.id && !regressionName && (
+              <button onClick={() => setRegressionPick((p) => ({ ...p, [rawEx0.id]: ex.regression }))}>
+                Use the easier version: {ex.regression}
+              </button>
+            )}
+            {findExerciseByName(ex.regression) && findExerciseByName(ex.regression)!.id !== ex.id && regressionName && (
+              <p className="small muted">You are doing the easier version now. Tap "Back to the full move" above to go back.</p>
+            )}
             {ex.swap && <p><strong>Swap:</strong> {ex.swap}</p>}
             {ex.videoLabel && <p className="small muted">Video: {ex.videoLabel}</p>}
           </details>
@@ -418,6 +461,15 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
           <div>
             <p><strong>{best.title}</strong> · Phase {best.phase} · about {best.minutes} minutes</p>
             <p className="small">Picked for your goal ({goalLabel}), your gear ({effectiveEquipment(doc.equipment).join(', ')}), and {timeMin === 45 ? '45 or more' : timeMin} minutes. {goalNote}</p>
+            {classFocus && (
+              <p className="small"><strong>{classFocus.line}</strong></p>
+            )}
+            {classFocus && (
+              <details>
+                <summary>Show more about your class focus</summary>
+                <p className="small">{classFocus.detail}</p>
+              </details>
+            )}
             <p className="small muted">{best.exercises.map((e) => resolveForDoc(e, doc).exercise.name).join(' · ')}</p>
             <button className="primary" onClick={() => startWorkout(best)}>Start this workout</button>
           </div>
@@ -542,6 +594,9 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
       <div className="card">
         <h3>Reference tracks</h3>
         <p className="small muted">Extra tracks to try, built from the same moves. No brand credit, just the workout.</p>
+        {classFocus && (
+          <p className="small"><strong>{classFocus.line}</strong> Your class focus changes the sets in these tracks too.</p>
+        )}
         <details>
           <summary>Show reference tracks</summary>
           {REFERENCE_TRACKS.map((t) => {
@@ -583,6 +638,18 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
                 Swapped for your gear: {swapped.map((r) => `${r.exercise.name} in for ${r.swappedFrom}`).join('; ')}.
               </p>
             )}
+            {classFocus && focusFor(w) && (
+              <p className="small"><strong>{classFocus.line}</strong></p>
+            )}
+            <details>
+              <summary>Regressions: easier versions</summary>
+              {w.exercises.map((e) => (
+                <p key={e.id} className="small" style={{ margin: '4px 0' }}>
+                  <strong>{e.name}:</strong> {e.regression}
+                </p>
+              ))}
+              <p className="small muted">In the workout, tap "Use the easier version" on any move to switch to it. Tap "I don&apos;t like this move" or "This hurts" and it is swapped out from now on.</p>
+            </details>
             <button className="primary" disabled={locked} onClick={() => startWorkout(w)}>
               {locked ? 'Locked' : 'Start workout'}
             </button>

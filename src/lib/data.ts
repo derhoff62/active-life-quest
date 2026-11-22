@@ -1478,6 +1478,119 @@ export const CLASS_SUGGESTED_GOALS: Record<string, string[]> = {
   Spellweaver: ['stronger', 'consistency', 'sleep', 'weight-loss'],
 };
 
+// -------------------------------------------------- CLASS WORKOUT FOCUS
+// Class now changes workout focus and volume, not just spells, weapon,
+// avatar, and background. Phase, phase reps and sets ranges, compound
+// lifts first, and 1 to 2 rest days between strength days never change.
+// No class removes strength work. Guardian adds volume to main lifts and
+// trims core and balance moves. Ranger adds volume to balance, single-leg,
+// and core moves, plus more cardio. Spellweaver adds volume to core and
+// mobility moves, with the same strength work, not instead of it.
+
+export const MAIN_LIFT_IDS: string[] = [
+  'barbell-back-squat',
+  'barbell-deadlift',
+  'goblet-squat',
+  'romanian-deadlift',
+  'dumbbell-bench-press',
+  'overhead-press',
+  'lat-pulldown',
+  'seated-cable-row',
+  'single-arm-dumbbell-row',
+  'push-up',
+];
+
+export const BALANCE_SINGLE_LEG_IDS: string[] = [
+  'single-leg-rdl',
+  'split-squat',
+  'step-up',
+  'bird-dog',
+];
+
+export const CORE_MOBILITY_IDS: string[] = [
+  'plank',
+  'side-plank',
+  'dead-bug',
+  'pallof-press',
+  'glute-bridge',
+  'bird-dog',
+];
+
+export const CLASS_WORKOUT_FOCUS: Record<string, { line: string; detail: string; cardioLine?: string }> = {
+  Guardian: {
+    line: 'Guardian focus: extra set on main lifts, one less set on core and balance moves.',
+    detail:
+      'Main compound lifts get one extra set, up to the top of your phase range. Core and balance moves get one less set, never less than one set. You still do the same strength work, phases, and compound lifts first.',
+  },
+  Ranger: {
+    line: 'Ranger focus: extra set on balance, single-leg, and core moves, plus more cardio.',
+    detail:
+      'Balance, single-leg, and core moves get one extra set, up to the top of your phase range. Aim for the top of your cardio range, 150 to 300 minutes a week, Zone 2.',
+    cardioLine: 'Aim for the top of your cardio range, 150 to 300 minutes a week.',
+  },
+  Spellweaver: {
+    line: 'Spellweaver focus: extra set on core and mobility moves, with the same strength work.',
+    detail:
+      'Core and mobility moves get one extra set, up to the top of your phase range. Main lifts stay the same. Strength first, recovery built in, not instead of it.',
+  },
+};
+
+/** Top of the phase sets range, e.g. Phase 1 is 1-3 sets, so the max is 3. */
+export function phaseMaxSets(phase: number): number {
+  const p = PHASES.find((x) => x.phase === phase);
+  if (!p) return 5;
+  const m = p.sets.match(/(\d+)\s*-\s*(\d+)/);
+  return m ? Number(m[2]) : 5;
+}
+
+export interface ClassFocusResult {
+  exercise: Exercise;
+  delta: number;
+  reason: string;
+}
+
+/**
+ * Adjust one exercise for the client's class. Returns the exercise with
+ * its sets changed, the change in sets, and a plain-words reason. Sets
+ * never go below 1 or above the top of the phase range.
+ */
+export function applyClassFocus(
+  ex: Exercise,
+  classId: string | undefined | null,
+  phase: number,
+): ClassFocusResult {
+  if (!classId) return { exercise: ex, delta: 0, reason: '' };
+  const max = phaseMaxSets(phase);
+  let delta = 0;
+  let reason = '';
+  if (classId === 'Guardian') {
+    if (MAIN_LIFT_IDS.includes(ex.id)) {
+      delta = 1;
+      reason = 'Guardian focus: +1 set on main lifts';
+    } else if (BALANCE_SINGLE_LEG_IDS.includes(ex.id) || CORE_MOBILITY_IDS.includes(ex.id)) {
+      delta = -1;
+      reason = 'Guardian focus: 1 less set on core and balance moves';
+    }
+  } else if (classId === 'Ranger') {
+    if (BALANCE_SINGLE_LEG_IDS.includes(ex.id)) {
+      delta = 1;
+      reason = 'Ranger focus: +1 set on balance and single-leg moves';
+    } else if (CORE_MOBILITY_IDS.includes(ex.id)) {
+      delta = 1;
+      reason = 'Ranger focus: +1 set on core moves';
+    }
+  } else if (classId === 'Spellweaver') {
+    if (CORE_MOBILITY_IDS.includes(ex.id)) {
+      delta = 1;
+      reason = 'Spellweaver focus: +1 set on core and mobility moves';
+    }
+  }
+  if (delta === 0) return { exercise: ex, delta: 0, reason: '' };
+  const sets = Math.max(1, Math.min(max, ex.sets + delta));
+  if (sets === ex.sets) return { exercise: ex, delta: 0, reason: '' };
+  return { exercise: { ...ex, sets }, delta: sets - ex.sets, reason };
+}
+
 export const CLASSES: ClassInfo[] = [
   {
     id: 'Guardian',

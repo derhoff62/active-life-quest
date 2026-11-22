@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { Ctx } from '../App';
-import { ARMOR, CLASSES, CLASS_GOOD_FOR, SPELLS } from '../lib/data';
+import { ARMOR, CLASSES, CLASS_GOOD_FOR, CLASS_WORKOUT_FOCUS, SPELLS } from '../lib/data';
 import type { ArmorPiece } from '../lib/types';
 import { levelForXp } from '../lib/store';
 import GuardianAvatar from './GuardianAvatar';
@@ -112,6 +112,9 @@ export default function Armor({ ctx }: { ctx: Ctx }) {
             </p>
             <p className="small muted">Armor and weapons never block a workout, quest, check-in, or retest. They are earned, one at a time, from real milestones.</p>
             {doc.guardian && <p className="small">{CLASS_GOOD_FOR[doc.guardian.classId] || ''}</p>}
+            {doc.guardian && CLASS_WORKOUT_FOCUS[doc.guardian.classId] && (
+              <p className="small"><strong>{CLASS_WORKOUT_FOCUS[doc.guardian.classId].line}</strong></p>
+            )}
             {doc.guardian && (
               <button onClick={() => { setShowClassPicker((v) => !v); setConfirmClass(null); }}>
                 {showClassPicker ? 'Close class picker' : 'Change class'}
@@ -125,13 +128,22 @@ export default function Armor({ ctx }: { ctx: Ctx }) {
                 </p>
                 <p className="small">{c.description}</p>
                 <p className="small">{CLASS_GOOD_FOR[c.id] || ''}</p>
-                <p className="small muted">All classes do the same strength workouts, phases, cardio, and assessment. The class only changes spells, weapon, avatar, and background.</p>
+                {CLASS_WORKOUT_FOCUS[c.id] && (
+                  <p className="small"><strong>Workout focus:</strong> {CLASS_WORKOUT_FOCUS[c.id].line}</p>
+                )}
+                {CLASS_WORKOUT_FOCUS[c.id] && (
+                  <details>
+                    <summary>Show more about this workout focus</summary>
+                    <p className="small">{CLASS_WORKOUT_FOCUS[c.id].detail}</p>
+                  </details>
+                )}
+                <p className="small muted">All classes keep the same phase, strength work, and compound lifts first. The class changes spells, weapon, avatar, background, AND workout focus.</p>
                 {c.id !== doc.guardian?.classId && confirmClass !== c.id && (
                   <button onClick={() => setConfirmClass(c.id)}>Switch to {c.name}</button>
                 )}
                 {confirmClass === c.id && (
                   <div className="notice">
-                    <p>Switch to {c.name}? Your spells and class weapon will change to {c.name}&apos;s. Your XP, level, and armor stay.</p>
+                    <p>Switch to {c.name}? Your spells, class weapon, and workout focus will change to {c.name}&apos;s. Your XP, level, and armor stay.</p>
                     <div className="row">
                       <button
                         className="primary"
