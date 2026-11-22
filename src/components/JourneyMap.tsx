@@ -5,6 +5,35 @@
 // are dimmed. The text lists stay below the map.
 import { CREATURES, BOSS_ROUNDS } from '../lib/data';
 
+// Every map label sits on a solid white pill with a dark navy border and
+// dark navy text, so it stays readable on any land colour, even where the
+// gold path, a castle, or a dot passes behind it. Pills are opaque, so
+// nothing underneath shows through the text.
+function MapLabel({
+  x,
+  y,
+  w,
+  h = 22,
+  fontSize = 12,
+  children,
+}: {
+  x: number;
+  y: number;
+  w: number;
+  h?: number;
+  fontSize?: number;
+  children: string;
+}) {
+  return (
+    <g>
+      <rect x={x - w / 2} y={y} width={w} height={h} rx={h / 2} fill="#ffffff" stroke="#124571" strokeWidth="1.5" />
+      <text x={x} y={y + h / 2 + fontSize * 0.35} textAnchor="middle" fontSize={fontSize} fontWeight="700" fill="#124571">
+        {children}
+      </text>
+    </g>
+  );
+}
+
 function weekToY(week: number): number {
   if (week <= 4) return 40 + (week - 1) * 38;
   if (week <= 8) return 216 + (week - 5) * 38;
@@ -52,7 +81,19 @@ export default function JourneyMap({
     <div>
       {/* "You are here" as a real HTML pill above the map, so it can never
           be clipped by the SVG or overlapped by dots and the path. */}
-      <p className="pill" style={{ display: 'block', width: 'fit-content', margin: '0 auto 8px', padding: '6px 14px', fontSize: '0.95rem' }}>
+      <p
+        className="pill"
+        style={{
+          display: 'block',
+          width: 'fit-content',
+          margin: '0 auto 10px',
+          padding: '10px 18px',
+          fontSize: '1.05rem',
+          background: '#ffffff',
+          color: '#124571',
+          border: '2px solid #124571',
+        }}
+      >
         You are here: {hereLand.label} · Week {currentWeek}
       </p>
       <svg width="100%" viewBox="0 0 360 560" role="img" aria-label="Journey map: three lands, Forest, Shores, and Peaks" style={{ display: 'block', maxWidth: 420, margin: '0 auto' }}>
@@ -61,8 +102,15 @@ export default function JourneyMap({
           return (
             <g key={l.label} opacity={state === 'future' ? 0.55 : 1}>
               <rect x="8" y={l.y} width="344" height={l.h} rx="16" fill={l.fill} stroke={state === 'current' ? '#c9a227' : '#d7e3ee'} strokeWidth={state === 'current' ? 3 : 1.5} />
-              <text x="180" y={l.y + 24} textAnchor="middle" fontSize="13" fontWeight="700" fill="#124571">{l.label}</text>
-              <text x="180" y={l.y + 40} textAnchor="middle" fontSize="10" fill="#5b6b7a">{l.sub}</text>
+              {/* Land title and subtitle on solid white pills, centred at the
+                  top of the land. The pills are opaque, so the gold path
+                  passing behind them never shows through the text. */}
+              <MapLabel x={180} y={l.y + 10} w={190} h={24} fontSize={15}>
+                {l.label}
+              </MapLabel>
+              <MapLabel x={180} y={l.y + 38} w={200} h={20} fontSize={11}>
+                {l.sub}
+              </MapLabel>
               {state === 'done' && (
                 <g>
                   <circle cx="330" cy={l.y + 22} r="10" fill="#1e7a46" />
@@ -95,7 +143,9 @@ export default function JourneyMap({
             <g key={r.id}>
               <circle cx="180" cy={y} r="12" fill={beaten ? '#1e7a46' : '#a83232'} stroke="#fff" strokeWidth="2" />
               <text x="180" y={y + 4.5} textAnchor="middle" fontSize="12" fontWeight="700" fill="#fff">{beaten ? '✓' : '★'}</text>
-              <text x="180" y={y + 26} textAnchor="middle" fontSize="9" fontWeight="700" fill="#a83232">{beaten ? `Week ${r.week} boss beaten` : `Boss · Week ${r.week}`}</text>
+              <MapLabel x={180} y={y + 16} w={180} h={20} fontSize={11}>
+                {beaten ? `Week ${r.week} boss beaten` : `Boss · Week ${r.week}`}
+              </MapLabel>
             </g>
           );
         })}
@@ -110,7 +160,9 @@ export default function JourneyMap({
               <circle cx={x} cy={y} r="9" fill={isMet ? '#124571' : '#9aa5b1'} stroke="#fff" strokeWidth="2" />
               <text x={x} y={y + 3.5} textAnchor="middle" fontSize="10" fontWeight="700" fill="#fff">{isMet ? c.name[0] : '?'}</text>
               {isMet && (
-                <text x={x} y={y + 22} textAnchor="middle" fontSize="9" fill="#124571">{c.name}</text>
+                <MapLabel x={x} y={y + 14} w={c.name.length * 8 + 16} h={18} fontSize={11}>
+                  {c.name}
+                </MapLabel>
               )}
             </g>
           );
@@ -123,12 +175,12 @@ export default function JourneyMap({
           <text x="180" y={hereY + 5} textAnchor="middle" fontSize="13" fontWeight="700" fill="#fff">★</text>
         </g>
       </svg>
-      <div className="small muted" style={{ textAlign: 'center', lineHeight: 1.8, marginTop: 6 }}>
-        <div>Gold line: your path</div>
-        <div>Castle: each land&apos;s castle</div>
-        <div>Red star: boss round</div>
-        <div>Blue dot: a companion you met</div>
-        <div>Shield: you are here</div>
+      <div className="map-legend">
+        <div><strong>Gold line:</strong> your path</div>
+        <div><strong>Castle:</strong> each land&apos;s castle</div>
+        <div><strong>Red star:</strong> boss round</div>
+        <div><strong>Blue dot:</strong> a companion you met</div>
+        <div><strong>Shield:</strong> you are here</div>
       </div>
     </div>
   );

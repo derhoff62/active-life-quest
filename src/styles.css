@@ -230,6 +230,13 @@ details summary { cursor: pointer; font-weight: 600; color: var(--navy); padding
 .equip-list input { width: auto; min-height: 0; margin-top: 3px; flex-shrink: 0; accent-color: var(--navy); }
 .equip-list .equip-name { font-weight: 700; color: var(--navy); }
 .equip-list .equip-note { color: var(--muted); font-size: 0.875rem; }
+/* Journey map legend: large, dark navy on solid white, fully readable. */
+.map-legend {
+  background: #fff; border: 2px solid var(--navy); border-radius: 14px;
+  padding: 12px 16px; margin-top: 10px;
+  font-size: 1rem; line-height: 1.9; color: var(--navy); text-align: left;
+}
+.map-legend strong { color: var(--navy); }
 .map-you { animation: map-you-pulse 2s ease-in-out infinite; }
 @keyframes map-you-pulse {
   0%, 100% { opacity: 0.6; }
