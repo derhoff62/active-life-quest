@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Active Life Quest shield">
+  <rect width="512" height="512" rx="96" fill="#124571"/>
+  <path d="M256 48 L416 112 V256 C416 360 344 440 256 464 C168 440 96 360 96 256 V112 Z" fill="#0B5592" stroke="#C9A227" stroke-width="12" stroke-linejoin="round"/>
+  <path d="M256 96 L368 144 V256 C368 332 320 396 256 416 C192 396 144 332 144 256 V144 Z" fill="#124571"/>
+  <g fill="#C9A227">
+    <path d="M256 150 L268 182 L302 182 L274 202 L284 236 L256 216 L228 236 L238 202 L210 182 L244 182 Z"/>
+    <rect x="248" y="248" width="16" height="118" rx="8"/>
+    <rect x="196" y="286" width="120" height="16" rx="8"/>
+  </g>
+  <circle cx="256" cy="294" r="14" fill="#124571" stroke="#C9A227" stroke-width="6"/>
+</svg>

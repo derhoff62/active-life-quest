@@ -1,0 +1,16 @@
+name = "active-life-quest"
+pages_build_output_dir = "dist"
+compatibility_date = "2026-11-01"
+
+# Secrets and environment variables. Do NOT put real values in this file.
+# Set these in the Cloudflare dashboard under Pages > active-life-quest > Settings > Environment variables,
+# or with `wrangler pages secret put <NAME>`:
+#   DATABASE_URL       Neon Postgres connection string (required for all DB endpoints)
+#   SESSION_SECRET     Long random string, set now and kept in reserve for
+#                      future signed cookies. Sessions in v1 are opaque
+#                      random ids stored in the sessions table.
+#   COACH_PIN_HASH     Leave blank at first deploy. Derek sets the Coach PIN on first
+#                      Coach sign-in; the API stores its hash in the settings table.
+#   BETA_CODE          Beta code, e.g. ACTIVEBETA
+#   BETA_USES          Beta code max uses, e.g. 25
+#   BETA_EXPIRES       Beta code expiry date, e.g. 2027-02-19

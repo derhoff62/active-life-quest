@@ -1,0 +1,227 @@
+import { useEffect, useState } from 'react';
+import type { ProfileDoc } from './lib/store';
+import { defaultProfile, loadLocal, saveLocal, clearLocal, loadLocalAuth, saveLocalAuth, hasFullAccess, levelForXp, titleForLevel } from './lib/store';
+import * as api from './lib/api';
+import Auth from './components/Auth';
+import Onboarding from './components/Onboarding';
+import Assessment from './components/Assessment';
+import Today from './components/Today';
+import Workouts from './components/Workouts';
+import Journey from './components/Journey';
+import Nutrition from './components/Nutrition';
+import Progress from './components/Progress';
+import Armor from './components/Armor';
+import Faq from './components/Faq';
+import Coach from './components/Coach';
+
+export type Tab = 'today' | 'assessment' | 'workouts' | 'journey' | 'nutrition' | 'progress' | 'armor' | 'faq' | 'coach';
+
+const TABS: { id: Tab; label: string }[] = [
+  { id: 'today', label: 'Today' },
+  { id: 'assessment', label: 'Assessment' },
+  { id: 'workouts', label: 'Workouts' },
+  { id: 'journey', label: 'Journey' },
+  { id: 'nutrition', label: 'Nutrition' },
+  { id: 'progress', label: 'Progress' },
+  { id: 'armor', label: 'Armor' },
+  { id: 'faq', label: 'FAQ' },
+  { id: 'coach', label: 'Coach' },
+];
+
+export interface Ctx {
+  doc: ProfileDoc;
+  save: (next: ProfileDoc) => void;
+  update: (fn: (d: ProfileDoc) => void) => void;
+  go: (t: Tab) => void;
+  auth: { email: string; displayName: string } | null;
+  serverMode: boolean;
+}
+
+export default function App() {
+  const [doc, setDoc] = useState<ProfileDoc | null>(null);
+  const [auth, setAuth] = useState<{ email: string; displayName: string } | null>(null);
+  const [tab, setTab] = useState<Tab>('today');
+  const [serverMode, setServerMode] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    (async () => {
+      const mode = await api.detectMode();
+      setServerMode(mode === 'server');
+      if (mode === 'server') {
+        try {
+          const meRes = await api.me();
+          if (meRes.user) {
+            setAuth(meRes.user);
+            const remote = await api.loadProfile();
+            if (remote) {
+              setDoc(remote);
+              saveLocal(remote);
+              setLoading(false);
+              return;
+            }
+          }
+        } catch {
+          /* fall through to local */
+        }
+      }
+      const localAuth = loadLocalAuth();
+      if (localAuth) setAuth(localAuth);
+      setDoc(loadLocal() || defaultProfile(localAuth?.email || '', localAuth?.displayName || ''));
+      setLoading(false);
+    })();
+  }, []);
+
+  const save = (next: ProfileDoc) => {
+    next.lastActive = new Date().toISOString();
+    next.level = levelForXp(next.xp);
+    setDoc(next);
+    saveLocal(next);
+    if (serverMode && auth) {
+      api.saveProfile(next).catch(() => undefined);
+    }
+  };
+
+  const update = (fn: (d: ProfileDoc) => void) => {
+    if (!doc) return;
+    const next: ProfileDoc = JSON.parse(JSON.stringify(doc));
+    fn(next);
+    save(next);
+  };
+
+  const go = (t: Tab) => {
+    setTab(t);
+    window.scrollTo({ top: 0 });
+  };
+
+  if (loading || !doc) {
+    return (
+      <div className="app">
+        <div className="banner">
+          <h1>Active Life Quest</h1>
+          <p>Loading your quest...</p>
+        </div>
+      </div>
+    );
+  }
+
+  const ctx: Ctx = { doc, save, update, go, auth, serverMode };
+
+  if (!auth) {
+    return (
+      <div className={doc.largeText ? 'large-text' : ''}>
+        <div className="app">
+          <Auth
+            onAuth={(a) => {
+              setAuth(a);
+              saveLocalAuth(a);
+              update((d) => {
+                d.email = a.email;
+                d.displayName = a.displayName;
+              });
+            }}
+          />
+          <footer className="appfoot">
+            Active Life Personal Training by Derek. Derek cannot fix, treat, diagnose, or cure pain. Move better with less discomfort. For sharp, new, worsening, or non-improving pain, see a doctor or physical therapist.
+          </footer>
+        </div>
+      </div>
+    );
+  }
+
+  const full = hasFullAccess(doc);
+  const level = levelForXp(doc.xp);
+  const unread = doc.nudges.filter((n) => !n.read).length + doc.messages.filter((m) => m.coachReply && !m.repliedAt).length;
+
+  return (
+    <div className={doc.largeText ? 'large-text' : ''}>
+      <div className="app">
+        <div className="banner">
+          <h1>Active Life Quest</h1>
+          <p>
+            {doc.guardian ? `${doc.guardian.name} the ${doc.guardian.classId}` : 'Your quest starts here'} · Level {level} {titleForLevel(level)} · {doc.xp} XP
+            {doc.betaRedeemed ? ' · Beta access' : doc.trialStartedAt ? ' · Trial' : ' · Free plan'}
+          </p>
+        </div>
+
+        {!doc.guardianPicked && tab !== 'assessment' && (
+          <Onboarding ctx={ctx} />
+        )}
+        {doc.guardianPicked && tab === 'today' && <Today ctx={ctx} />}
+        {tab === 'assessment' && <Assessment ctx={ctx} />}
+        {tab === 'workouts' && <Workouts ctx={ctx} />}
+        {tab === 'journey' && <Journey ctx={ctx} />}
+        {tab === 'nutrition' && <Nutrition ctx={ctx} />}
+        {tab === 'progress' && <Progress ctx={ctx} />}
+        {tab === 'armor' && <Armor ctx={ctx} />}
+        {tab === 'faq' && <Faq ctx={ctx} />}
+        {tab === 'coach' && <Coach ctx={ctx} />}
+
+        {!full && doc.guardianPicked && tab !== 'coach' && (
+          <div className="card gold-frame">
+            <h3>Free plan</h3>
+            <p>The assessment and Week 1 are free. After that, a 14-day trial, then paid coaching through Stripe. No one is charged in beta.</p>
+            <div className="row">
+              <button
+                className="primary"
+                onClick={() => {
+                  update((d) => {
+                    d.trialStartedAt = d.trialStartedAt || new Date().toISOString();
+                  });
+                }}
+              >
+                Start my 14-day trial
+              </button>
+              <button
+                onClick={() => {
+                  const code = window.prompt('Enter your beta code from Derek:');
+                  if (!code) return;
+                  api.redeemBeta(code).then((r) => {
+                    if (r.ok) {
+                      update((d) => {
+                        d.betaRedeemed = true;
+                      });
+                      window.alert('Beta access unlocked. Welcome to the quest.');
+                    } else {
+                      window.alert(r.error || 'That code did not work.');
+                    }
+                  });
+                }}
+              >
+                Have a code from Derek? Enter it here
+              </button>
+            </div>
+          </div>
+        )}
+
+        <footer className="appfoot">
+          <button
+            onClick={() => {
+              if (window.confirm('Sign out? Your progress is saved to your account.')) {
+                api.logout();
+                clearLocal();
+                setAuth(null);
+                setDoc(defaultProfile());
+              }
+            }}
+          >
+            Sign out
+          </button>{' '}
+          · Active Life Personal Training by Derek · Derek cannot fix, treat, diagnose, or cure pain.
+        </footer>
+
+        <nav className="nav" aria-label="Sections">
+          {TABS.filter((t) => t.id !== 'coach').map((t) => (
+            <button key={t.id} className={tab === t.id ? 'active' : ''} onClick={() => go(t.id)}>
+              {t.label}
+              {t.id === 'today' && unread > 0 && <span className="badge">{unread}</span>}
+            </button>
+          ))}
+          <button className={tab === 'coach' ? 'active' : ''} onClick={() => go('coach')}>
+            Coach
+          </button>
+        </nav>
+      </div>
+    </div>
+  );
+}
