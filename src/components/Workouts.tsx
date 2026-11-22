@@ -13,6 +13,7 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
   const [restRunning, setRestRunning] = useState(false);
   const [showHow, setShowHow] = useState<string | null>(null);
   const [finishMinutes, setFinishMinutes] = useState('');
+  const [notice, setNotice] = useState('');
   const [editId, setEditId] = useState<string | null>(null);
   const [editMinutes, setEditMinutes] = useState('');
   const timerRef = useRef<number | null>(null);
@@ -40,24 +41,25 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
 
   function startWorkout(w: Workout) {
     if (!doc.assessmentDone) {
-      window.alert('Do the assessment first. It sets your starting phase.');
+      setNotice('Do the assessment first. It sets your starting phase.');
       return;
     }
     if (w.phase === 4 && !doc.retests.some((r) => (r as { week?: number }).week === 12)) {
-      window.alert('Phase 4 unlocks after Phase 3 and your Week 12 retest.');
+      setNotice('Phase 4 unlocks after Phase 3 and your Week 12 retest.');
       return;
     }
     if (w.phase === 5) {
       const clean = doc.retests.some((r) => (r as { clean?: boolean }).clean === true);
       if (!clean) {
-        window.alert('Phase 5 is locked until a clean form retest AND Derek approves it in Coach.');
+        setNotice('Phase 5 is locked until a clean form retest AND Derek approves it in Coach.');
         return;
       }
     }
     if (!full && w.id !== 'w1_first') {
-      window.alert('Week 2 and later workouts need the trial or beta access. Start the trial or enter your beta code on Today.');
+      setNotice('Week 2 and later workouts need the trial or beta access. Start the trial or enter your beta code on Today.');
       return;
     }
+    setNotice('');
     setActiveId(w.id);
     setStep(doc.sessions?.workoutId === w.id ? doc.sessions.step : 0);
     startedAt.current = Date.now();
@@ -86,7 +88,7 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
     });
     setActiveId(null);
     setLog({});
-    window.alert(`Workout saved. ${minutes} minutes, +50 XP.`);
+    setNotice(`Workout saved. ${minutes} minutes, +50 XP.`);
   }
 
   if (active) {
@@ -189,6 +191,16 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
         <h2>Workouts</h2>
         <p>Phase {phase}: {PHASES.find((p) => p.phase === phase)?.name}. Take 1 to 2 rest days between strength days.</p>
         {!doc.assessmentDone && <div className="notice">Do the assessment first. It sets your starting phase.</div>}
+        {notice && (
+          <div className="notice">
+            {notice}
+            {!doc.assessmentDone && (
+              <div style={{ marginTop: 8 }}>
+                <button className="primary" onClick={() => ctx.go('assessment')}>Go to assessment</button>
+              </div>
+            )}
+          </div>
+        )}
         {myTemplates.length > 0 && (
           <details>
             <summary>Your fix-it warm-up ({myTemplates.length} {myTemplates.length === 1 ? 'move' : 'moves'})</summary>
