@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import type { Ctx } from '../App';
 import * as api from '../lib/api';
-import { PHASES, WORKOUTS, WEEK13, CLASS_GOOD_FOR, GOAL_TYPES } from '../lib/data';
+import { PHASES, WORKOUTS, CORE_BALANCE_WORKOUT, WEEK13, CLASS_GOOD_FOR, GOAL_TYPES, splitForDays } from '../lib/data';
+import type { TrainingStyle } from '../lib/data';
 import { phaseForDoc, recoveryScore, levelForXp, titleForLevel, metCompanionIds, currentWeekForDoc, checkinPreferenceText, checkinFrequenciesForMode, normalizeCheckinFrequency, loggedToday } from '../lib/store';
 import type { AssessmentVideo } from '../lib/store';
 import GuardianAvatar from './GuardianAvatar';
@@ -40,13 +41,26 @@ export default function Today({ ctx }: { ctx: Ctx }) {
   const phaseInfo = PHASES.find((p) => p.phase === phase);
   // Next workout rotates through the phase workouts instead of always
   // showing Day 1, even after many workouts.
-  const phaseWorkouts = WORKOUTS.filter((w) => w.phase === phase && (w.id === 'day1-first' || w.id.startsWith(`p${phase}`)));
+  const phaseWorkouts = WORKOUTS.filter((w) => w.phase === phase && (w.id === 'day1-first' || w.id === `p${phase}a` || w.id === `p${phase}b`));
   const lastWorkoutId = doc.workouts.length ? String(doc.workouts[doc.workouts.length - 1].workoutId || '') : '';
   const lastIdx = phaseWorkouts.findIndex((w) => w.id === lastWorkoutId);
   const nextWorkout =
     doc.workouts.length === 0
       ? WORKOUTS.find((w) => w.id === 'day1-first')
-      : phaseWorkouts[(lastIdx + 1) % Math.max(1, phaseWorkouts.length)] || WORKOUTS.find((w) => w.phase === phase);
+      : (doc.trainingDays || 3) >= 5
+        ? (() => {
+          // At 5 to 6 days the next workout is the next day in the
+          // client's own split (Push, Pull, Legs, or the next short
+          // session), not a mix of full-body and split days.
+          const style: TrainingStyle = doc.trainingStyle || 'ppl';
+          const split = splitForDays(doc.trainingDays || 3, phase, style);
+          const idx = split.days.findIndex((d) => d.workoutId === lastWorkoutId);
+          const next = split.days[(idx + 1) % split.days.length];
+          return WORKOUTS.find((w) => w.id === next.workoutId)
+            || (next.workoutId === 'core-balance-mobility' ? CORE_BALANCE_WORKOUT : undefined)
+            || phaseWorkouts[(lastIdx + 1) % Math.max(1, phaseWorkouts.length)];
+        })()
+        : phaseWorkouts[(lastIdx + 1) % Math.max(1, phaseWorkouts.length)] || WORKOUTS.find((w) => w.phase === phase);
   const unfinished = doc.sessions;
   const week12Done = doc.retests.some((r) => (r as { week?: number }).week === 12);
   const lastSleep = doc.sleep[doc.sleep.length - 1] as { hours?: number } | undefined;

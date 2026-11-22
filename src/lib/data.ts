@@ -640,18 +640,35 @@ export const FOCUS_AREAS: { id: string; label: string }[] = [
 // split (no upper-only or lower-only workout exists in the app). The
 // workout ids follow the client's phase.
 
-export interface SplitDay { name: string; workoutId: string; }
-export function splitForDays(days: number, phase = 1): { label: string; days: SplitDay[] } {
+// How a client trains at 5 or 6 days a week. Full-body is the default
+// at 2 to 4 days. At 5 to 6 days the client picks: Push / Pull / Legs,
+// Short daily sessions, or (5 days only) Full-body. Full-body is NOT
+// offered at 6 days: six full-body strength days in a row trains the
+// same muscles on back-to-back days, which breaks the 1 to 2 rest days
+// between strength days rule for each muscle group.
+export type TrainingStyle = 'full-body' | 'ppl' | 'short';
+
+export const TRAINING_STYLES: { id: TrainingStyle; name: string; blurb: string }[] = [
+  { id: 'ppl', name: 'Push / Pull / Legs', blurb: 'One muscle group a day, each group twice a week. Each muscle rests 2 to 3 days before its next session. Day 7 is a full rest day.' },
+  { id: 'short', name: 'Short daily sessions', blurb: '15 minutes a day, small dose, not a full strength session. Day 7 is a full rest day. If you are sore or tired, take the day off instead.' },
+  { id: 'full-body', name: 'Full-body A/B', blurb: 'The same muscles every strength day, so take 1 to 2 rest days between strength days. Not offered at 6 days a week.' },
+];
+
+export interface SplitDay { name: string; workoutId: string; group?: 'push' | 'pull' | 'legs' | 'short' | 'full'; }
+export function splitForDays(days: number, phase = 1, style: TrainingStyle = 'full-body'): { label: string; days: SplitDay[] } {
   const p = Math.min(Math.max(phase, 1), 5);
   const a = `p${p}a`;
   const b = `p${p}b`;
+  const push = `p${p}push`;
+  const pull = `p${p}pull`;
+  const legs = `p${p}legs`;
   if (days <= 3) {
     return {
       label: 'Full-body, 2 to 3 days a week',
       days: [
-        { name: 'Day 1: Full-body A', workoutId: a },
-        { name: 'Day 2: Full-body B', workoutId: b },
-        ...(days >= 3 ? [{ name: 'Day 3: Full-body A', workoutId: a }] : []),
+        { name: 'Day 1: Full-body A', workoutId: a, group: 'full' },
+        { name: 'Day 2: Full-body B', workoutId: b, group: 'full' },
+        ...(days >= 3 ? [{ name: 'Day 3: Full-body A', workoutId: a, group: 'full' as const }] : []),
       ],
     };
   }
@@ -659,10 +676,38 @@ export function splitForDays(days: number, phase = 1): { label: string; days: Sp
     return {
       label: 'Full-body A and B, 4 days a week',
       days: [
-        { name: 'Day 1: Full-body A', workoutId: a },
-        { name: 'Day 2: Full-body B', workoutId: b },
-        { name: 'Day 3: Full-body A', workoutId: a },
-        { name: 'Day 4: Full-body B', workoutId: b },
+        { name: 'Day 1: Full-body A', workoutId: a, group: 'full' },
+        { name: 'Day 2: Full-body B', workoutId: b, group: 'full' },
+        { name: 'Day 3: Full-body A', workoutId: a, group: 'full' },
+        { name: 'Day 4: Full-body B', workoutId: b, group: 'full' },
+      ],
+    };
+  }
+  if (style === 'ppl') {
+    return {
+      label: days === 5 ? 'Push / Pull / Legs, 5 days a week' : 'Push / Pull / Legs, 6 days a week',
+      days: [
+        { name: 'Day 1: Push', workoutId: push, group: 'push' },
+        { name: 'Day 2: Pull', workoutId: pull, group: 'pull' },
+        { name: 'Day 3: Legs', workoutId: legs, group: 'legs' },
+        { name: 'Day 4: Push', workoutId: push, group: 'push' },
+        { name: 'Day 5: Pull', workoutId: pull, group: 'pull' },
+        ...(days >= 6 ? [{ name: 'Day 6: Legs', workoutId: legs, group: 'legs' as const }] : []),
+      ],
+    };
+  }
+  if (style === 'short') {
+    // Short daily sessions: 15 minutes a day, small dose (2 sets a move),
+    // rotating the short blocks so no day is a full heavy session.
+    return {
+      label: days === 5 ? 'Short daily sessions, 5 days a week' : 'Short daily sessions, 6 days a week',
+      days: [
+        { name: 'Day 1: Short session 1', workoutId: 'track-block-1', group: 'short' },
+        { name: 'Day 2: Short session 2', workoutId: 'track-block-2', group: 'short' },
+        { name: 'Day 3: Core, Balance and Mobility', workoutId: 'core-balance-mobility', group: 'short' },
+        { name: 'Day 4: Short session 1', workoutId: 'track-block-1', group: 'short' },
+        { name: 'Day 5: Short session 2', workoutId: 'track-block-2', group: 'short' },
+        ...(days >= 6 ? [{ name: 'Day 6: Core, Balance and Mobility', workoutId: 'core-balance-mobility', group: 'short' as const }] : []),
       ],
     };
   }
@@ -670,26 +715,112 @@ export function splitForDays(days: number, phase = 1): { label: string; days: Sp
     return {
       label: 'Full-body A and B plus Core, Balance and Mobility, 5 days a week',
       days: [
-        { name: 'Day 1: Full-body A', workoutId: a },
-        { name: 'Day 2: Full-body B', workoutId: b },
-        { name: 'Day 3: Full-body A', workoutId: a },
-        { name: 'Day 4: Full-body B', workoutId: b },
-        { name: 'Day 5: Core, Balance and Mobility', workoutId: 'core-balance-mobility' },
+        { name: 'Day 1: Full-body A', workoutId: a, group: 'full' },
+        { name: 'Day 2: Full-body B', workoutId: b, group: 'full' },
+        { name: 'Day 3: Full-body A', workoutId: a, group: 'full' },
+        { name: 'Day 4: Full-body B', workoutId: b, group: 'full' },
+        { name: 'Day 5: Core, Balance and Mobility', workoutId: 'core-balance-mobility', group: 'full' },
       ],
     };
   }
+  // 6 days, Full-body asked for: not offered. Six full-body strength
+  // days in a row breaks the rest rule for the same muscles, so the
+  // split falls back to Push / Pull / Legs instead of pretending
+  // Full-body works at 6 days.
   return {
-    label: 'Full-body A and B, 6 days a week',
+    label: 'Push / Pull / Legs, 6 days a week',
     days: [
-      { name: 'Day 1: Full-body A', workoutId: a },
-      { name: 'Day 2: Full-body B', workoutId: b },
-      { name: 'Day 3: Full-body A', workoutId: a },
-      { name: 'Day 4: Full-body B', workoutId: b },
-      { name: 'Day 5: Full-body A', workoutId: a },
-      { name: 'Day 6: Full-body B', workoutId: b },
+      { name: 'Day 1: Push', workoutId: push, group: 'push' },
+      { name: 'Day 2: Pull', workoutId: pull, group: 'pull' },
+      { name: 'Day 3: Legs', workoutId: legs, group: 'legs' },
+      { name: 'Day 4: Push', workoutId: push, group: 'push' },
+      { name: 'Day 5: Pull', workoutId: pull, group: 'pull' },
+      { name: 'Day 6: Legs', workoutId: legs, group: 'legs' },
     ],
   };
 }
+
+// ------------------------------------------------- PUSH / PULL / LEGS
+// One muscle group a day, for 5 to 6 training days a week. Built ONLY
+// from moves already in the app (cloned by name, so how-to, regression,
+// swap, and video all come along). No new moves, nothing new to film.
+// NASM check, Nov 22: same loads as the phase full-body workouts, so a
+// Phase 1 client never gets Phase 4/5 loads or power moves on a PPL day;
+// compound lifts first; tempo is slow on the lowering (P1 4/2/1, P2
+// 3/2/1, P3-5 3/1/1); rest follows the phase (P3 main lifts 90s-2min,
+// accessories 0-60s; P4 main lifts 3-5min); each muscle is hit twice a
+// week at 6 days, so weekly sets per muscle = 2 x per-session sets,
+// inside PHASE_WEEKLY_SETS (P1 6-10, P2 8-12, P3 10-15, P4 12-18,
+// P5 10-15); each muscle rests 2 to 3 days between its sessions; start
+// with your fix-it warm-up (corrective work first, as the assessment
+// flagged it). Phase gating is the same as the full-body workouts:
+// the Workout.phase field drives the existing unlock checks, so Phase 4
+// stays locked behind the Week 12 retest and Phase 5 behind a clean
+// retest plus Coach approval. No brand names anywhere client-visible.
+
+function pplEx(name: string, sets: number, reps: string, restSec: number, tempo: string): Exercise {
+  const found = findExerciseByName(name);
+  if (!found) throw new Error(`PPL exercise not found: ${name}`);
+  return { ...found, sets, reps, restSec, tempo };
+}
+
+type PplRow = [string, number, string, number];
+function pplWorkout(id: string, title: string, phase: number, minutes: number, note: string, tempo: string, rows: PplRow[]): Workout {
+  return { id, title, phase, day: title.replace(`Phase ${phase} `, ''), minutes, note, exercises: rows.map(([name, sets, reps, restSec]) => pplEx(name, sets, reps, restSec, tempo)) };
+}
+
+export const PPL_WORKOUTS: Workout[] = [
+  pplWorkout('p1push', 'Phase 1 Push', 1, 30, 'Push day: chest, shoulders, and triceps. Compound lifts first. Lower for 3 to 4 seconds. Start with your fix-it warm-up. Each muscle rests 2 to 3 days before its next Push day.', '4/2/1', [
+    ['Dumbbell Bench Press', 2, '12 reps', 60], ['Dumbbell Overhead Press', 2, '12 reps', 60], ['Push-Up', 2, '12 reps', 60], ['Plank', 2, '20 seconds', 30],
+  ]),
+  pplWorkout('p1pull', 'Phase 1 Pull', 1, 30, 'Pull day: back and the hinge. Compound lifts first. Lower for 3 to 4 seconds. Start with your fix-it warm-up. Each muscle rests 2 to 3 days before its next Pull day.', '4/2/1', [
+    ['Lat Pulldown', 2, '12 reps', 60], ['Seated Cable Row', 2, '12 reps', 60], ['Romanian Deadlift', 2, '12 reps', 60], ['Bird Dog', 2, '8 reps each side', 30],
+  ]),
+  pplWorkout('p1legs', 'Phase 1 Legs', 1, 30, 'Legs day: squat, single-leg, and hinge. Compound lifts first. Lower for 3 to 4 seconds. Start with your fix-it warm-up. Each muscle rests 2 to 3 days before its next Legs day.', '4/2/1', [
+    ['Dumbbell Goblet Squat', 2, '12 reps', 60], ['Split Squat', 2, '10 reps each leg', 60], ['Single-Leg Romanian Deadlift', 2, '8 reps each leg', 60], ['Glute Bridge', 2, '15 reps', 30],
+  ]),
+  pplWorkout('p2push', 'Phase 2 Push', 2, 35, 'Push day: chest, shoulders, and triceps. Compound lifts first. Lower for 3 seconds. Start with your fix-it warm-up. Each muscle rests 2 to 3 days before its next Push day.', '3/2/1', [
+    ['Dumbbell Bench Press', 3, '10 reps', 45], ['Dumbbell Overhead Press', 3, '10 reps', 45], ['Push-Up', 3, '10 reps', 45], ['Plank', 3, '30 seconds', 30],
+  ]),
+  pplWorkout('p2pull', 'Phase 2 Pull', 2, 35, 'Pull day: back and the hinge. Compound lifts first. Lower for 3 seconds. Start with your fix-it warm-up. Each muscle rests 2 to 3 days before its next Pull day.', '3/2/1', [
+    ['Lat Pulldown', 3, '10 reps', 45], ['Seated Cable Row', 3, '10 reps', 45], ['Romanian Deadlift', 3, '10 reps', 45], ['Bird Dog', 3, '8 reps each side', 30],
+  ]),
+  pplWorkout('p2legs', 'Phase 2 Legs', 2, 35, 'Legs day: squat, single-leg, and hinge. Compound lifts first. Lower for 3 seconds. Start with your fix-it warm-up. Each muscle rests 2 to 3 days before its next Legs day.', '3/2/1', [
+    ['Barbell Back Squat', 3, '8 reps', 60], ['Split Squat', 3, '10 reps each leg', 45], ['Single-Leg Romanian Deadlift', 3, '8 reps each leg', 45], ['Glute Bridge', 3, '12 reps', 30],
+  ]),
+  pplWorkout('p3push', 'Phase 3 Push', 3, 40, 'Push day: chest, shoulders, and triceps. Main lifts get 90 seconds to 2 minutes of rest. Accessories get 0 to 60 seconds. Start with your fix-it warm-up. Each muscle rests 2 to 3 days before its next Push day.', '3/1/1', [
+    ['Dumbbell Bench Press', 3, '8 reps', 90], ['Dumbbell Overhead Press', 3, '8 reps', 90], ['Push-Up', 3, '8 reps', 45], ['Plank', 3, '40 seconds', 30],
+  ]),
+  pplWorkout('p3pull', 'Phase 3 Pull', 3, 40, 'Pull day: back and the hinge. Main lifts get 90 seconds to 2 minutes of rest. Accessories get 0 to 60 seconds. Start with your fix-it warm-up. Each muscle rests 2 to 3 days before its next Pull day.', '3/1/1', [
+    ['Lat Pulldown', 3, '8 reps', 90], ['Seated Cable Row', 3, '10 reps', 45], ['Romanian Deadlift', 3, '8 reps', 90], ['Bird Dog', 3, '8 reps each side', 30],
+  ]),
+  pplWorkout('p3legs', 'Phase 3 Legs', 3, 40, 'Legs day: squat, single-leg, and hinge. Main lifts get 90 seconds to 2 minutes of rest. Accessories get 0 to 60 seconds. Start with your fix-it warm-up. Each muscle rests 2 to 3 days before its next Legs day.', '3/1/1', [
+    ['Barbell Back Squat', 4, '6 reps', 120], ['Split Squat', 3, '10 reps each leg', 45], ['Single-Leg Romanian Deadlift', 3, '8 reps each leg', 45], ['Glute Bridge', 3, '12 reps', 30],
+  ]),
+  pplWorkout('p4push', 'Phase 4 Push', 4, 45, 'Push day: maximal strength. Rest 3 to 5 minutes between sets on main lifts. Only after Phase 3 and a clean Week 12 retest. Start with your fix-it warm-up. Each muscle rests 2 to 3 days before its next Push day.', '3/1/1', [
+    ['Dumbbell Bench Press', 4, '5 reps', 180], ['Dumbbell Overhead Press', 4, '5 reps', 180], ['Push-Up', 4, '5 reps', 120], ['Plank', 3, '45 seconds', 60],
+  ]),
+  pplWorkout('p4pull', 'Phase 4 Pull', 4, 45, 'Pull day: maximal strength. Rest 3 to 5 minutes between sets on main lifts. Only after Phase 3 and a clean Week 12 retest. Start with your fix-it warm-up. Each muscle rests 2 to 3 days before its next Pull day.', '3/1/1', [
+    ['Lat Pulldown', 4, '5 reps', 180], ['Seated Cable Row', 4, '5 reps', 120], ['Barbell Deadlift', 4, '3 reps', 240], ['Bird Dog', 3, '8 reps each side', 60],
+  ]),
+  pplWorkout('p4legs', 'Phase 4 Legs', 4, 45, 'Legs day: maximal strength. Rest 3 to 5 minutes between sets on main lifts. Only after Phase 3 and a clean Week 12 retest. Start with your fix-it warm-up. Each muscle rests 2 to 3 days before its next Legs day.', '3/1/1', [
+    ['Barbell Back Squat', 5, '3 reps', 240], ['Split Squat', 4, '5 reps each leg', 120], ['Single-Leg Romanian Deadlift', 4, '5 reps each leg', 120], ['Glute Bridge', 3, '12 reps', 60],
+  ]),
+  pplWorkout('p5push', 'Phase 5 Push', 5, 45, 'Push day: power. Fast, controlled, explosive reps. Locked until a clean form retest AND Derek approves it in Coach. Start with your fix-it warm-up. Each muscle rests 2 to 3 days before its next Push day.', '3/1/1', [
+    ['Dumbbell Bench Press', 3, '5 reps', 180], ['Dumbbell Overhead Press', 4, '5 reps', 180], ['Push-Up', 4, '5 reps', 180], ['Plank', 3, '30 seconds', 60],
+  ]),
+  pplWorkout('p5pull', 'Phase 5 Pull', 5, 45, 'Pull day: power. Fast, controlled, explosive reps. Locked until a clean form retest AND Derek approves it in Coach. Start with your fix-it warm-up. Each muscle rests 2 to 3 days before its next Pull day.', '3/1/1', [
+    ['Lat Pulldown', 4, '5 reps', 120], ['Barbell Deadlift', 4, '3 reps', 240], ['Seated Cable Row', 3, '5 reps', 120], ['Bird Dog', 3, '8 reps each side', 60],
+  ]),
+  pplWorkout('p5legs', 'Phase 5 Legs', 5, 45, 'Legs day: power. Fast, controlled, explosive reps. Locked until a clean form retest AND Derek approves it in Coach. Start with your fix-it warm-up. Each muscle rests 2 to 3 days before its next Legs day.', '3/1/1', [
+    ['Barbell Back Squat', 4, '3 reps', 240], ['Step-Up', 3, '5 reps each leg', 180], ['Single-Leg Romanian Deadlift', 3, '5 reps each leg', 120], ['Glute Bridge', 3, '12 reps', 60],
+  ]),
+];
+
+// PPL workouts live in the main WORKOUTS list, so phase gating, the
+// rest timer, swaps, class focus, PRs, and XP all treat them exactly
+// like the full-body workouts.
+WORKOUTS.push(...PPL_WORKOUTS);
 
 // ------------------------------------------------ REFERENCE TRACKS
 // Adapted reference tracks, built from the moves already in the app.

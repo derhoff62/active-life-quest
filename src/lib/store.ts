@@ -3,6 +3,7 @@
 // and always to localStorage so the app works offline and before deploy.
 import type { AssessmentResult, FindingId, GoalType } from './types';
 import { CREATURES } from './data';
+import type { TrainingStyle } from './data';
 
 export interface GuardianState {
   name: string;
@@ -101,6 +102,7 @@ export interface ProfileDoc {
   checkinFrequency: 'daily' | '1x-month' | '2x-month' | '3x-month' | '4x-month';
   checkinMode: 'text' | 'live-call';
   trainingDays: number;
+  trainingStyle: TrainingStyle;
   dislikedExercises: string[];
   hurtExercises: string[];
   focus: Record<string, number>;
@@ -168,6 +170,7 @@ export function defaultProfile(email = '', displayName = ''): ProfileDoc {
     checkinFrequency: 'daily',
     checkinMode: 'text',
     trainingDays: 3,
+    trainingStyle: 'full-body',
     dislikedExercises: [],
     hurtExercises: [],
     focus: {},
@@ -250,6 +253,7 @@ export function normalizeProfile(raw: unknown): ProfileDoc {
   if (typeof out.level !== 'number') out.level = 1;
   if (typeof out.streakDays !== 'number') out.streakDays = 0;
   if (typeof out.trainingDays !== 'number') out.trainingDays = 3;
+  if (out.trainingStyle !== 'full-body' && out.trainingStyle !== 'ppl' && out.trainingStyle !== 'short') out.trainingStyle = 'full-body';
   return out;
 }
 

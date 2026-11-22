@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Ctx } from '../App';
-import { WORKOUTS, CORE_BALANCE_WORKOUT, REFERENCE_TRACKS, PHASES, PHASE_WEEKLY_SETS, daysForTime, splitForDays, CES_TEMPLATES, EQUIPMENT_NOTES, effectiveEquipment, resolveExercise, findExerciseByName, CLASS_WORKOUT_FOCUS, applyClassFocus, GOAL_FINISHERS } from '../lib/data';
+import { WORKOUTS, CORE_BALANCE_WORKOUT, REFERENCE_TRACKS, PHASES, PHASE_WEEKLY_SETS, daysForTime, splitForDays, TRAINING_STYLES, CES_TEMPLATES, EQUIPMENT_NOTES, effectiveEquipment, resolveExercise, findExerciseByName, CLASS_WORKOUT_FOCUS, applyClassFocus, GOAL_FINISHERS } from '../lib/data';
+import type { TrainingStyle } from '../lib/data';
 import { phaseForDoc, hasFullAccess, metCompanionIds, lastTimeFor, awardBadges, loggedToday, daysInMonthSet } from '../lib/store';
 import type { Workout } from '../lib/types';
 import ExampleVideo from './ExampleVideo';
@@ -63,6 +64,28 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
   const restLoggedToday = doc.quests.some((q) => (q as { kind?: string }).kind === 'rest-day' && new Date(String(q.date)).toISOString().split('T')[0] === todayStr);
   const daysNeeded = daysForTime(timeMin, phase);
   const weeklySets = PHASE_WEEKLY_SETS[phase] || '6 to 10';
+  // How the client trains at 5 to 6 days a week. At 2 to 4 days it is
+  // always Full-body. At 5 to 6 days the saved pick wins, defaulting to
+  // Push / Pull / Legs for old profiles.
+  const daysPerWeek = doc.trainingDays || 3;
+  const style: TrainingStyle = daysPerWeek >= 5 ? (doc.trainingStyle || 'ppl') : 'full-body';
+  const split = splitForDays(daysPerWeek, phase, style);
+  const lastSplitIdx = (() => {
+    const lastId = doc.workouts.length ? String(doc.workouts[doc.workouts.length - 1].workoutId || '') : '';
+    return split.days.findIndex((d) => d.workoutId === lastId);
+  })();
+  const planned = split.days[(lastSplitIdx + 1) % split.days.length];
+  const lastGroup = lastSplitIdx >= 0 ? split.days[lastSplitIdx].group : undefined;
+  // Rest is per muscle group, not per day: on a Push / Pull / Legs week,
+  // training a different muscle group the day after is fine, because
+  // that muscle rested. Only the same group twice in a row needs a rest
+  // day. Short sessions are a light dose, so they never force a rest day
+  // (if you are sore or tired, take the day off anyway).
+  const isRestDay = style === 'ppl'
+    ? trainedYesterday && lastGroup !== undefined && lastGroup === planned.group
+    : style === 'short'
+      ? false
+      : trainedYesterday;
 
   function logRestDay() {
     // One rest day logged a day. Tapping again does not earn again.
@@ -115,7 +138,7 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
     (full || w.id === 'day1-first') &&
     w.exercises.every((e) => !resolveExercise(e, doc.equipment).unavailable);
   const best: Workout | null = useMemo(() => {
-    if (!doc.assessmentDone || trainedYesterday) return null;
+    if (!doc.assessmentDone || isRestDay) return null;
     const candidates = WORKOUTS.filter(unlocked);
     if (!candidates.length) return null;
     if (doc.workouts.length === 0) {
@@ -124,11 +147,19 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
     if (timeMin === 15) {
       return candidates.find((w) => w.id === 'track-block-1') || [...candidates].sort((a, b) => a.minutes - b.minutes)[0];
     }
+    // At 5 to 6 days the best workout is the next day in the client's
+    // own split (Push, Pull, Legs, or the next short session), not just
+    // the longest workout of the phase.
+    if (daysPerWeek >= 5) {
+      const plannedW = WORKOUTS.find((w) => w.id === planned.workoutId)
+        || (planned.workoutId === 'core-balance-mobility' ? CORE_BALANCE_WORKOUT : undefined);
+      if (plannedW && unlocked(plannedW)) return plannedW;
+    }
     const fits = candidates.filter((w) => w.minutes <= timeMin);
     const pool = fits.length ? fits : candidates;
     return [...pool].sort((a, b) => (b.phase - a.phase) || (b.minutes - a.minutes))[0];
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [doc.assessmentDone, trainedYesterday, timeMin, phase, full, doc.workouts.length, doc.equipment]);
+  }, [doc.assessmentDone, isRestDay, timeMin, phase, full, doc.workouts.length, doc.equipment, daysPerWeek, planned]);
   const myTemplates = CES_TEMPLATES.filter((t) => doc.assessment?.findings.includes(t.id));
   const startedAt = useRef(Date.now());
 
@@ -498,9 +529,9 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
           ))}
         </div>
         {!doc.assessmentDone && <p>Do the assessment first. It sets your starting phase, and then your best workout shows here.</p>}
-        {doc.assessmentDone && trainedYesterday && (
+        {doc.assessmentDone && isRestDay && (
           <div>
-            <p><strong>Today is an active rest day.</strong> You trained yesterday. Take 1 to 2 rest days between strength days.</p>
+            <p><strong>Today is an active rest day.</strong> {style === 'ppl' ? 'You trained those same muscles yesterday, so they rest today. A different muscle group is next.' : 'You trained yesterday. Take 1 to 2 rest days between strength days.'}</p>
             <p className="small muted">Rest well today: a gentle walk, your 2-minute balance hold, and your stretches. No strength workout today. The gym gives the stimulus, recovery builds on it.</p>
             <button onClick={logRestDay}>
               Log my rest day (+5 XP)
@@ -508,7 +539,7 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
             {notice && <p className="notice" style={{ marginTop: 8 }}>{notice}</p>}
           </div>
         )}
-        {doc.assessmentDone && !trainedYesterday && best && (
+        {doc.assessmentDone && !isRestDay && best && (
           <div>
             <p><strong>{best.title}</strong> · Phase {best.phase} · about {best.minutes} minutes</p>
             <p className="small">Picked for your goal ({goalLabel}), your gear ({effectiveEquipment(doc.equipment).join(', ')}), and {timeMin === 45 ? '45 or more' : timeMin} minutes. {goalNote}</p>
@@ -525,7 +556,7 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
             <button className="primary" onClick={() => startWorkout(best)}>Start this workout</button>
           </div>
         )}
-        {doc.assessmentDone && !trainedYesterday && !best && (
+        {doc.assessmentDone && !isRestDay && !best && (
           <p>No workout fits right now. Pick one from the list below.</p>
         )}
       </div>
@@ -579,16 +610,22 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
 
       <div className="card">
         <h3>Active rest days</h3>
-        {trainedYesterday && !restLoggedToday && (
+        {isRestDay && !restLoggedToday && (
           <div>
-            <p><strong>Today is an active rest day.</strong> You trained yesterday. Take 1 to 2 rest days between strength days.</p>
+            <p><strong>Today is an active rest day.</strong> {style === 'ppl' ? 'You trained those same muscles yesterday, so they rest today.' : 'You trained yesterday. Take 1 to 2 rest days between strength days.'}</p>
             <p className="small muted">Rest well today: a gentle walk, your 2-minute balance hold, and your stretches. No strength workout today. The gym gives the stimulus, recovery builds on it.</p>
             <button onClick={logRestDay}>Log my rest day (+5 XP)</button>
           </div>
         )}
-        {trainedYesterday && restLoggedToday && <p>Today is an active rest day, and you logged it. Walk, stretch, balance, and rest well.</p>}
-        {!trainedYesterday && trainedToday && (
+        {isRestDay && restLoggedToday && <p>Today is an active rest day, and you logged it. Walk, stretch, balance, and rest well.</p>}
+        {!isRestDay && trainedToday && style === 'full-body' && (
           <p><strong>Tomorrow is an active rest day.</strong> You trained today. Tomorrow, walk, stretch, and do your 2-minute balance hold. No strength workout tomorrow.</p>
+        )}
+        {!isRestDay && trainedToday && style !== 'full-body' && (
+          <p><strong>Tomorrow is {planned.name.replace('Day ', 'day ')} in your split.</strong> {style === 'ppl' ? 'A different muscle group, so yesterday’s muscles keep resting.' : 'A short 15-minute dose. If you are sore or tired, take the day off instead.'}</p>
+        )}
+        {!isRestDay && !trainedToday && trainedYesterday && style !== 'full-body' && (
+          <p><strong>Today is {planned.name}.</strong> A different muscle group from yesterday, so yesterday’s muscles keep resting. {style === 'short' ? 'A short 15-minute dose. If you are sore or tired, take the day off instead.' : ''}</p>
         )}
         {!trainedYesterday && !trainedToday && (
           <p>Rest days are active days. On a rest day, walk, stretch, and do your 2-minute balance hold. Take 1 to 2 rest days between strength days.</p>
@@ -631,7 +668,7 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
 
       <div className="card">
         <h3>Fit the workout to your time</h3>
-        <p>Shorter workouts need more days: at {timeMin === 45 ? '45 or more' : timeMin} minutes, train {daysNeeded} days a week to hit your Phase {phase} weekly sets ({weeklySets} per muscle). Split days work different muscles, so weekly volume still adds up.</p>
+        <p>Shorter workouts need more days: at {timeMin === 45 ? '45 or more' : timeMin} minutes, train {daysNeeded} days a week to hit your Phase {phase} weekly sets ({weeklySets} per muscle). {style === 'ppl' ? 'Push, Pull, and Legs work different muscles, so each muscle gets 2 to 3 days off before its next session.' : style === 'short' ? 'Short sessions are a small daily dose, not a full strength session, so they do not add heavy volume every day.' : 'Full-body days work the same muscles each day, so take 1 to 2 rest days between strength days.'}</p>
         <p className="small muted">15 minutes: 4 days a week. 30 minutes: 3 days a week. 45 or more minutes: {phase >= 3 ? '3' : '2'} days a week. Take 1 to 2 rest days between strength days.</p>
       </div>
 
@@ -642,15 +679,41 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
           {[2, 3, 4, 5, 6].map((d) => (
             <button
               key={d}
-              onClick={() => update((doc2) => { doc2.trainingDays = d; })}
+              onClick={() => update((doc2) => {
+                doc2.trainingDays = d;
+                // Full-body is not offered at 6 days a week, so a client
+                // on Full-body who picks 6 days moves to Push / Pull / Legs.
+                if (d === 6 && (doc2.trainingStyle || 'full-body') === 'full-body') doc2.trainingStyle = 'ppl';
+              })}
               style={(doc.trainingDays || 3) === d ? { background: '#124571', color: '#fff' } : {}}
             >
               {d} days
             </button>
           ))}
         </div>
-        <p><strong>{splitForDays(doc.trainingDays || 3, phase).label}</strong></p>
-        {splitForDays(doc.trainingDays || 3, phase).days.map((day) => {
+        {(doc.trainingDays || 3) >= 5 && (
+          <div>
+            <p className="small">How do you want to train {doc.trainingDays} days a week?</p>
+            <div className="row">
+              {TRAINING_STYLES.filter((s) => s.id !== 'full-body' || (doc.trainingDays || 3) === 5).map((s) => (
+                <button
+                  key={s.id}
+                  onClick={() => {
+                    update((doc2) => { doc2.trainingStyle = s.id; });
+                    toast(`${s.name} picked. ${s.id === 'ppl' ? 'Each muscle rests 2 to 3 days between sessions.' : s.id === 'short' ? '15 minutes a day, small dose.' : 'Take 1 to 2 rest days between strength days.'}`);
+                  }}
+                  style={style === s.id ? { background: '#124571', color: '#fff' } : {}}
+                >
+                  {s.name}
+                </button>
+              ))}
+            </div>
+            <p className="small muted">{TRAINING_STYLES.find((s) => s.id === style)?.blurb}</p>
+            {style === 'full-body' && <p className="small muted">Full-body trains the same muscles on back-to-back days. It is not offered at 6 days a week.</p>}
+          </div>
+        )}
+        <p><strong>{split.label}</strong></p>
+        {split.days.map((day) => {
           const w = ALL_WORKOUTS.find((x) => x.id === day.workoutId);
           return (
             <p key={day.name} className="small" style={{ margin: '4px 0' }}>
@@ -660,7 +723,7 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
             </p>
           );
         })}
-        <p className="small muted">Take 1 to 2 rest days between strength days. The other days are active rest days.</p>
+        <p className="small muted">{style === 'ppl' ? 'Each muscle rests 2 to 3 days between its sessions. Day 7 is a full rest day.' : style === 'short' ? 'Small daily dose. Day 7 is a full rest day. If you are sore or tired, take the day off instead.' : 'Take 1 to 2 rest days between strength days. The other days are active rest days.'}</p>
       </div>
 
       <div className="card">
