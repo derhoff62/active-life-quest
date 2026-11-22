@@ -1463,7 +1463,7 @@ export const BOSS_ROUNDS: { id: string; week: number; name: string; land: string
   { id: 'boss-week-40', week: 40, name: 'The Gold Golem', land: 'Golden Summit', maxHp: 340, unlockPhase: 4 },
   { id: 'boss-week-44', week: 44, name: 'The Summit Wraith', land: 'Golden Summit', maxHp: 360, unlockPhase: 4 },
   { id: 'boss-week-48', week: 48, name: 'The Peak Keeper', land: 'Golden Summit', maxHp: 380, unlockPhase: 4 },
-  { id: 'boss-week-52', week: 52, name: 'The Year Review', land: 'Golden Summit', maxHp: 400, unlockPhase: 4 },
+  { id: 'boss-week-52', week: 52, name: 'The Summit Review', land: 'Golden Summit', maxHp: 400, unlockPhase: 4 },
 ];
 
 // ---------------------------------------------------------------- MONSTERS
@@ -1672,7 +1672,7 @@ export const CREATURES: Creature[] = [
 export const STORY: { firstLine: string; expanded: string[] } = {
   firstLine: 'The guardian woke up tired and out of shape.',
   expanded: [
-    'The guardian had spent years sitting, rushing, and putting everyone else first. One morning, the armor did not fit the way it used to, the stairs felt longer, and the forest outside felt very far away. So the guardian made a simple choice: start small, and keep going.',
+    'The guardian had spent a long time sitting, rushing, and putting everyone else first. One morning, the armor did not fit the way it used to, the stairs felt longer, and the forest outside felt very far away. So the guardian made a simple choice: start small, and keep going.',
     'The road runs through three lands. Sapphire Forest comes first, green and quiet, where the Forest Castle stands. Then Crystal Shores, where the Lake Castle shines. Then Navy Peaks, where the Navy Castle waits at the top of the climb. Each land has its own monsters, and each monster guards a lesson.',
     'In Weeks 1 to 4, the guardian meets The Slump and the Stiff Hips Goblin. In Weeks 5 to 8, the Achy Knees Troll and the Tired Back Beast block the road. In Weeks 9 to 12, the Wobbly Balance Sprite dances on the mountain path. At the end of each stretch, in Week 4, Week 8, and Week 12, a boss round tests everything the guardian has learned.',
     'The monsters are challenges, not friends. When you beat a monster with steady work, it is done and you move on. The Slump clears. The goblin is gone. The troll stays behind you. The beast is beaten. The sprite is gone, and you stay standing. Every win is yours, and the road ahead is open.',
@@ -1911,7 +1911,7 @@ export const BADGES: Badge[] = [
   { id: 'cycle-2-finisher', name: 'Cycle 2 Finisher', how: 'Finish Cycle 2: save the Week 24 retest.' },
   { id: 'cycle-3-finisher', name: 'Cycle 3 Finisher', how: 'Finish Cycle 3: save the Week 36 retest.' },
   { id: 'cycle-4-finisher', name: 'Cycle 4 Finisher', how: 'Finish Cycle 4: save the Week 48 retest.' },
-  { id: 'year-finisher', name: 'Year Finisher', how: 'Finish the year: save the Week 52 review retest.' },
+  { id: 'year-finisher', name: 'Summit Finisher', how: 'Save the Week 52 review retest.' },
   { id: 'ten-prs', name: 'Ten PRs', how: 'Set 10 personal records.' },
   { id: 'twenty-five-workouts', name: '25 Workouts', how: 'Finish 25 workouts.' },
   { id: 'fifty-workouts', name: '50 Workouts', how: 'Finish 50 workouts.' },
@@ -1965,10 +1965,10 @@ export const ARMOR: ArmorPiece[] = [
   { id: 'tideforged-helm', name: 'Tideforged Helm', tier: 'Rare', set: 'Tideforged', how: 'Defeat the Week 28 boss round.', effect: 'Clear head in the storm. Heavy sets stay steady.' },
   { id: 'tideforged-chestplate', name: 'Tideforged Chestplate', tier: 'Rare', set: 'Tideforged', how: 'Finish Cycle 3: save the Week 36 retest.', effect: 'Storm-steady. You hold your form when the work gets hard.' },
   { id: 'tideforged-greaves', name: 'Tideforged Greaves', tier: 'Rare', set: 'Tideforged', how: 'Finish 40 workouts.', effect: 'Forty workouts of miles in these legs.' },
-  { id: 'summitforged-helm', name: 'Summitforged Helm', tier: 'Rare', set: 'Summitforged', how: 'Defeat the Week 40 boss round.', effect: 'Summit focus. The top of the year is in sight.' },
-  { id: 'summitforged-chestplate', name: 'Summitforged Chestplate', tier: 'Rare', set: 'Summitforged', how: 'Finish Cycle 4: save the Week 48 retest.', effect: 'A peak chest. A year of training sits behind every rep.' },
+  { id: 'summitforged-helm', name: 'Summitforged Helm', tier: 'Rare', set: 'Summitforged', how: 'Defeat the Week 40 boss round.', effect: 'Summit focus. The top is in sight.' },
+  { id: 'summitforged-chestplate', name: 'Summitforged Chestplate', tier: 'Rare', set: 'Summitforged', how: 'Finish Cycle 4: save the Week 48 retest.', effect: 'A peak chest. A long stretch of training sits behind every rep.' },
   { id: 'summitforged-greaves', name: 'Summitforged Greaves', tier: 'Rare', set: 'Summitforged', how: 'Finish 50 workouts.', effect: 'Fifty workouts. The road is worn smooth under your feet.' },
-  { id: 'crown-year', name: 'Crown of the Year', tier: 'Mythical', how: 'Finish the year: save the Week 52 review retest.', effect: 'A crown for 52 weeks. You did the whole year.' },
+  { id: 'crown-year', name: 'Crown of the Summit', tier: 'Mythical', how: 'Save the Week 52 review retest.', effect: 'A crown for a long road, well walked.' },
   { id: 'cloak-year', name: 'Cloak of Twenty Wins', tier: 'Legendary', how: 'Earn 20 badges.', effect: 'Twenty wins sewn into one cloak.' },
   { id: 'boots-year', name: 'Boots of a Thousand Minutes', tier: 'Legendary', how: 'Log 2,000 minutes of cardio in total.', effect: 'Two thousand minutes of moving. Your heart knows the road.' },
 ];
@@ -2259,7 +2259,7 @@ export function recommendPhase(
     return {
       phase: 3,
       reason:
-        'Your screen was clean, you train regularly with over 3 years of experience, and your form looked good on all three lifts. You start in Phase 3.',
+        'Your screen was clean, you train regularly with a long stretch of training behind you, and your form looked good on all three lifts. You start in Phase 3.',
     };
   }
   return {

@@ -488,11 +488,11 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
         <p>Phase {phase}: {PHASES.find((p) => p.phase === phase)?.name}. Take 1 to 2 rest days between strength days.</p>
         {doc.assessmentDone && (() => {
           const wWeek = currentWeekForDoc(doc);
-          const { cycle: wCycle } = cycleForWeek(wWeek);
+          const { cycle: wCycle, weekInCycle: wWeekInCycle } = cycleForWeek(wWeek);
           const wNextRetest = nextRetestWeek(wWeek, new Set(doc.retests.map((r) => (r as { week?: number }).week || 0)));
           return (
             <div className="card gold-frame" style={{ marginTop: 10 }}>
-              <h3 style={{ margin: 0 }}>Cycle {wCycle.cycle} of 4: {wCycle.name} · Week {wWeek} of 52</h3>
+              <h3 style={{ margin: 0 }}>{wCycle.name} · Week {wWeekInCycle}</h3>
               <p className="small">{wCycle.track}: {wCycle.trackDetail}</p>
               <p className="small"><strong>How to progress this cycle:</strong> {wCycle.progression}</p>
               {isDeloadWeek(wWeek) && <p className="small"><strong>Deload week.</strong> Lighter loads this week, then your retest.</p>}
@@ -535,7 +535,7 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
         <button onClick={() => ctx.go('assessment')}>Change my equipment in the assessment</button>
       </div>
 
-      <div className="card gold-frame">
+      <div className="card gold-frame" id="best-workout">
         <h3>Best for you today</h3>
         <p className="small">How much time do you have today?</p>
         <div className="row">

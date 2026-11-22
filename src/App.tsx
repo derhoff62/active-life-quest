@@ -1,7 +1,8 @@
 import { useEffect, useState, Component, type ReactNode } from 'react';
 import type { ProfileDoc } from './lib/store';
-import { defaultProfile, loadLocal, saveLocal, clearLocal, loadLocalAuth, saveLocalAuth, hasFullAccess, levelForXp, titleForLevel , normalizeCheckinFrequency, normalizeProfile, refillMana, earnedArmorIds, currentWeekForDoc } from './lib/store';
+import { defaultProfile, loadLocal, saveLocal, clearLocal, loadLocalAuth, saveLocalAuth, hasFullAccess, levelForXp, titleForLevel , normalizeCheckinFrequency, normalizeProfile, refillMana, earnedArmorIds } from './lib/store';
 import { tabBadges } from './lib/badges';
+import { tabNotice, type NoticeAction } from './lib/tabNotices';
 import * as api from './lib/api';
 import Auth from './components/Auth';
 import Onboarding from './components/Onboarding';
@@ -16,6 +17,7 @@ import Progress from './components/Progress';
 import Armor from './components/Armor';
 import Faq from './components/Faq';
 import ToastHost from './components/Toast';
+import TabNoticeCard from './components/TabNotice';
 import { showToast } from './lib/toast';
 import Coach from './components/Coach';
 
@@ -203,29 +205,29 @@ export default function App() {
   };
 
   const go = (t: Tab) => {
-    // Visiting Armor or Journey marks what is there as seen, so the
-    // "new gear" / "journey moved on" badge clears. Only ever raises the
-    // counters, and only when there is something new to mark.
-    if (doc) {
-      if (t === 'armor') {
-        const earned = earnedArmorIds(doc).length;
-        if (earned > (doc.armorSeenCount || 0)) {
-          update((d) => {
-            d.armorSeenCount = earnedArmorIds(d).length;
-          });
-        }
-      }
-      if (t === 'journey') {
-        const week = currentWeekForDoc(doc);
-        if (week > (doc.journeySeenWeek || 0)) {
-          update((d) => {
-            d.journeySeenWeek = currentWeekForDoc(d);
-          });
-        }
-      }
-    }
     setTab(t);
     window.scrollTo({ top: 0 });
+  };
+
+  // A button on the top-of-tab notice: open another tab, scroll to the
+  // thing to do on this tab, or both (go first, then scroll once the new
+  // tab has rendered). Visiting Armor or Journey no longer marks things
+  // seen on arrival: the badge and the notice stay while you are on the
+  // tab, and the tab itself marks them seen when you leave it.
+  const handleNoticeAction = (a: NoticeAction) => {
+    if (a.go) {
+      go(a.go);
+      if (a.anchor) {
+        const anchor = a.anchor;
+        window.setTimeout(() => {
+          document.getElementById(anchor)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 150);
+      }
+      return;
+    }
+    if (a.anchor) {
+      document.getElementById(a.anchor)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
   };
 
   // Sign-in / sign-up: in server mode the auth effect above reloads the
@@ -316,6 +318,10 @@ export default function App() {
         {!doc.guardianPicked && tab !== 'assessment' && (
           <Onboarding ctx={ctx} />
         )}
+        {(() => {
+          const notice = tabNotice(doc, tab);
+          return notice ? <TabNoticeCard notice={notice} onAction={handleNoticeAction} /> : null;
+        })()}
         <TabErrorBoundary tab={tab}>
           {doc.guardianPicked && tab === 'today' && <Today ctx={ctx} />}
           {tab === 'assessment' && <Assessment ctx={ctx} />}

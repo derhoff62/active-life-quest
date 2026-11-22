@@ -56,7 +56,7 @@ export default function Cardio({ ctx }: { ctx: Ctx }) {
         <p>High intensity counts double: 20 minutes hard counts as 40.</p>
       </div>
 
-      <div className="card">
+      <div className="card" id="log-cardio">
         <h3>Log cardio</h3>
         <p><strong>{cardioThisWeek} of 150 to 300 minutes this week.</strong> {cardioMilestone}.</p>
         <div className="progress-bar"><div style={{ width: `${Math.min(100, (cardioThisWeek / 300) * 100)}%` }} /></div>

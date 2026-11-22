@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { Ctx } from '../App';
 import { PHASES, MONSTERS, CREATURES, STORY, SPELLS, CLASSES, BOSS_ROUNDS } from '../lib/data';
 import { YEAR_CYCLES, challengeForWeek } from '../lib/yearPlan';
@@ -29,6 +29,26 @@ export default function Journey({ ctx }: { ctx: Ctx }) {
   const { doc, update, toast } = ctx;
   const [showStory, setShowStory] = useState(false);
   const [bossHit, setBossHit] = useState('');
+  // Same as Armor: the "new companion" badge and the top notice stay
+  // while you are on this tab, and clear when you leave it. The
+  // boss-ready part of the badge does not clear on a visit at all: it
+  // clears when the boss is beaten.
+  const docRef = useRef(doc);
+  docRef.current = doc;
+  const updateRef = useRef(update);
+  updateRef.current = update;
+  useEffect(
+    () => () => {
+      const d = docRef.current;
+      const week = currentWeekForDoc(d);
+      if (week > (d.journeySeenWeek || 0)) {
+        updateRef.current((x) => {
+          x.journeySeenWeek = currentWeekForDoc(x);
+        });
+      }
+    },
+    [],
+  );
   const phase = phaseForDoc(doc);
   const level = levelForXp(doc.xp);
   const mySpells = SPELLS.filter((s) => {
@@ -57,32 +77,32 @@ export default function Journey({ ctx }: { ctx: Ctx }) {
           <p className={phase < 2 ? 'locked' : ''}><span className="land">Land 2: Crystal Shores, Lake Castle, Weeks 5 to 8.</span> {phase < 2 ? 'Locked until your Week 4 retest.' : 'Open.'}</p>
           <p className={phase < 3 ? 'locked' : ''}><span className="land">Land 3: Navy Peaks, Navy Castle, Weeks 9 to 12.</span> {phase < 3 ? 'Locked until your Week 8 retest.' : 'Open.'}</p>
         </div>
-        <p className="small muted">Boss rounds at Weeks 4, 8, and 12 of every cycle, plus a Week 52 year review round. Win the round with your class moves and mana, then do the retest to open the next land. The map above shows Cycle 1, Weeks 1 to 12. The road continues below.</p>
+        <p className="small muted">Boss rounds at Weeks 4, 8, and 12 of every cycle, plus a review round at Week 52. Win the round with your class moves and mana, then do the retest to open the next land. The map above shows the first stretch, Weeks 1 to 12. The road continues below.</p>
       </div>
 
       <div className="card">
-        <h2>Your year road: 52 weeks, 4 cycles</h2>
-        <p className="small muted">Each cycle is different: a new goal, a new land, new boss rounds, and new companions. A cycle only opens after the last cycle's retest, the same gate as Week 13.</p>
+        <h2>Your road ahead</h2>
+        <p className="small muted">Each stretch is different: a new goal, a new land, new boss rounds, and new companions. A stretch only opens after the last stretch's retest, the same gate as Week 13.</p>
         {YEAR_CYCLES.map((c) => {
           const week = currentWeekForDoc(doc);
           const state = week > c.weeks[1] ? 'Done' : week >= c.weeks[0] ? 'You are here' : 'Coming up';
           const beaten = c.bossWeeks.filter((w) => ((doc.bossHp || {})[`boss-week-${w}`] ?? 999) <= 0).length;
           return (
             <div key={c.cycle} style={{ marginBottom: 12 }}>
-              <p><strong>Cycle {c.cycle}: {c.name} (Weeks {c.weeks[0]} to {c.weeks[1]}) · {state}</strong></p>
+              <p><strong>{c.name} (Weeks {c.weeks[0]} to {c.weeks[1]}) · {state}</strong></p>
               <p className="small">Goal: {c.goal} · {c.phases} · {c.lands}</p>
               <p className="small">{c.story}</p>
               <p className="small muted">Boss rounds: Weeks {c.bossWeeks.join(', ')} · {beaten} of {c.bossWeeks.length} beaten · {c.track}</p>
             </div>
           );
         })}
-        <p><strong>Weeks 49 to 52: the year review.</strong> Steady build weeks, then the Week 52 review round and retest. Look back at the whole year and pick your next goal.</p>
+        <p><strong>Keep going.</strong> After the Golden Summit, test your best in a review retest, pick your next goal, and the road keeps going. There is no finish line here.</p>
         <p className="small">This month's challenge: <strong>{challengeForWeek(currentWeekForDoc(doc)).title}</strong> · {challengeForWeek(currentWeekForDoc(doc)).detail}</p>
       </div>
 
-      <div className="card gold-frame">
+      <div className="card gold-frame" id="combat">
         <h2>Combat</h2>
-        <p>A boss round is a practice fight at the end of a land, at Weeks 4, 8, and 12 of every cycle, plus a Week 52 review round. You attack with your class spells, and each spell costs mana. Win the round, do the retest, and the next land opens. Bosses are challenges you beat, not friends.</p>
+        <p>A boss round is a practice fight at the end of a land, at Weeks 4, 8, and 12 of every cycle, plus a review round at Week 52. You attack with your class spells, and each spell costs mana. Win the round, do the retest, and the next land opens. Bosses are challenges you beat, not friends.</p>
         <p className="small muted">Mana: {doc.mana}/10. Mana refills daily, and good sleep and check-ins add more. Spells never block a workout, quest, check-in, or retest. Pick a boss, then use a spell. The bar drops with every hit.</p>
         {BOSS_ROUNDS.map((r) => {
           const hp = hpOf(r);
@@ -178,7 +198,7 @@ export default function Journey({ ctx }: { ctx: Ctx }) {
         )}
       </div>
 
-      <div className="card">
+      <div className="card" id="companions">
         <h3>Your companions ({metCount} of {CREATURES.length} met)</h3>
         <p className="small muted">People and animals you befriend along the road, one at a time as you get further. Bosses are not companions. They are challenges you beat.</p>
         {CREATURES.map((c) => {

@@ -28,7 +28,7 @@
 // Fresh accounts only ever see Today (check-in) and Assessment (do the
 // assessment): Cardio, Sleep, Journey, Workouts and Progress badges are
 // all gated on the assessment being done first.
-import { BOSS_ROUNDS, SPELLS } from './data';
+import { ARMOR, BOSS_ROUNDS, CREATURES, SPELLS } from './data';
 import { RETEST_WEEKS } from './yearPlan';
 import {
   currentWeekForDoc,
@@ -50,21 +50,21 @@ function yesterdayStr(): string {
   return new Date(Date.now() - DAY).toISOString().slice(0, 10);
 }
 
-function cardioThisWeek(doc: ProfileDoc): number {
+export function cardioThisWeek(doc: ProfileDoc): number {
   const weekAgo = Date.now() - 7 * DAY;
   return (doc.cardio || [])
     .filter((c) => new Date(String(c.date)).getTime() >= weekAgo)
     .reduce((s, c) => s + Number(c.minutes || 0), 0);
 }
 
-function unreadCount(doc: ProfileDoc): number {
+export function unreadCount(doc: ProfileDoc): number {
   return (
     (doc.nudges || []).filter((n) => !n.read).length +
     (doc.messages || []).filter((m) => m.coachReply && !m.repliedAt).length
   );
 }
 
-function workoutDueToday(doc: ProfileDoc): boolean {
+export function workoutDueToday(doc: ProfileDoc): boolean {
   if (!doc.assessmentDone) return false;
   if (doc.lastWorkoutDate === todayStr()) return false;
   // Rest is per muscle group: a full-body day yesterday means today is a
@@ -74,14 +74,22 @@ function workoutDueToday(doc: ProfileDoc): boolean {
   return true;
 }
 
-function retestDue(doc: ProfileDoc): boolean {
+export function retestDue(doc: ProfileDoc): boolean {
   if (!doc.assessmentDone) return false;
   const done = new Set((doc.retests || []).map((r) => (r as { week?: number }).week));
   const week = currentWeekForDoc(doc);
   return RETEST_WEEKS.some((w) => week >= w && !done.has(w));
 }
 
-function weighInDue(doc: ProfileDoc): boolean {
+/** First retest week that is due and not saved yet, or null. */
+export function nextRetestDueWeek(doc: ProfileDoc): number | null {
+  if (!doc.assessmentDone) return null;
+  const done = new Set((doc.retests || []).map((r) => (r as { week?: number }).week));
+  const week = currentWeekForDoc(doc);
+  return RETEST_WEEKS.find((w) => week >= w && !done.has(w)) ?? null;
+}
+
+export function weighInDue(doc: ProfileDoc): boolean {
   if (!doc.assessmentDone) return false;
   const sixDaysAgo = Date.now() - 6 * DAY;
   return !(doc.measurements || []).some(
@@ -101,6 +109,38 @@ function journeyNeedsAttention(doc: ProfileDoc): boolean {
   // The journey has moved on since the client last looked at it: a new
   // companion or land is waiting.
   return currentWeekForDoc(doc) > (doc.journeySeenWeek || 0);
+}
+
+/** First boss round that is unlocked, unbeaten, and affordable, or null. */
+export function readyBoss(doc: ProfileDoc): { id: string; week: number; name: string; land: string; maxHp: number; hp: number } | null {
+  if (!doc.assessmentDone) return null;
+  const phase = phaseForDoc(doc);
+  const cheapestSpell = Math.min(...SPELLS.map((s) => s.cost));
+  const r = BOSS_ROUNDS.find((x) => {
+    const hp = (doc.bossHp || {})[x.id] ?? x.maxHp;
+    return phase >= x.unlockPhase && hp > 0 && doc.mana >= cheapestSpell;
+  });
+  if (!r) return null;
+  return { ...r, hp: (doc.bossHp || {})[r.id] ?? r.maxHp };
+}
+
+/** Companions met since the client last opened Journey. */
+export function newCompanions(doc: ProfileDoc): { id: string; name: string }[] {
+  if (!doc.assessmentDone) return [];
+  const week = currentWeekForDoc(doc);
+  const seenWeek = doc.journeySeenWeek || 0;
+  return CREATURES.filter((c) => week >= c.meetWeek && c.meetWeek > seenWeek).map((c) => ({ id: c.id, name: c.name }));
+}
+
+/** Gear earned since the client last opened Armor, in award order. */
+export function newGearIds(doc: ProfileDoc): string[] {
+  return earnedArmorIds(doc).slice(doc.armorSeenCount || 0);
+}
+
+/** Client-visible names of the gear in newGearIds. */
+export function newGearNames(doc: ProfileDoc): string[] {
+  const byId = new Map(ARMOR.map((a) => [a.id, a.name]));
+  return newGearIds(doc).map((id) => byId.get(id) || id).filter(Boolean);
 }
 
 export function tabBadges(doc: ProfileDoc): Record<string, TabBadge> {

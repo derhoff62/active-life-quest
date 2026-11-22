@@ -313,7 +313,7 @@ export default function Metrics({ doc, update, toast }: MetricsProps) {
       )}
 
       {!readOnly && metric === 'weight' && (
-        <div style={{ marginTop: 12 }}>
+        <div id="weigh-in" style={{ marginTop: 12 }}>
           <label htmlFor="metric-weigh">Once-a-week weigh-in (lb, same day and time)</label>
           <input id="metric-weigh" inputMode="decimal" value={weigh} onChange={(e) => { setWeigh(e.target.value); setWeighMsg(''); }} placeholder="e.g. 188" />
           <button style={{ marginTop: 8 }} onClick={logWeighIn}>Log weigh-in</button>

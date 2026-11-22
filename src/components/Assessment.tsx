@@ -200,9 +200,9 @@ export default function Assessment({ ctx }: { ctx: Ctx }) {
           </div>
           <button className="primary" onClick={startRetake}>Retake the assessment</button>
         </div>
-        <div className="card">
-          <h3>Retest (Weeks 4, 8, and 12 of each cycle, plus Week 52)</h3>
-          <p className="small muted">A retest is a short check, not the full assessment. Do it at Weeks 4, 8, and 12 of each 12-week cycle, and a final review at Week 52. A clean retest moves you to the next phase and moves your corrective steps one step forward. Week 12 of each cycle is also a deload week: lighter loads that week. The next cycle only opens after that cycle's retest.</p>
+        <div className="card" id="retest">
+          <h3>Retest (Weeks 4, 8, and 12 of each cycle)</h3>
+          <p className="small muted">A retest is a short check, not the full assessment. Do it at Weeks 4, 8, and 12 of each 12-week cycle. Week 52 is a review retest too, then you keep going with a new goal. A clean retest moves you to the next phase and moves your corrective steps one step forward. Week 12 of each cycle is also a deload week: lighter loads that week. The next cycle only opens after that cycle's retest.</p>
           <label>Which week are you retesting?</label>
           <div className="row">
             {RETEST_WEEKS.map((w) => (
@@ -266,7 +266,7 @@ export default function Assessment({ ctx }: { ctx: Ctx }) {
           <p className="small muted">Targets: 10 seconds per side at Week 4, 20 at Week 8, 30 at Week 12, then hold 30 seconds and beat your best each cycle after.</p>
         </div>
         {(week12Done || doc.week13Goal) && (
-        <div className="card">
+        <div className="card" id="week13-plan">
           <h3>Week 13: keep going</h3>
           <p className="small muted">After Week 12, pick where to go next. Nothing resets. Your guardian, gear, and XP stay.</p>
           {week12Done && (
@@ -321,7 +321,7 @@ export default function Assessment({ ctx }: { ctx: Ctx }) {
   }
 
   return (
-    <div className="card">
+    <div className="card" id="assessment-start">
       <h2>Assessment, 30 to 45 minutes</h2>
       <p className="muted small">Goals and history, then the movement screen: overhead squat, single-leg squat, and postural assessment. Filming is optional and never required. Skip any video and you can still finish.</p>
 
@@ -370,11 +370,11 @@ export default function Assessment({ ctx }: { ctx: Ctx }) {
             <option value="some">Some experience</option>
             <option value="regular">Train regularly</option>
           </select>
-          <label>Years training</label>
+          <label>How long have you trained?</label>
           <select value={years} onChange={(e) => setYears(e.target.value as never)}>
-            <option value="under1">Under 1 year</option>
-            <option value="1to3">1 to 3 years</option>
-            <option value="over3">Over 3 years</option>
+            <option value="under1">Less than 1</option>
+            <option value="1to3">1 to 3</option>
+            <option value="over3">More than 3</option>
           </select>
           <label>What do you want to focus on? (1 = not a focus, 5 = a big focus)</label>
           {FOCUS_AREAS.map((f) => (
@@ -415,7 +415,7 @@ export default function Assessment({ ctx }: { ctx: Ctx }) {
             </div>
             <div>
               <label htmlFor="a-age">Age</label>
-              <input id="a-age" inputMode="numeric" value={age} onChange={(e) => setAge(e.target.value)} placeholder="e.g. 52" />
+              <input id="a-age" inputMode="numeric" value={age} onChange={(e) => setAge(e.target.value)} placeholder="e.g. 45" />
             </div>
             <div>
               <label htmlFor="a-height">Height (inches)</label>

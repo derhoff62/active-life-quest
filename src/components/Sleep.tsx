@@ -57,7 +57,7 @@ export default function Sleep({ ctx }: { ctx: Ctx }) {
         )}
       </div>
 
-      <div className="card">
+      <div className="card" id="log-sleep">
         <h3>Log sleep</h3>
         {loggedToday(doc.sleep) ? (
           <p className="small ok">Sleep logged today. Log again tomorrow morning.</p>

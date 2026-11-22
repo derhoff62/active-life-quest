@@ -36,9 +36,9 @@ export default function Progress({ ctx }: { ctx: Ctx }) {
   // can never sit at 0 forever the way the stored field did.
   const streak = streakDaysForDoc(doc);
   const cardioTotal = cardioArr.reduce((s, c) => s + Number(c.minutes || 0), 0);
-  // Your year: Week X of 52, Cycle Y of 4, next retest, next boss.
+  // Where you are: week in this stretch, and the stretch name. No totals.
   const yearWeek = currentWeekForDoc(doc);
-  const { cycle: yearCycle } = cycleForWeek(yearWeek);
+  const { cycle: yearCycle, weekInCycle: yearWeekInCycle } = cycleForWeek(yearWeek);
   const yearDoneRetests = new Set(retests.map((r) => (r as { week?: number }).week || 0));
   const yearNextRetest = nextRetestWeek(yearWeek, yearDoneRetests);
   const yearBeatenBossWeeks = new Set(
@@ -77,7 +77,7 @@ export default function Progress({ ctx }: { ctx: Ctx }) {
       <div className="card">
         <h2>Progress</h2>
         <p>Level {level} · {titleForLevel(level)} · {doc.xp} XP · Streak {streak} {streak === 1 ? 'day' : 'days'}</p>
-        <p>Week {yearWeek} of 52 · Cycle {yearCycle.cycle} of 4, {yearCycle.name} · {yearCycle.goal}</p>
+        <p>Week {yearWeekInCycle} · {yearCycle.name} · {yearCycle.goal}</p>
         <p className="small">{yearNextRetest !== null ? `Next retest: Week ${yearNextRetest}.` : 'All retests done.'} {yearNextBoss !== null ? `Next boss round: Week ${yearNextBoss}.` : 'All boss rounds beaten.'}</p>
         <p>Workouts this week: {workoutsThisWeek} · Cardio logged: {cardioTotal} min · Check-ins: {checkins.length}</p>
         <p className="small muted">Results so far: {prs.length} personal record{prs.length === 1 ? '' : 's'} · {cardioTotal.toLocaleString()} cardio minutes total{yearWaistChange !== null ? ` · Waist ${yearWaistChange > 0 ? '+' : ''}${yearWaistChange} in since your first measurement` : ''} · {badges.length} badges · {workouts.length} workouts total</p>

@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { Ctx } from '../App';
 import { ARMOR, CLASSES, CLASS_GOOD_FOR, CLASS_WORKOUT_FOCUS, SPELLS } from '../lib/data';
 import type { ArmorPiece } from '../lib/types';
-import { levelForXp } from '../lib/store';
+import { earnedArmorIds, levelForXp } from '../lib/store';
 import type { GuardianState } from '../lib/store';
 import type { ClassId } from '../lib/types';
 import GuardianAvatar from './GuardianAvatar';
@@ -119,6 +119,26 @@ function GearCard({ piece, earned }: { piece: ArmorPiece; earned: boolean }) {
 
 export default function Armor({ ctx }: { ctx: Ctx }) {
   const { doc, update } = ctx;
+  // The "new gear" badge and the top notice stay while you are on this
+  // tab, and clear when you leave it: the seen count is only ever raised
+  // on unmount. Refs, not the first render's closure, so leaving never
+  // writes a stale copy of the profile over newer progress.
+  const docRef = useRef(doc);
+  docRef.current = doc;
+  const updateRef = useRef(update);
+  updateRef.current = update;
+  useEffect(
+    () => () => {
+      const d = docRef.current;
+      const earned = earnedArmorIds(d).length;
+      if (earned > (d.armorSeenCount || 0)) {
+        updateRef.current((x) => {
+          x.armorSeenCount = earnedArmorIds(x).length;
+        });
+      }
+    },
+    [],
+  );
   const earned = new Set(doc.armorEarned);
   const rarityEarned = new Set(doc.rarityEarned);
   const total = ARMOR.length;
@@ -331,7 +351,7 @@ export default function Armor({ ctx }: { ctx: Ctx }) {
       </div>
 
       {(['Common', 'Rare', 'Legendary', 'Mythical'] as const).map((tier) => (
-        <div className="card" key={tier}>
+        <div className="card" key={tier} id={tier === 'Common' ? 'gear-list' : undefined}>
           <h3>{tier}</h3>
           <p className="small muted">
             {tier === 'Common' && 'Easiest to earn.'}

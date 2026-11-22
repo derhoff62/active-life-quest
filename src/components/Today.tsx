@@ -61,7 +61,7 @@ export default function Today({ ctx }: { ctx: Ctx }) {
         : phaseWorkouts[(lastIdx + 1) % Math.max(1, phaseWorkouts.length)] || WORKOUTS.find((w) => w.phase === phase);
   const unfinished = doc.sessions;
   const week12Done = doc.retests.some((r) => (r as { week?: number }).week === 12);
-  // Your year: where you are in the 52 weeks, and results so far, not
+  // Where you are in this stretch, and results so far, not
   // just XP. Waist change comes from first vs latest measurement.
   const yearWeek = currentWeekForDoc(doc);
   const { cycle: yearCycle, weekInCycle, isReview } = cycleForWeek(yearWeek);
@@ -209,13 +209,13 @@ export default function Today({ ctx }: { ctx: Ctx }) {
 
       {doc.assessmentDone && (
         <div className="card gold-frame">
-          <h3 style={{ margin: 0 }}>Your year: Week {yearWeek} of 52 · Cycle {yearCycle.cycle} of 4, {yearCycle.name}</h3>
-          <p className="small">Week {weekInCycle} of this cycle{isReview ? ' · Year review stretch' : ''}. This cycle's goal: <strong>{yearCycle.goal}</strong> · {yearCycle.phases} · {yearCycle.track}</p>
+          <h3 style={{ margin: 0 }}>Where you are: Week {weekInCycle} · {yearCycle.name}</h3>
+          <p className="small">Week {weekInCycle} of this stretch{isReview ? ' · Review stretch' : ''}. This stretch's goal: <strong>{yearCycle.goal}</strong> · {yearCycle.phases} · {yearCycle.track}</p>
           <p className="small">{yearNextRetest !== null ? `Next retest: Week ${yearNextRetest}.` : 'All retests done.'} {yearNextBoss !== null ? `Next boss round: Week ${yearNextBoss}.` : 'All boss rounds beaten.'}</p>
           {isDeloadWeek(yearWeek) && <p className="small"><strong>Deload week.</strong> Lighter loads this week, then your retest.</p>}
           <p className="small muted">Results so far: {doc.prs.length} personal record{doc.prs.length === 1 ? '' : 's'} · {yearCardioTotal.toLocaleString()} cardio minutes · Streak {yearStreak} {yearStreak === 1 ? 'day' : 'days'}{yearWaistChange !== null ? ` · Waist ${yearWaistChange > 0 ? '+' : ''}${yearWaistChange} in since your first measurement` : ''} · {doc.badges.length} badges</p>
           <p className="small">This month's challenge: <strong>{yearChallenge.title}</strong> · {yearChallenge.detail}</p>
-          <div className="row"><button onClick={() => go('journey')}>See the year road</button><button onClick={() => go('progress')}>See my results</button></div>
+          <div className="row"><button onClick={() => go('journey')}>See the road ahead</button><button onClick={() => go('progress')}>See my results</button></div>
         </div>
       )}
 
@@ -255,7 +255,7 @@ export default function Today({ ctx }: { ctx: Ctx }) {
         </div>
       )}
 
-      <div className="card">
+      <div className="card" id="today-checkin">
         <h3 style={{ margin: 0 }}>Daily check-in</h3>
         <p className="muted small">
           Recovery score from your last check-in: {lastCheckin ? `${rec}/100` : 'not set yet, log your first check-in below'}. Sleep 40, aches 25, energy 25, rest rhythm 10.
@@ -395,7 +395,7 @@ export default function Today({ ctx }: { ctx: Ctx }) {
         <button className="primary" onClick={() => go('sleep')}>Log sleep in the Sleep tab</button>
       </div>
 
-      <div className="card">
+      <div className="card" id="today-messages">
         <h3>Message Derek</h3>
         <p className="small muted">This is not live chat. Derek replies within one business day.</p>
         <div className="row">
