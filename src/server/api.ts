@@ -540,6 +540,31 @@ app.put("/api/profile", async (c) => {
   if (!user) {
     return c.json({ error: "You are not signed in." }, 401);
   }
+  // Safety net: never let a fresh default profile overwrite a profile
+  // that already has progress. This happened live three times: a failed
+  // load made the client think the account was new, and the next save
+  // PUT an empty doc (0 XP, no guardian, no assessment) over the real
+  // one. If the stored profile has progress and the incoming one has
+  // none, keep the stored one and tell the client.
+  const hasProgress = (d: Record<string, unknown> | null): boolean => {
+    if (!d) return false;
+    if (typeof d.xp === "number" && d.xp > 0) return true;
+    if (d.guardianPicked === true) return true;
+    if (d.assessmentDone === true) return true;
+    if (d.betaRedeemed === true) return true;
+    if (typeof d.trialStartedAt === "string" && d.trialStartedAt) return true;
+    for (const f of ["workouts", "checkins", "messages", "cardio", "sleep", "measurements", "prs", "retests"] as const) {
+      if (Array.isArray(d[f]) && (d[f] as unknown[]).length > 0) return true;
+    }
+    return false;
+  };
+  const existing = await getProfileDoc(db, user.id);
+  if (hasProgress(existing) && !hasProgress(profile)) {
+    return c.json(
+      { error: "Your saved progress was kept. The empty profile was not written over it. Reload the page and try again." },
+      409,
+    );
+  }
   const rows = (await db`INSERT INTO profiles (user_id, data) VALUES (${user.id}, ${text}::jsonb)
     ON CONFLICT (user_id) DO UPDATE SET data = EXCLUDED.data, updated_at = now()
     RETURNING updated_at AS "updatedAt"`) as unknown as Array<{

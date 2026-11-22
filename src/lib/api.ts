@@ -77,15 +77,25 @@ export async function deleteAccount() {
 }
 
 // --- Profile doc ---
+// loadProfile throws when the server cannot be reached, after retries.
+// That is deliberate: callers must tell "the server did not answer" apart
+// from "this account has no profile yet" (null). The old version returned
+// null for both, so a single failed fetch looked like a brand-new account
+// and the app then saved a fresh default over the real profile in Neon.
 export async function loadProfile(): Promise<ProfileDoc | null> {
   const m = await detectMode();
   if (m === 'local') return null;
-  try {
-    const r = await req<{ data: ProfileDoc }>('/api/profile');
-    return r.data && Object.keys(r.data).length ? r.data : null;
-  } catch {
-    return null;
+  let lastErr: unknown = null;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const r = await req<{ data: ProfileDoc }>('/api/profile');
+      return r.data && Object.keys(r.data).length ? r.data : null;
+    } catch (e) {
+      lastErr = e;
+      await new Promise((r) => window.setTimeout(r, 500 * (attempt + 1)));
+    }
   }
+  throw lastErr instanceof Error ? lastErr : new Error('Could not load your profile.');
 }
 export async function saveProfile(doc: ProfileDoc): Promise<boolean> {
   const m = await detectMode();

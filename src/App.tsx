@@ -70,6 +70,13 @@ export default function App() {
   const [tab, setTab] = useState<Tab>('today');
   const [serverMode, setServerMode] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
+  // True only once the server profile for the CURRENT signed-in account
+  // has actually answered (with a profile, or with "no profile yet").
+  // save() must never PUT to the server before this is true: before the
+  // fix, a failed load fell through to a fresh default doc and the next
+  // save overwrote the real profile in Neon with 0 XP, no guardian.
+  const [remoteReady, setRemoteReady] = useState(false);
   const [showBeta, setShowBeta] = useState(false);
   const [betaCode, setBetaCode] = useState('');
   const [betaMsg, setBetaMsg] = useState('');
@@ -77,6 +84,41 @@ export default function App() {
   const [confirmSignOut, setConfirmSignOut] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleteMsg, setDeleteMsg] = useState('');
+
+  // Load the server profile for one signed-in user, behind the loading
+  // screen. Runs on first mount AND after every sign-in / sign-up: the
+  // old code only ran on mount, so signing in (or signing back in after
+  // sign-out) never reloaded the server profile and the app showed a
+  // fresh 0 XP default as if the account were new, with no loading
+  // screen at all. A failed load stays on the loading screen with a
+  // Retry button instead of falling through to a fresh default that a
+  // later save could write over the real profile.
+  const loadRemoteProfile = async (user: { email: string; displayName: string }) => {
+    setLoading(true);
+    setLoadError('');
+    try {
+      const remote = await api.loadProfile();
+      if (remote) {
+        const next = normalizeProfile(remote);
+        setDoc(next);
+        saveLocal(next);
+      } else {
+        // No server profile yet (a brand-new account): only use the
+        // local copy if it actually holds progress. Otherwise start
+        // from a fresh default, which is the correct first-run state.
+        const local = normalizeProfile(loadLocal());
+        const hasLocal = local.guardianPicked || local.xp > 0 || local.assessmentDone || local.workouts.length > 0;
+        local.email = local.email || user.email;
+        local.displayName = local.displayName || user.displayName;
+        setDoc(hasLocal ? local : { ...local, email: user.email, displayName: user.displayName });
+      }
+      setRemoteReady(true);
+    } catch (e) {
+      setLoadError(e instanceof Error ? e.message : 'Your profile could not be loaded. Check your connection and try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     (async () => {
@@ -87,38 +129,14 @@ export default function App() {
           const meRes = await api.me();
           if (meRes.user) {
             setAuth(meRes.user);
-            // Load the server profile, with one retry. A single failed
-            // fetch used to fall straight through to an empty local
-            // profile, so right after sign-in the app flashed 0 XP with
-            // "Pick my guardian" and assessment-not-done, even though
-            // the real profile (60 XP, guardian picked) was on the
-            // server. Never render an empty default as if it were the
-            // user's real profile: stay on the loading screen until the
-            // server profile has actually answered.
-            let remote = await api.loadProfile();
-            if (!remote) {
-              await new Promise((r) => window.setTimeout(r, 900));
-              remote = await api.loadProfile();
-            }
-            if (remote) {
-              setDoc(normalizeProfile(remote));
-              saveLocal(normalizeProfile(remote));
-              setLoading(false);
-              return;
-            }
-            // No server profile yet (a brand-new account): only use the
-            // local copy if it actually holds progress. Otherwise start
-            // from a fresh default, which is the correct first-run state.
-            const local = normalizeProfile(loadLocal());
-            const hasLocal = local.guardianPicked || local.xp > 0 || local.assessmentDone || local.workouts.length > 0;
-            local.email = local.email || meRes.user.email;
-            local.displayName = local.displayName || meRes.user.displayName;
-            setDoc(hasLocal ? local : { ...local, email: meRes.user.email, displayName: meRes.user.displayName });
-            setLoading(false);
+            // Mark this account as loaded here so the auth effect below
+            // does not load the same profile a second time.
+            setAuthLoadedFor(meRes.user.email);
+            await loadRemoteProfile(meRes.user);
             return;
           }
         } catch {
-          /* fall through to local */
+          /* not signed in: fall through to local */
         }
       }
       const localAuth = loadLocalAuth();
@@ -129,7 +147,20 @@ export default function App() {
       setDoc(localDoc);
       setLoading(false);
     })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // After sign-in / sign-up, reload the server profile for that account.
+  // Auth's onAuth calls this through handleAuth below; it is an effect
+  // here so the reload also happens whenever auth changes.
+  const [authLoadedFor, setAuthLoadedFor] = useState('');
+  useEffect(() => {
+    if (auth && serverMode && auth.email && authLoadedFor !== auth.email) {
+      setAuthLoadedFor(auth.email);
+      void loadRemoteProfile(auth);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [auth, serverMode]);
 
   const save = (next: ProfileDoc) => {
     const fixed = normalizeProfile(next);
@@ -150,7 +181,10 @@ export default function App() {
     fixed.rarityEarned = earned;
     setDoc(fixed);
     saveLocal(fixed);
-    if (serverMode && auth) {
+    // Never write to the server until the server profile for this account
+    // has actually loaded (remoteReady). Before this guard, a fresh
+    // default doc could be PUT over the real profile after a failed load.
+    if (serverMode && auth && remoteReady) {
       api.saveProfile(fixed).catch(() => undefined);
     }
   };
@@ -166,6 +200,46 @@ export default function App() {
     setTab(t);
     window.scrollTo({ top: 0 });
   };
+
+  // Sign-in / sign-up: in server mode the auth effect above reloads the
+  // server profile for this account (behind the loading screen). Do NOT
+  // update() the current doc here: while signed out it is a fresh
+  // default, and writing it would clobber the real server profile.
+  // In local mode there is no server profile, so keep the old behaviour.
+  const handleAuth = (a: { email: string; displayName: string }) => {
+    setAuth(a);
+    saveLocalAuth(a);
+    if (!serverMode) {
+      update((d) => {
+        d.email = a.email;
+        d.displayName = a.displayName;
+      });
+    }
+  };
+
+  if (loadError && auth) {
+    return (
+      <div className="app">
+        <div className="banner">
+          <h1>Active Life Quest</h1>
+          <p>Your profile could not be loaded.</p>
+        </div>
+        <div className="card">
+          <p>{loadError}</p>
+          <p>Your progress is still saved on your account. It did not load, so the app is waiting instead of showing a fresh start.</p>
+          <button
+            className="primary"
+            onClick={() => {
+              setAuthLoadedFor('');
+              void loadRemoteProfile(auth);
+            }}
+          >
+            Try again
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   if (loading || !doc) {
     return (
@@ -185,16 +259,7 @@ export default function App() {
       <div className={doc.largeText ? 'large-text' : ''}>
         <div className="app">
           <ToastHost />
-          <Auth
-            onAuth={(a) => {
-              setAuth(a);
-              saveLocalAuth(a);
-              update((d) => {
-                d.email = a.email;
-                d.displayName = a.displayName;
-              });
-            }}
-          />
+          <Auth onAuth={handleAuth} />
           <footer className="appfoot">
             Active Life Personal Training by Derek. Derek cannot fix, treat, diagnose, or cure pain. Move better with less discomfort. For sharp, new, worsening, or non-improving pain, see a doctor or physical therapist.
           </footer>
@@ -312,6 +377,9 @@ export default function App() {
                   api.logout();
                   clearLocal();
                   setAuth(null);
+                  setRemoteReady(false);
+                  setAuthLoadedFor('');
+                  setLoadError('');
                   setDoc(defaultProfile());
                   setConfirmSignOut(false);
                 }}
@@ -334,6 +402,9 @@ export default function App() {
                     api.logout();
                     clearLocal();
                     setAuth(null);
+                    setRemoteReady(false);
+                    setAuthLoadedFor('');
+                    setLoadError('');
                     setDoc(defaultProfile());
                   } catch (e) {
                     setDeleteMsg(e instanceof Error ? e.message : 'Your account could not be deleted. Try again, or message Derek.');
