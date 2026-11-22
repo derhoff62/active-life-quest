@@ -56,7 +56,6 @@ export default function Journey({ ctx }: { ctx: Ctx }) {
     return s.classId === 'any' || s.classId === doc.guardian?.classId;
   });
   const met = metCompanionIds(doc);
-  const metCount = met.size;
   // Boss health, stored on the profile so a beaten boss stays beaten.
   const bossHpMap = doc.bossHp || {};
   const hpOf = (r: (typeof BOSS_ROUNDS)[number]) => bossHpMap[r.id] ?? r.maxHp;
@@ -77,7 +76,7 @@ export default function Journey({ ctx }: { ctx: Ctx }) {
           <p className={phase < 2 ? 'locked' : ''}><span className="land">Land 2: Crystal Shores, Lake Castle, Weeks 5 to 8.</span> {phase < 2 ? 'Locked until your Week 4 retest.' : 'Open.'}</p>
           <p className={phase < 3 ? 'locked' : ''}><span className="land">Land 3: Navy Peaks, Navy Castle, Weeks 9 to 12.</span> {phase < 3 ? 'Locked until your Week 8 retest.' : 'Open.'}</p>
         </div>
-        <p className="small muted">Boss rounds at Weeks 4, 8, and 12 of every cycle, plus a review round at Week 52. Win the round with your class moves and mana, then do the retest to open the next land. The map above shows the first stretch, Weeks 1 to 12. The road continues below.</p>
+        <p className="small muted">Boss rounds at Weeks 4, 8, and 12 of every cycle, plus a review round at the end of the road. Win the round with your class moves and mana, then do the retest to open the next land. The map above shows the first stretch, Weeks 1 to 12. The road continues below.</p>
       </div>
 
       <div className="card">
@@ -86,13 +85,17 @@ export default function Journey({ ctx }: { ctx: Ctx }) {
         {YEAR_CYCLES.map((c) => {
           const week = currentWeekForDoc(doc);
           const state = week > c.weeks[1] ? 'Done' : week >= c.weeks[0] ? 'You are here' : 'Coming up';
-          const beaten = c.bossWeeks.filter((w) => ((doc.bossHp || {})[`boss-week-${w}`] ?? 999) <= 0).length;
+          // Boss weeks are shown without the review round week, and the
+          // beaten count never shows a total: the length of the road
+          // stays hidden.
+          const shownBossWeeks = c.bossWeeks.filter((w) => w !== 52);
+          const beaten = shownBossWeeks.filter((w) => ((doc.bossHp || {})[`boss-week-${w}`] ?? 999) <= 0).length;
           return (
             <div key={c.cycle} style={{ marginBottom: 12 }}>
               <p><strong>{c.name} (Weeks {c.weeks[0]} to {c.weeks[1]}) · {state}</strong></p>
               <p className="small">Goal: {c.goal} · {c.phases} · {c.lands}</p>
               <p className="small">{c.story}</p>
-              <p className="small muted">Boss rounds: Weeks {c.bossWeeks.join(', ')} · {beaten} of {c.bossWeeks.length} beaten · {c.track}</p>
+              <p className="small muted">Boss rounds: Weeks {shownBossWeeks.join(', ')}{beaten > 0 ? ` · ${beaten} beaten` : ''} · {c.track}</p>
             </div>
           );
         })}
@@ -102,7 +105,7 @@ export default function Journey({ ctx }: { ctx: Ctx }) {
 
       <div className="card gold-frame" id="combat">
         <h2>Combat</h2>
-        <p>A boss round is a practice fight at the end of a land, at Weeks 4, 8, and 12 of every cycle, plus a review round at Week 52. You attack with your class spells, and each spell costs mana. Win the round, do the retest, and the next land opens. Bosses are challenges you beat, not friends.</p>
+        <p>A boss round is a practice fight at the end of a land, at Weeks 4, 8, and 12 of every cycle, plus a review round when you get there. You attack with your class spells, and each spell costs mana. Win the round, do the retest, and the next land opens. Bosses are challenges you beat, not friends.</p>
         <p className="small muted">Mana: {doc.mana}/10. Mana refills daily, and good sleep and check-ins add more. Spells never block a workout, quest, check-in, or retest. Pick a boss, then use a spell. The bar drops with every hit.</p>
         {BOSS_ROUNDS.map((r) => {
           const hp = hpOf(r);
@@ -199,7 +202,7 @@ export default function Journey({ ctx }: { ctx: Ctx }) {
       </div>
 
       <div className="card" id="companions">
-        <h3>Your companions ({metCount} of {CREATURES.length} met)</h3>
+        <h3>Your companions</h3>
         <p className="small muted">People and animals you befriend along the road, one at a time as you get further. Bosses are not companions. They are challenges you beat.</p>
         {CREATURES.map((c) => {
           const isMet = met.has(c.id);

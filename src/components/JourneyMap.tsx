@@ -10,6 +10,7 @@
 // reflections. Navy Peaks: layered snow-capped mountains, clouds, a golden
 // sky glow like a far-off Erdtree light.
 import { CREATURES, BOSS_ROUNDS } from '../lib/data';
+import { weekLabel } from '../lib/yearPlan';
 
 // Every map label sits on a solid white pill with a dark navy border and
 // dark navy text, so it stays readable on any land colour, even where the
@@ -136,7 +137,7 @@ export default function JourneyMap({
           border: '2px solid #124571',
         }}
       >
-        You are here: {hereLand.label} · Week {currentWeek}
+        You are here: {hereLand.label} · {weekLabel(currentWeek)}
       </p>
       <svg width="100%" viewBox="0 0 360 560" role="img" aria-label="Journey map: three lands, Forest, Shores, and Peaks" style={{ display: 'block', maxWidth: 420, margin: '0 auto' }}>
         <defs>

@@ -1911,7 +1911,7 @@ export const BADGES: Badge[] = [
   { id: 'cycle-2-finisher', name: 'Cycle 2 Finisher', how: 'Finish Cycle 2: save the Week 24 retest.' },
   { id: 'cycle-3-finisher', name: 'Cycle 3 Finisher', how: 'Finish Cycle 3: save the Week 36 retest.' },
   { id: 'cycle-4-finisher', name: 'Cycle 4 Finisher', how: 'Finish Cycle 4: save the Week 48 retest.' },
-  { id: 'year-finisher', name: 'Summit Finisher', how: 'Save the Week 52 review retest.' },
+  { id: 'year-finisher', name: 'Summit Finisher', how: 'Save a review retest.' },
   { id: 'ten-prs', name: 'Ten PRs', how: 'Set 10 personal records.' },
   { id: 'twenty-five-workouts', name: '25 Workouts', how: 'Finish 25 workouts.' },
   { id: 'fifty-workouts', name: '50 Workouts', how: 'Finish 50 workouts.' },
@@ -1968,7 +1968,7 @@ export const ARMOR: ArmorPiece[] = [
   { id: 'summitforged-helm', name: 'Summitforged Helm', tier: 'Rare', set: 'Summitforged', how: 'Defeat the Week 40 boss round.', effect: 'Summit focus. The top is in sight.' },
   { id: 'summitforged-chestplate', name: 'Summitforged Chestplate', tier: 'Rare', set: 'Summitforged', how: 'Finish Cycle 4: save the Week 48 retest.', effect: 'A peak chest. A long stretch of training sits behind every rep.' },
   { id: 'summitforged-greaves', name: 'Summitforged Greaves', tier: 'Rare', set: 'Summitforged', how: 'Finish 50 workouts.', effect: 'Fifty workouts. The road is worn smooth under your feet.' },
-  { id: 'crown-year', name: 'Crown of the Summit', tier: 'Mythical', how: 'Save the Week 52 review retest.', effect: 'A crown for a long road, well walked.' },
+  { id: 'crown-year', name: 'Crown of the Summit', tier: 'Mythical', how: 'Save a review retest.', effect: 'A crown for a long road, well walked.' },
   { id: 'cloak-year', name: 'Cloak of Twenty Wins', tier: 'Legendary', how: 'Earn 20 badges.', effect: 'Twenty wins sewn into one cloak.' },
   { id: 'boots-year', name: 'Boots of a Thousand Minutes', tier: 'Legendary', how: 'Log 2,000 minutes of cardio in total.', effect: 'Two thousand minutes of moving. Your heart knows the road.' },
 ];

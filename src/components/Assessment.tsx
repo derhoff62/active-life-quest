@@ -3,7 +3,7 @@ import type { Ctx } from '../App';
 import * as api from '../lib/api';
 import { ASSESSMENT_EXAMPLES, ASSESSMENT_QUESTIONS, CES_TEMPLATES, CONTRAINDICATIONS, DEFAULT_EQUIPMENT, EQUIPMENT_NOTES, EQUIPMENT_OPTIONS, FOCUS_AREAS, recommendPhase } from '../lib/data';
 import { currentWeekForDoc, awardBadges, phaseForDoc } from '../lib/store';
-import { RETEST_WEEKS } from '../lib/yearPlan';
+import { RETEST_WEEKS, weekLabel } from '../lib/yearPlan';
 import type { FindingId, FormRating } from '../lib/types';
 import ExampleVideo from './ExampleVideo';
 
@@ -202,11 +202,11 @@ export default function Assessment({ ctx }: { ctx: Ctx }) {
         </div>
         <div className="card" id="retest">
           <h3>Retest (Weeks 4, 8, and 12 of each cycle)</h3>
-          <p className="small muted">A retest is a short check, not the full assessment. Do it at Weeks 4, 8, and 12 of each 12-week cycle. Week 52 is a review retest too, then you keep going with a new goal. A clean retest moves you to the next phase and moves your corrective steps one step forward. Week 12 of each cycle is also a deload week: lighter loads that week. The next cycle only opens after that cycle's retest.</p>
+          <p className="small muted">A retest is a short check, not the full assessment. Do it at Weeks 4, 8, and 12 of each 12-week cycle. There is a review retest too, then you keep going with a new goal. A clean retest moves you to the next phase and moves your corrective steps one step forward. Week 12 of each cycle is also a deload week: lighter loads that week. The next cycle only opens after that cycle's retest.</p>
           <label>Which week are you retesting?</label>
           <div className="row">
             {RETEST_WEEKS.map((w) => (
-              <button key={w} type="button" onClick={() => setRetestWeek(w)} style={retestWeek === w ? { background: '#124571', color: '#fff' } : {}}>Week {w}</button>
+              <button key={w} type="button" onClick={() => setRetestWeek(w)} style={retestWeek === w ? { background: '#124571', color: '#fff' } : {}}>{weekLabel(w)}</button>
             ))}
           </div>
           <label>Balance now (seconds each side, general check)</label>
@@ -227,13 +227,13 @@ export default function Assessment({ ctx }: { ctx: Ctx }) {
               // to hand out +20 XP and a phase jump every tap.
               const doneWeeks = new Set(doc.retests.map((r) => (r as { week?: number }).week));
               if (doneWeeks.has(retestWeek)) {
-                setRetestMsg(`Week ${retestWeek} retest is already saved. Pick the next week.`);
+                setRetestMsg(`${weekLabel(retestWeek)} retest is already saved. Pick the next week.`);
                 return;
               }
               const retestIdx = RETEST_WEEKS.indexOf(retestWeek);
               const prevRetest = retestIdx > 0 ? RETEST_WEEKS[retestIdx - 1] : null;
               if (prevRetest !== null && !doneWeeks.has(prevRetest)) {
-                setRetestMsg(`Do the Week ${prevRetest} retest first.`);
+                setRetestMsg(`Do the ${weekLabel(prevRetest)} retest first.`);
                 return;
               }
               // Weeks 4, 8, and 12 move the phase. Later retests keep the

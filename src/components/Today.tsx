@@ -4,7 +4,7 @@ import * as api from '../lib/api';
 import { PHASES, WORKOUTS, CORE_BALANCE_WORKOUT, WEEK13, CLASS_GOOD_FOR, GOAL_TYPES, splitForDays } from '../lib/data';
 import type { TrainingStyle } from '../lib/data';
 import { phaseForDoc, recoveryScore, levelForXp, titleForLevel, metCompanionIds, currentWeekForDoc, checkinPreferenceText, checkinFrequenciesForMode, normalizeCheckinFrequency, loggedToday, streakDaysForDoc } from '../lib/store';
-import { cycleForWeek, nextRetestWeek, nextBossWeek, isDeloadWeek, challengeForWeek } from '../lib/yearPlan';
+import { cycleForWeek, nextRetestWeek, nextBossWeek, nextRetestLabel, nextBossLabel, isDeloadWeek, challengeForWeek } from '../lib/yearPlan';
 import type { AssessmentVideo } from '../lib/store';
 import GuardianAvatar from './GuardianAvatar';
 
@@ -211,7 +211,7 @@ export default function Today({ ctx }: { ctx: Ctx }) {
         <div className="card gold-frame">
           <h3 style={{ margin: 0 }}>Where you are: Week {weekInCycle} · {yearCycle.name}</h3>
           <p className="small">Week {weekInCycle} of this stretch{isReview ? ' · Review stretch' : ''}. This stretch's goal: <strong>{yearCycle.goal}</strong> · {yearCycle.phases} · {yearCycle.track}</p>
-          <p className="small">{yearNextRetest !== null ? `Next retest: Week ${yearNextRetest}.` : 'All retests done.'} {yearNextBoss !== null ? `Next boss round: Week ${yearNextBoss}.` : 'All boss rounds beaten.'}</p>
+          <p className="small">{nextRetestLabel(yearNextRetest)} {nextBossLabel(yearNextBoss)}</p>
           {isDeloadWeek(yearWeek) && <p className="small"><strong>Deload week.</strong> Lighter loads this week, then your retest.</p>}
           <p className="small muted">Results so far: {doc.prs.length} personal record{doc.prs.length === 1 ? '' : 's'} · {yearCardioTotal.toLocaleString()} cardio minutes · Streak {yearStreak} {yearStreak === 1 ? 'day' : 'days'}{yearWaistChange !== null ? ` · Waist ${yearWaistChange > 0 ? '+' : ''}${yearWaistChange} in since your first measurement` : ''} · {doc.badges.length} badges</p>
           <p className="small">This month's challenge: <strong>{yearChallenge.title}</strong> · {yearChallenge.detail}</p>

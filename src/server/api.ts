@@ -573,6 +573,151 @@ app.put("/api/profile", async (c) => {
   return c.json({ ok: true, updatedAt: rows[0]?.updatedAt ?? null });
 });
 
+// ---------- community board (opt-in, anonymous) ----------
+// The board ranks consistency only, this month only: workouts done,
+// check-ins logged, cardio minutes, and streak days. It resets on the
+// 1st of every month, so a new client never starts hundreds of points
+// behind. The server aggregates here and returns ONLY the top 5 plus
+// the caller's own row and the row directly above them. It never
+// returns a full list, a user id, an email, a real name, a weight, or
+// measurements. A client who has not opted in is never included, and
+// turning the opt-in off removes them on the next load, because the
+// endpoint only reads the stored opt-in flag.
+app.get("/api/community/leaderboard", async (c) => {
+  const db = getDb(c);
+  if (!db) {
+    return dbMissing(c);
+  }
+  const user = await requireSession(c, db);
+  if (!user) {
+    return c.json({ error: "You are not signed in." }, 401);
+  }
+  const now = new Date();
+  const monthKey = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, "0")}`;
+  const monthNames = [
+    "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December",
+  ];
+  const monthLabel = `${monthNames[now.getUTCMonth()]} ${now.getUTCFullYear()}`;
+  const todayKey = now.toISOString().slice(0, 10);
+
+  const rows = (await db`SELECT user_id AS "userId", data FROM profiles`) as unknown as Array<{
+    userId: string;
+    data: Record<string, unknown> | null;
+  }>;
+
+  type RawEntry = {
+    userId: string;
+    name: string;
+    classId: string;
+    workouts: number;
+    checkins: number;
+    cardioMinutes: number;
+    streak: number;
+    score: number;
+  };
+  const raw: RawEntry[] = [];
+  for (const row of rows) {
+    const d = row.data;
+    if (!d || d.communityOptIn !== true) continue;
+    const guardian = d.guardian as { name?: string; classId?: string } | null;
+    const name = typeof guardian?.name === "string" ? guardian.name.trim() : "";
+    if (!name) continue;
+    const inMonth = (list: unknown): Array<Record<string, unknown>> =>
+      Array.isArray(list)
+        ? (list as Array<Record<string, unknown>>).filter(
+            (e) => typeof e?.date === "string" && e.date.slice(0, 7) === monthKey,
+          )
+        : [];
+    const workouts = inMonth(d.workouts).length;
+    const checkins = inMonth(d.checkins).length;
+    const cardioMinutes = inMonth(d.cardio).reduce(
+      (s, e) => s + Number(e.minutes || 0),
+      0,
+    );
+    // Streak: consecutive days ending today or yesterday with a workout
+    // or a check-in, worked out from the dates.
+    const days = new Set<string>();
+    for (const list of [d.workouts, d.checkins]) {
+      if (Array.isArray(list)) {
+        for (const e of list as Array<Record<string, unknown>>) {
+          if (typeof e?.date === "string") days.add(e.date.slice(0, 10));
+        }
+      }
+    }
+    let streak = 0;
+    const day = new Date(`${todayKey}T12:00:00Z`);
+    if (!days.has(day.toISOString().slice(0, 10))) day.setUTCDate(day.getUTCDate() - 1);
+    while (days.has(day.toISOString().slice(0, 10))) {
+      streak += 1;
+      day.setUTCDate(day.getUTCDate() - 1);
+    }
+    // Showing up score: 10 per workout, 5 per check-in, 2 per streak
+    // day, 1 per 10 cardio minutes up to 300 minutes.
+    const score =
+      workouts * 10 + checkins * 5 + streak * 2 + Math.min(cardioMinutes, 300) / 10;
+    raw.push({
+      userId: row.userId,
+      name,
+      classId: typeof guardian?.classId === "string" ? guardian.classId : "Guardian",
+      workouts,
+      checkins,
+      cardioMinutes,
+      streak,
+      score,
+    });
+  }
+  raw.sort(
+    (a, b) =>
+      b.score - a.score || b.workouts - a.workouts || a.name.localeCompare(b.name),
+  );
+  // Anonymous names only. If two guardians picked the same name, tell
+  // them apart with a number, never with a real name. Names are numbered
+  // once, up front, so an entry shown twice (top 5 and your own row)
+  // keeps the same name.
+  const seenNames = new Map<string, number>();
+  const named = raw.map((e) => {
+    const base = `${e.name} the ${e.classId}`;
+    const n = (seenNames.get(base) || 0) + 1;
+    seenNames.set(base, n);
+    return { ...e, display: n === 1 ? base : `${base} ${n}` };
+  });
+  const toEntry = (e: (typeof named)[number], rank: number) => ({
+    rank,
+    name: e.display,
+    classId: e.classId,
+    workouts: e.workouts,
+    checkins: e.checkins,
+    cardioMinutes: e.cardioMinutes,
+    streak: e.streak,
+    score: e.score,
+    isMe: e.userId === user.id,
+  });
+  const top = named.slice(0, 5).map((e, i) => toEntry(e, i + 1));
+  const myIndex = named.findIndex((e) => e.userId === user.id);
+  const me = myIndex >= 0 ? toEntry(named[myIndex], myIndex + 1) : null;
+  // The row directly above the viewer, so the client can say how far
+  // behind the next spot they are without ever seeing the full list.
+  const ahead = myIndex > 0 ? named[myIndex - 1] : null;
+  return c.json({
+    month: monthKey,
+    monthLabel,
+    top,
+    me,
+    aheadOfMe: ahead
+      ? {
+          rank: myIndex,
+          workouts: ahead.workouts,
+          checkins: ahead.checkins,
+          cardioMinutes: ahead.cardioMinutes,
+          streak: ahead.streak,
+          score: ahead.score,
+        }
+      : null,
+    totalOptedIn: raw.length,
+  });
+});
+
 // ---------- assessment videos (Cloudflare R2) ----------
 // Video bytes live in R2 only, never in the Neon profile JSON
 // (PROFILE_MAX_BYTES is 1,000,000, a video would blow it up). Only the

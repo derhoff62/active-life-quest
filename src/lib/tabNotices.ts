@@ -70,7 +70,9 @@ export function tabNotice(doc: ProfileDoc, tab: Tab): TabNotice | null {
       const dueWeek = nextRetestDueWeek(doc);
       if (dueWeek !== null) {
         return {
-          text: `Retest due: Week ${dueWeek}. A short check, not the full assessment.`,
+          text: dueWeek === 52
+            ? 'Retest due: a review retest. A short check, not the full assessment.'
+            : `Retest due: Week ${dueWeek}. A short check, not the full assessment.`,
           actions: [{ label: 'Do the retest', anchor: 'retest' }],
         };
       }

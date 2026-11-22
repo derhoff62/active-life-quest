@@ -120,6 +120,11 @@ export interface ProfileDoc {
   // time they opened Journey. Badges clear when the tab is visited.
   armorSeenCount: number;
   journeySeenWeek: number;
+  // Community board: opt-in only, off by default. Turning it off removes
+  // the client from the board. Only the guardian name and this month's
+  // consistency counts are ever shared. Never a real name, weight, or
+  // measurements.
+  communityOptIn: boolean;
   trialStartedAt: string | null;
   betaRedeemed: boolean;
   joinedAt: string;
@@ -189,6 +194,7 @@ export function defaultProfile(email = '', displayName = ''): ProfileDoc {
     week13PlanRequested: false,
     armorSeenCount: 0,
     journeySeenWeek: 0,
+    communityOptIn: false,
     trialStartedAt: null,
     betaRedeemed: false,
     joinedAt: now,
@@ -260,6 +266,7 @@ export function normalizeProfile(raw: unknown): ProfileDoc {
   if (typeof out.level !== 'number') out.level = 1;
   if (typeof out.armorSeenCount !== 'number') out.armorSeenCount = 0;
   if (typeof out.journeySeenWeek !== 'number') out.journeySeenWeek = 0;
+  if (typeof out.communityOptIn !== 'boolean') out.communityOptIn = false;
   if (typeof out.streakDays !== 'number') out.streakDays = 0;
   if (typeof out.trainingDays !== 'number') out.trainingDays = 3;
   if (out.trainingStyle !== 'full-body' && out.trainingStyle !== 'ppl' && out.trainingStyle !== 'short') out.trainingStyle = 'full-body';

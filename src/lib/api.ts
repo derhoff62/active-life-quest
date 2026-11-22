@@ -238,6 +238,33 @@ export async function coachSetCheckinPreference(userId: string, mode: string, fr
   });
 }
 
+// --- Community board (opt-in, anonymous) ---
+// The server returns only the top 5 plus your own row and the row
+// directly above you. No user ids, no emails, no real names, no weight,
+// no measurements ever come back from this endpoint.
+export interface LeaderboardEntry {
+  rank: number;
+  name: string;
+  classId: string;
+  workouts: number;
+  checkins: number;
+  cardioMinutes: number;
+  streak: number;
+  score: number;
+  isMe: boolean;
+}
+export interface LeaderboardResponse {
+  month: string;
+  monthLabel: string;
+  top: LeaderboardEntry[];
+  me: LeaderboardEntry | null;
+  aheadOfMe: { rank: number; workouts: number; checkins: number; cardioMinutes: number; streak: number; score: number } | null;
+  totalOptedIn: number;
+}
+export async function fetchLeaderboard(): Promise<LeaderboardResponse> {
+  return req<LeaderboardResponse>('/api/community/leaderboard');
+}
+
 // --- Coach ---
 export async function coachUnlock(pin: string) {
   return req<{ ok: boolean; firstSet?: boolean }>('/api/coach/pin', {

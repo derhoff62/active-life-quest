@@ -3,8 +3,9 @@ import type { Ctx } from '../App';
 import * as api from '../lib/api';
 import Switch from './Switch';
 import Metrics from './Metrics';
+import Community from './Community';
 import { GOAL_TYPES, BADGES } from '../lib/data';
-import { cycleForWeek, nextRetestWeek, nextBossWeek } from '../lib/yearPlan';
+import { cycleForWeek, nextRetestWeek, nextBossWeek, nextRetestLabel, nextBossLabel } from '../lib/yearPlan';
 import { levelForXp, titleForLevel, daysInMonthSet, streakDaysForDoc, metCompanionIds, currentWeekForDoc } from '../lib/store';
 
 export default function Progress({ ctx }: { ctx: Ctx }) {
@@ -78,7 +79,7 @@ export default function Progress({ ctx }: { ctx: Ctx }) {
         <h2>Progress</h2>
         <p>Level {level} · {titleForLevel(level)} · {doc.xp} XP · Streak {streak} {streak === 1 ? 'day' : 'days'}</p>
         <p>Week {yearWeekInCycle} · {yearCycle.name} · {yearCycle.goal}</p>
-        <p className="small">{yearNextRetest !== null ? `Next retest: Week ${yearNextRetest}.` : 'All retests done.'} {yearNextBoss !== null ? `Next boss round: Week ${yearNextBoss}.` : 'All boss rounds beaten.'}</p>
+        <p className="small">{nextRetestLabel(yearNextRetest)} {nextBossLabel(yearNextBoss)}</p>
         <p>Workouts this week: {workoutsThisWeek} · Cardio logged: {cardioTotal} min · Check-ins: {checkins.length}</p>
         <p className="small muted">Results so far: {prs.length} personal record{prs.length === 1 ? '' : 's'} · {cardioTotal.toLocaleString()} cardio minutes total{yearWaistChange !== null ? ` · Waist ${yearWaistChange > 0 ? '+' : ''}${yearWaistChange} in since your first measurement` : ''} · {badges.length} badges · {workouts.length} workouts total</p>
         {last && <p className="muted small">Last workout: {last.title} on {new Date(String(last.date)).toLocaleDateString()}.</p>}
@@ -113,6 +114,10 @@ export default function Progress({ ctx }: { ctx: Ctx }) {
         </div>
         <p className="small muted">Navy days are days you trained, green days are active rest days. {activeDays.size} active days in total logged.</p>
       </div>
+
+      {/* Community board: opt-in only, anonymous, ranked on showing up.
+          No new tab, it lives here in Progress. */}
+      <Community ctx={ctx} />
 
       <div className="card">
         <div className="row space">
@@ -281,7 +286,7 @@ export default function Progress({ ctx }: { ctx: Ctx }) {
             <strong>{badges.includes(b.id) ? '✓ ' : ''}{b.name}</strong> · {b.how}
           </p>
         ))}
-        <p className="small muted">Earned: {badges.length} of {BADGES.length}. Tap a workout, check-in, or PR to earn more.</p>
+        <p className="small muted">Earned: {badges.length} {badges.length === 1 ? 'badge' : 'badges'}. Tap a workout, check-in, or PR to earn more.</p>
       </div>
 
       <div className="card">

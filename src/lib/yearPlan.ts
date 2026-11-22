@@ -96,8 +96,8 @@ export const YEAR_CYCLES: YearCycle[] = [
     lands: 'Golden Summit',
     track: 'Peak track',
     trackDetail: 'Your heaviest main lifts yet, plus short daily sessions when time is tight.',
-    progression: 'Your heaviest main lifts yet. Week 48 is a retest and deload, then steady build weeks and a review retest at Week 52, where you test your best and pick your next goal.',
-    deload: 'Week 48 is a retest and deload week. After that, steady build weeks and a review retest at Week 52: retest, deload, and look back at how far you have come.',
+    progression: 'Your heaviest main lifts yet. Week 48 is a retest and deload, then steady build weeks and a review retest at the end of the road, where you test your best and pick your next goal.',
+    deload: 'Week 48 is a retest and deload week. After that, steady build weeks and a review retest at the end of the road: retest, deload, and look back at how far you have come.',
     story: 'The Golden Summit is the highest ground yet. Lark the messenger flies ahead with news of the road home. The bosses here are the hardest, and the guardian meets them with a long stretch of training behind every rep.',
     bossWeeks: [40, 44, 48, 52],
     companionIds: ['lark'],
@@ -137,6 +137,26 @@ export function nextBossWeek(week: number, beatenWeeks: Set<number>): number | n
   return null;
 }
 
+// How a week is shown to the client. The last retest week is a review
+// retest, never a number: the length of the road stays hidden, so no
+// client ever sees a finish line. Internal week numbers still drive
+// gating, retests, and bosses.
+export function weekLabel(week: number): string {
+  return week === 52 ? 'Review' : `Week ${week}`;
+}
+
+export function nextRetestLabel(week: number | null): string {
+  if (week === null) return 'All retests done.';
+  if (week === 52) return 'Next retest: a review retest.';
+  return `Next retest: Week ${week}.`;
+}
+
+export function nextBossLabel(week: number | null): string {
+  if (week === null) return 'All boss rounds beaten.';
+  if (week === 52) return 'Next boss round: a review round.';
+  return `Next boss round: Week ${week}.`;
+}
+
 export function monthForWeek(week: number): number {
   return Math.min(12, Math.max(1, Math.ceil((week * 12) / YEAR_WEEKS)));
 }
@@ -163,7 +183,7 @@ export const MONTHLY_CHALLENGES: MonthlyChallenge[] = [
   { month: 9, title: '14-day check-in streak', detail: 'Check in 14 days in a row.', result: '14-day streak' },
   { month: 10, title: '1,000 cardio minutes total', detail: 'Reach 1,000 cardio minutes logged since you started.', result: '1,000 cardio minutes' },
   { month: 11, title: '50 workouts total', detail: 'Reach 50 workouts logged since you started.', result: '50 workouts' },
-  { month: 12, title: 'Review and keep going', detail: 'Do the Week 52 review retest, look back at how far you have come, and pick your next goal.', result: 'Week 52 retest done' },
+  { month: 12, title: 'Review and keep going', detail: 'Do a review retest, look back at how far you have come, and pick your next goal.', result: 'Review retest done' },
 ];
 
 export function challengeForWeek(week: number): MonthlyChallenge {

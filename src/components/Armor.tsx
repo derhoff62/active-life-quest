@@ -141,7 +141,6 @@ export default function Armor({ ctx }: { ctx: Ctx }) {
   );
   const earned = new Set(doc.armorEarned);
   const rarityEarned = new Set(doc.rarityEarned);
-  const total = ARMOR.length;
   const earnedCount = ARMOR.filter((a) => earned.has(a.id) || rarityEarned.has(a.id)).length;
   const next = ARMOR.find((a) => !earned.has(a.id) && !rarityEarned.has(a.id));
   const nextHidden = next && (next.tier === 'Legendary' || next.tier === 'Mythical');
@@ -182,7 +181,7 @@ export default function Armor({ ctx }: { ctx: Ctx }) {
           <div>
             <h2>Armor vault</h2>
             <p>
-              {doc.guardian ? `${doc.guardian.name}, Level ${doc.level}` : 'Your guardian'} · {Math.min(earnedCount, total)} of {total} pieces earned
+              {doc.guardian ? `${doc.guardian.name}, Level ${doc.level}` : 'Your guardian'} · {earnedCount} {earnedCount === 1 ? 'piece' : 'pieces'} earned
               {next ? ` · Next: ${nextHidden ? '??? (hidden until earned)' : next.name}` : ''}
             </p>
             <p className="small muted">Armor and weapons never block a workout, quest, check-in, or retest. They are earned, one at a time, from real milestones.</p>

@@ -3,7 +3,7 @@ import type { Ctx } from '../App';
 import { WORKOUTS, CORE_BALANCE_WORKOUT, REFERENCE_TRACKS, PHASES, PHASE_WEEKLY_SETS, daysForTime, splitForDays, TRAINING_STYLES, CES_TEMPLATES, EQUIPMENT_NOTES, effectiveEquipment, resolveExercise, findExerciseByName, CLASS_WORKOUT_FOCUS, applyClassFocus, GOAL_FINISHERS } from '../lib/data';
 import type { TrainingStyle } from '../lib/data';
 import { phaseForDoc, hasFullAccess, metCompanionIds, lastTimeFor, awardBadges, daysInMonthSet, currentWeekForDoc } from '../lib/store';
-import { cycleForWeek, nextRetestWeek, isDeloadWeek } from '../lib/yearPlan';
+import { cycleForWeek, nextRetestWeek, nextRetestLabel, isDeloadWeek } from '../lib/yearPlan';
 import type { Workout } from '../lib/types';
 import ExampleVideo from './ExampleVideo';
 
@@ -496,7 +496,7 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
               <p className="small">{wCycle.track}: {wCycle.trackDetail}</p>
               <p className="small"><strong>How to progress this cycle:</strong> {wCycle.progression}</p>
               {isDeloadWeek(wWeek) && <p className="small"><strong>Deload week.</strong> Lighter loads this week, then your retest.</p>}
-              <p className="small muted">{wNextRetest !== null ? `Next retest: Week ${wNextRetest}.` : 'All retests done.'} Short daily sessions stay available when time is tight.</p>
+              <p className="small muted">{nextRetestLabel(wNextRetest)} Short daily sessions stay available when time is tight.</p>
             </div>
           );
         })()}
