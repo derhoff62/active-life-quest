@@ -3,7 +3,7 @@ import type { Ctx } from '../App';
 import * as api from '../lib/api';
 import { CES_TEMPLATES } from '../lib/data';
 import type { ProfileDoc } from '../lib/store';
-import { checkinPreferenceText, checkinFrequenciesForMode, normalizeCheckinFrequency } from '../lib/store';
+import { checkinPreferenceText, checkinFrequenciesForMode, normalizeCheckinFrequency, phaseForDoc } from '../lib/store';
 
 interface ClientRow {
   id: string;
@@ -35,6 +35,12 @@ export default function Coach({ ctx }: { ctx: Ctx }) {
   const [prefMsg, setPrefMsg] = useState('');
   const [callFor, setCallFor] = useState('');
   const [deleteVideoKey, setDeleteVideoKey] = useState('');
+  const [newBetaCode, setNewBetaCode] = useState('');
+  const [newBetaUses, setNewBetaUses] = useState('25');
+  const [newBetaExpires, setNewBetaExpires] = useState('2027-02-19');
+  const [betaMsg, setBetaMsg] = useState('');
+  const [resetToken, setResetToken] = useState('');
+  const [resetMsg, setResetMsg] = useState('');
 
   useEffect(() => {
     if (unlocked && api.getMode() === 'server') {
@@ -99,6 +105,11 @@ export default function Coach({ ctx }: { ctx: Ctx }) {
     if (c.data.week13PlanRequested) alerts.push(`Week 13 plan to send to ${c.displayName || c.email}`);
     if (c.data.sessions) alerts.push(`Unfinished workout for ${c.displayName || c.email}`);
     if (c.data.assessment?.findings.length) alerts.push(`Balance warning: check balance moves for ${c.displayName || c.email}`);
+    if (c.data.assessmentDone && c.data.retests.length === 0) alerts.push(`Week 4 retest due for ${c.displayName || c.email}`);
+    const cleanWeeks = c.data.retests.filter((r) => (r as { clean?: boolean }).clean).map((r) => (r as { week?: number }).week || 0);
+    const nextPhase = cleanWeeks.includes(12) ? 4 : cleanWeeks.includes(8) ? 3 : cleanWeeks.includes(4) ? 2 : 0;
+    const curPhase = phaseForDoc(c.data);
+    if (nextPhase > curPhase) alerts.push(`${c.displayName || c.email} passed a retest and is ready for Phase ${nextPhase}`);
   });
 
   return (
@@ -109,6 +120,43 @@ export default function Coach({ ctx }: { ctx: Ctx }) {
         {alerts.length === 0 && <p>Nothing needs you right now.</p>}
         {alerts.map((a, i) => <p key={i}>· {a}</p>)}
         {betaInfo && <p className="small muted">Beta code {betaInfo.code}: {betaInfo.uses} of {betaInfo.maxUses} uses, expires {betaInfo.expires}.</p>}
+        {api.getMode() === 'server' && (
+          <div className="card">
+            <h4 style={{ margin: '0 0 4px' }}>Change the beta code</h4>
+            <p className="small muted">Clients enter this code to unlock beta access. Changing it does not lock out clients who already unlocked.</p>
+            <div className="grid2">
+              <div>
+                <label htmlFor="beta-code">New code</label>
+                <input id="beta-code" value={newBetaCode} onChange={(e) => setNewBetaCode(e.target.value)} placeholder={betaInfo?.code || 'ACTIVEBETA'} autoCapitalize="characters" />
+              </div>
+              <div>
+                <label htmlFor="beta-uses">Max uses</label>
+                <input id="beta-uses" inputMode="numeric" value={newBetaUses} onChange={(e) => setNewBetaUses(e.target.value)} />
+              </div>
+              <div>
+                <label htmlFor="beta-exp">Expires</label>
+                <input id="beta-exp" type="date" value={newBetaExpires} onChange={(e) => setNewBetaExpires(e.target.value)} />
+              </div>
+            </div>
+            <button
+              className="primary"
+              style={{ marginTop: 10 }}
+              onClick={async () => {
+                try {
+                  await api.coachSetBeta(newBetaCode.trim().toUpperCase() || betaInfo?.code || 'ACTIVEBETA', Number(newBetaUses) || 25, newBetaExpires);
+                  const s = await api.coachSettings();
+                  setBetaInfo(s);
+                  setBetaMsg('Beta code updated.');
+                } catch {
+                  setBetaMsg('That could not be saved. Check the code, uses, and expiry.');
+                }
+              }}
+            >
+              Save beta code
+            </button>
+            {betaMsg && <p className="ok">{betaMsg}</p>}
+          </div>
+        )}
         {api.getMode() === 'local' && (
           <p className="small muted">Local mode: only this device's client is visible here. Connect the Neon database to see all clients.</p>
         )}
@@ -244,6 +292,33 @@ export default function Coach({ ctx }: { ctx: Ctx }) {
               </button>
             </div>
             {phase5Msg && <p className="ok">{phase5Msg}</p>}
+          </div>
+
+          <div className="card">
+            <h4 style={{ margin: '0 0 4px' }}>Reset this client's password</h4>
+            <p className="small muted">No reset email is sent in beta. Make a one-time code here, send it to the client in a message, and they enter it on the sign-in screen under "Set a new password". It works for 1 hour, once.</p>
+            {api.getMode() === 'server' ? (
+              <>
+                <button
+                  className="primary"
+                  onClick={async () => {
+                    try {
+                      const r = await api.coachResetToken(selected.id);
+                      setResetToken(r.token);
+                      setResetMsg('Code made. Send it to the client. It works for 1 hour, once.');
+                    } catch {
+                      setResetMsg('That could not be made. Try again.');
+                    }
+                  }}
+                >
+                  Make a reset code
+                </button>
+                {resetToken && <p className="notice" style={{ wordBreak: 'break-all' }}>Reset code: <strong>{resetToken}</strong></p>}
+                {resetMsg && <p className="ok">{resetMsg}</p>}
+              </>
+            ) : (
+              <p className="small muted">Reset codes need the live app with the database connected.</p>
+            )}
           </div>
 
           <h3>Assessment videos</h3>

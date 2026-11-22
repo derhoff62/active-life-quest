@@ -39,7 +39,7 @@ export default function Auth({ onAuth }: { onAuth: (a: { email: string; displayN
         onAuth(r.user);
       } else if (mode === 'forgot') {
         await api.forgotPassword(email.trim().toLowerCase());
-        setInfo('If that email has an account, a reset link was sent. Check your inbox.');
+        setInfo('No reset email is sent in beta yet. Message Derek and he will send you a one-time reset code. Then tap "Set a new password" below and enter the code.');
       } else {
         await api.resetPassword(token.trim(), password);
         setInfo('Password updated. Sign in with your new password.');
@@ -111,7 +111,7 @@ export default function Auth({ onAuth }: { onAuth: (a: { email: string; displayN
           )}
           <div style={{ marginTop: 14 }}>
             <button className="primary" type="submit" disabled={busy} style={{ width: '100%' }}>
-              {busy ? 'Please wait...' : mode === 'signup' ? 'Create account' : mode === 'login' ? 'Sign in' : mode === 'forgot' ? 'Send reset link' : 'Set new password'}
+              {busy ? 'Please wait...' : mode === 'signup' ? 'Create account' : mode === 'login' ? 'Sign in' : mode === 'forgot' ? 'Request a reset code' : 'Set new password'}
             </button>
           </div>
         </form>

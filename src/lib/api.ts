@@ -261,3 +261,9 @@ export async function coachSetBeta(code: string, maxUses: number, expires: strin
     body: JSON.stringify({ code, maxUses, expires }),
   });
 }
+export async function coachResetToken(userId: string) {
+  return req<{ ok: boolean; token: string }>('/api/coach/reset-token', {
+    method: 'POST',
+    body: JSON.stringify({ userId }),
+  });
+}

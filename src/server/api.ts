@@ -1406,5 +1406,34 @@ app.post("/api/coach/beta", async (c) => {
   return c.json({ ok: true });
 });
 
+// Coach issues a one-time password reset code for a client. No email is
+// sent in beta, so Derek copies this code to the client in a message, and
+// the client enters it on the sign-in screen under "Set a new password".
+// The code works for 1 hour, once.
+app.post("/api/coach/reset-token", async (c) => {
+  const body = await readJson(c);
+  const userId = body && typeof body.userId === "string" ? body.userId : "";
+  if (!userId) {
+    return c.json({ error: "A client is required." }, 400);
+  }
+  const db = getDb(c);
+  if (!db) {
+    return dbMissing(c);
+  }
+  if (!(await hasCoachSession(c, db))) {
+    return c.json({ error: "Coach sign-in is required." }, 401);
+  }
+  const rows = (await db`SELECT id FROM users WHERE id = ${userId}`) as unknown as Array<{ id: string }>;
+  if (!rows[0]) {
+    return c.json({ error: "That client was not found." }, 404);
+  }
+  const token = randomHex(32);
+  const tokenHash = await hashToken(token);
+  const expires = new Date(Date.now() + 60 * 60 * 1000).toISOString();
+  await db`INSERT INTO password_resets (user_id, token_hash, expires_at)
+    VALUES (${userId}, ${tokenHash}, ${expires})`;
+  return c.json({ ok: true, token });
+});
+
 // Shared API module. Entry points live in src/worker.ts (Worker) and
 // functions/api/[[path]].ts (Pages). Hono handles routing from there.
