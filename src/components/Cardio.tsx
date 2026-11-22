@@ -2,29 +2,34 @@
 // Logging used to live in Workouts, in Progress, and as an education
 // card in Nutrition. Now it lives here only. Workouts and Progress
 // link here instead, so there is no double-log confusion.
+//
+// HIIT credit: the client logs ACTUAL minutes plus the intensity
+// (Zone 2 or HIIT). High-intensity minutes count double in the weekly
+// total automatically, so 20 hard minutes count as 40. Nobody has to
+// do the doubling in their head any more.
 import { useState } from 'react';
 import type { Ctx } from '../App';
 import { HIIT } from '../lib/data';
-import { metCompanionIds, loggedToday } from '../lib/store';
+import { metCompanionIds, loggedToday, cardioCreditMinutes, lastLoggedLabel } from '../lib/store';
+import { cardioThisWeek } from '../lib/badges';
 import { metricSeries, TrendChart } from './Metrics';
 
 export default function Cardio({ ctx }: { ctx: Ctx }) {
   const { doc, update, toast, go } = ctx;
   const [cardioMin, setCardioMin] = useState('');
+  const [cardioZone, setCardioZone] = useState<'Zone 2' | 'HIIT'>('Zone 2');
   const [cardioMsg, setCardioMsg] = useState('');
   const [cardioBusy, setCardioBusy] = useState(false);
 
-  const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
-  const cardioThisWeek = (doc.cardio || [])
-    .filter((c) => new Date(String(c.date)).getTime() >= weekAgo)
-    .reduce((s, c) => s + Number(c.minutes || 0), 0);
+  const weekTotal = cardioThisWeek(doc);
   const cardioMilestone =
-    cardioThisWeek >= 300 ? '300 minute milestone done'
-    : cardioThisWeek >= 200 ? '200 done, next is 300'
-    : cardioThisWeek >= 150 ? '150 done, next is 200'
+    weekTotal >= 300 ? '300 minute milestone done'
+    : weekTotal >= 200 ? '200 done, next is 300'
+    : weekTotal >= 150 ? '150 done, next is 200'
     : 'Next milestone is 150';
   const points = metricSeries(doc, 'cardio');
   const recent = [...(doc.cardio || [])].reverse().slice(0, 5);
+  const lastLogged = lastLoggedLabel(doc.cardio);
 
   function logCardio() {
     if (cardioBusy) return;
@@ -36,14 +41,15 @@ export default function Cardio({ ctx }: { ctx: Ctx }) {
     setCardioBusy(true);
     window.setTimeout(() => setCardioBusy(false), 700);
     // Minutes always count. XP is once a day: logging twice does not
-    // earn twice.
+    // earn twice. The weekly total credits HIIT double automatically.
     const xpToday = !loggedToday(doc.cardio);
+    const credited = cardioZone === 'HIIT' ? mins * 2 : mins;
     update((d) => {
-      d.cardio.push({ id: `k${Date.now()}`, date: new Date().toISOString(), minutes: mins, zone: 'Zone 2' });
+      d.cardio.push({ id: `k${Date.now()}`, date: new Date().toISOString(), minutes: mins, zone: cardioZone });
       if (xpToday) d.xp += metCompanionIds(doc).has('sylva') ? 15 : 10;
     });
-    setCardioMsg(`Cardio logged: ${mins} minutes${xpToday ? ` (+10 XP${metCompanionIds(doc).has('sylva') ? ', +5 from Sylva' : ''})` : ' (already earned cardio XP today)'}.`);
-    toast(`Cardio logged: ${mins} minutes${xpToday ? ', +10 XP' : ''}.`);
+    setCardioMsg(`Cardio logged: ${mins} actual minutes (${cardioZone}) = ${credited} minutes toward this week${xpToday ? ` (+10 XP${metCompanionIds(doc).has('sylva') ? ', +5 from Sylva' : ''})` : ' (already earned cardio XP today)'}.`);
+    toast(`Cardio logged: ${mins} minutes${cardioZone === 'HIIT' ? ' HIIT, counts double' : ''}${xpToday ? ', +10 XP' : ''}.`);
     setCardioMin('');
   }
 
@@ -53,28 +59,40 @@ export default function Cardio({ ctx }: { ctx: Ctx }) {
         <h2>Cardio</h2>
         <p>The best type of cardio is the one you stick to.</p>
         <p>Aim for 150 to 300 minutes a week of Zone 2, easy enough to talk.</p>
-        <p>High intensity counts double: 20 minutes hard counts as 40.</p>
+        <p>High intensity counts double: 20 minutes hard counts as 40. Log your actual minutes and pick the intensity, the app does the doubling.</p>
       </div>
 
       <div className="card" id="log-cardio">
         <h3>Log cardio</h3>
-        <p><strong>{cardioThisWeek} of 150 to 300 minutes this week.</strong> {cardioMilestone}.</p>
-        <div className="progress-bar"><div style={{ width: `${Math.min(100, (cardioThisWeek / 300) * 100)}%` }} /></div>
-        <p className="small muted">Milestones at 150, then 200, then 300 minutes. Zone 2, easy enough to talk. High intensity counts double: log the doubled minutes.</p>
+        <p><strong>{weekTotal} of 150 to 300 minutes this week.</strong> {cardioMilestone}.</p>
+        <div className="progress-bar"><div style={{ width: `${Math.min(100, (weekTotal / 300) * 100)}%` }} /></div>
+        <p className="small muted">Milestones at 150, then 200, then 300 minutes. Zone 2, easy enough to talk. High intensity counts double automatically: log your actual minutes and pick HIIT.</p>
+        {lastLogged && <p className="small muted">{lastLogged}.</p>}
         <div className="row">
           <input inputMode="numeric" value={cardioMin} onChange={(e) => { setCardioMin(e.target.value); setCardioMsg(''); }} placeholder="Minutes" style={{ maxWidth: 140 }} aria-label="Cardio minutes" />
-          <button className="primary" disabled={cardioBusy} onClick={logCardio}>
-            {cardioBusy ? 'Saving…' : `Log cardio (+10 XP${metCompanionIds(doc).has('sylva') ? ', +5 from Sylva' : ''})`}
-          </button>
+          <div className="row" role="group" aria-label="Cardio intensity">
+            {(['Zone 2', 'HIIT'] as const).map((z) => (
+              <button key={z} type="button" onClick={() => setCardioZone(z)} style={cardioZone === z ? { background: '#124571', color: '#fff' } : {}}>
+                {z === 'HIIT' ? 'HIIT (counts double)' : 'Zone 2'}
+              </button>
+            ))}
+          </div>
         </div>
+        <p className="small muted">Log your actual minutes. {cardioZone === 'HIIT' ? 'HIIT counts double, so what you enter counts as twice as much toward the week.' : 'Zone 2 counts as logged.'}</p>
+        <button className="primary" disabled={cardioBusy} onClick={logCardio}>
+          {cardioBusy ? 'Saving…' : `Log cardio (+10 XP${metCompanionIds(doc).has('sylva') ? ', +5 from Sylva' : ''})`}
+        </button>
         {cardioMsg && <p className={cardioMsg.startsWith('Enter') ? 'error' : 'ok'}>{cardioMsg}</p>}
         {recent.length > 0 && (
           <div style={{ marginTop: 10 }}>
-            {recent.map((c) => (
-              <p key={c.id} className="small" style={{ margin: '2px 0' }}>
-                {new Date(String(c.date)).toLocaleDateString()}: {Number(c.minutes || 0)} min
-              </p>
-            ))}
+            {recent.map((c) => {
+              const credited = cardioCreditMinutes(c as { minutes?: unknown; zone?: unknown });
+              return (
+                <p key={c.id} className="small" style={{ margin: '2px 0' }}>
+                  {new Date(String(c.date)).toLocaleDateString()}: {Number(c.minutes || 0)} min{(c as { zone?: string }).zone === 'HIIT' ? ` HIIT = ${credited} credited` : ''}
+                </p>
+              );
+            })}
           </div>
         )}
       </div>
@@ -85,7 +103,7 @@ export default function Cardio({ ctx }: { ctx: Ctx }) {
           <p className="muted">No cardio logged yet. Log it above and the trend shows up here.</p>
         ) : (
           <>
-            <p className="small">Last 7 days: {cardioThisWeek} minutes of the 150 to 300 target.</p>
+            <p className="small">Last 7 days: {weekTotal} minutes of the 150 to 300 target.</p>
             <TrendChart points={points} unit="min" />
           </>
         )}

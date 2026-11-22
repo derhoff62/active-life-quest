@@ -285,7 +285,7 @@ export default function App() {
 
   if (!auth) {
     return (
-      <div className={doc.largeText ? 'large-text' : ''}>
+      <div className={`${doc.largeText ? 'large-text' : ''}${doc.reducedMotion ? ' reduced-motion' : ''}`}>
         <div className="app">
           <ToastHost />
           <Auth onAuth={handleAuth} />
@@ -304,7 +304,7 @@ export default function App() {
   const badges = tabBadges(doc);
 
   return (
-    <div className={doc.largeText ? 'large-text' : ''}>
+    <div className={`${doc.largeText ? 'large-text' : ''}${doc.reducedMotion ? ' reduced-motion' : ''}`}>
       <div className="app">
         <ToastHost />
         <div className="banner">
@@ -403,6 +403,17 @@ export default function App() {
         )}
 
         <footer className="appfoot">
+          <button
+            className="primary"
+            onClick={() => {
+              go('today');
+              window.setTimeout(() => {
+                document.getElementById('today-messages')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+              }, 150);
+            }}
+          >
+            Need help? Message Derek
+          </button>{' '}
           {!confirmSignOut ? (
             <button onClick={() => setConfirmSignOut(true)}>Sign out</button>
           ) : (

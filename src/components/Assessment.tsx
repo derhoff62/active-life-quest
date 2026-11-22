@@ -2,7 +2,7 @@ import { useState } from 'react';
 import type { Ctx } from '../App';
 import * as api from '../lib/api';
 import { ASSESSMENT_EXAMPLES, ASSESSMENT_QUESTIONS, CES_TEMPLATES, CONTRAINDICATIONS, DEFAULT_EQUIPMENT, EQUIPMENT_NOTES, EQUIPMENT_OPTIONS, FOCUS_AREAS, recommendPhase } from '../lib/data';
-import { currentWeekForDoc, awardBadges, phaseForDoc } from '../lib/store';
+import { currentWeekForDoc, awardBadges, phaseForDoc, bestBalanceSec, lastLoggedLabel } from '../lib/store';
 import { RETEST_WEEKS, weekLabel } from '../lib/yearPlan';
 import type { FindingId, FormRating } from '../lib/types';
 import ExampleVideo from './ExampleVideo';
@@ -37,6 +37,9 @@ export default function Assessment({ ctx }: { ctx: Ctx }) {
   const [retestBalL, setRetestBalL] = useState('');
   const [retestBalR, setRetestBalR] = useState('');
   const [retestMsg, setRetestMsg] = useState('');
+  const [balTestL, setBalTestL] = useState('');
+  const [balTestR, setBalTestR] = useState('');
+  const [balTestMsg, setBalTestMsg] = useState('');
   const [done, setDone] = useState(false);
   const [retaking, setRetaking] = useState(false);
   const [doctorCleared, setDoctorCleared] = useState(false);
@@ -124,6 +127,7 @@ export default function Assessment({ ctx }: { ctx: Ctx }) {
       d.equipment = equipment.length > 0 ? equipment : [...DEFAULT_EQUIPMENT];
       d.contraindications = contra;
       d.balanceBaseline = { left: Number(balL) || 0, right: Number(balR) || 0 };
+      d.doctorCleared = doctorCleared;
       d.body = {
         sex,
         heightIn: Number(height) || null,
@@ -264,6 +268,56 @@ export default function Assessment({ ctx }: { ctx: Ctx }) {
             Save my retest
           </button>
           <p className="small muted">Targets: 10 seconds per side at Week 4, 20 at Week 8, 30 at Week 12, then hold 30 seconds and beat your best each cycle after.</p>
+        </div>
+        <div className="card" id="balance-test">
+          <h3>Balance test</h3>
+          <p className="small muted">A standalone balance check, any time, not just at a retest. Stand on one leg, hold a chair or wall if you need it, and time each side. This is a general balance check, not a formal test.</p>
+          <p className="small"><strong>Your best hold so far: {bestBalanceSec(doc)} seconds.</strong>{(doc.balanceTests || []).length > 0 ? ` ${lastLoggedLabel(doc.balanceTests)}.` : ''}</p>
+          <div className="grid2">
+            <div>
+              <label htmlFor="bal-test-l">Left leg (seconds)</label>
+              <input id="bal-test-l" inputMode="numeric" value={balTestL} onChange={(e) => { setBalTestL(e.target.value); setBalTestMsg(''); }} placeholder={doc.balanceBaseline ? `Was ${doc.balanceBaseline.left}s` : 'Seconds'} />
+            </div>
+            <div>
+              <label htmlFor="bal-test-r">Right leg (seconds)</label>
+              <input id="bal-test-r" inputMode="numeric" value={balTestR} onChange={(e) => { setBalTestR(e.target.value); setBalTestMsg(''); }} placeholder={doc.balanceBaseline ? `Was ${doc.balanceBaseline.right}s` : 'Seconds'} />
+            </div>
+          </div>
+          <button
+            className="primary"
+            style={{ marginTop: 10 }}
+            onClick={() => {
+              const l = Number(balTestL) || 0;
+              const r = Number(balTestR) || 0;
+              if (l <= 0 && r <= 0) {
+                setBalTestMsg('Enter seconds for at least one leg.');
+                return;
+              }
+              const prevBest = bestBalanceSec(doc);
+              const newBest = Math.max(l, r);
+              update((d) => {
+                d.balanceTests = [...(d.balanceTests || []), { id: `b${Date.now()}`, date: new Date().toISOString(), leftSec: l, rightSec: r }];
+                if (newBest > prevBest) d.xp += 10;
+              });
+              setBalTestL('');
+              setBalTestR('');
+              setBalTestMsg(newBest > prevBest ? `New balance best: ${newBest} seconds. +10 XP.` : `Balance test saved: ${l}s left, ${r}s right.`);
+              toast(newBest > prevBest ? `New balance best: ${newBest} seconds. +10 XP.` : 'Balance test saved.');
+            }}
+          >
+            Save balance test
+          </button>
+          {balTestMsg && <p className={balTestMsg.startsWith('Enter') ? 'error' : 'ok'}>{balTestMsg}</p>}
+          {(doc.balanceTests || []).length > 0 && (
+            <div style={{ marginTop: 10 }}>
+              {[...doc.balanceTests].reverse().slice(0, 5).map((t) => (
+                <p key={t.id} className="small" style={{ margin: '2px 0' }}>
+                  {new Date(String(t.date)).toLocaleDateString()}: {t.leftSec}s left, {t.rightSec}s right
+                </p>
+              ))}
+            </div>
+          )}
+          <p className="small muted">Keep the 2-minute balance practice going too: it is a daily quest on Today (+15 XP).</p>
         </div>
         {(week12Done || doc.week13Goal) && (
         <div className="card" id="week13-plan">

@@ -472,3 +472,10 @@ th, td { text-align: left; padding: 8px 6px; border-bottom: 1px solid var(--line
 footer.appfoot { text-align: center; color: var(--muted); font-size: 0.85rem; padding: 20px 0; }
 .toggle { display: flex; align-items: center; gap: 10px; }
 .toggle button { min-width: 68px; }
+
+/* Reduced motion toggle: same calm behaviour as the system setting. */
+.reduced-motion *, .reduced-motion *::before, .reduced-motion *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+}

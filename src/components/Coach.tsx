@@ -2,9 +2,10 @@ import { useEffect, useState } from 'react';
 import type { Ctx } from '../App';
 import * as api from '../lib/api';
 import { CES_TEMPLATES } from '../lib/data';
-import Metrics, { latestMetric } from './Metrics';
+import Metrics, { latestMetric, TrendChart, metricSeries } from './Metrics';
 import type { ProfileDoc } from '../lib/store';
-import { checkinPreferenceText, checkinFrequenciesForMode, normalizeCheckinFrequency, normalizeProfile, phaseForDoc } from '../lib/store';
+import { checkinPreferenceText, checkinFrequenciesForMode, normalizeCheckinFrequency, normalizeProfile, phaseForDoc, recoveryScoreForDoc, cardioCreditedSum } from '../lib/store';
+import { coachReminders, retestWeeksDue } from '../lib/coachReminders';
 
 interface ClientRow {
   id: string;
@@ -27,6 +28,9 @@ export default function Coach({ ctx }: { ctx: Ctx }) {
   const [nudge, setNudge] = useState('');
   const [betaInfo, setBetaInfo] = useState<{ code: string; uses: number; maxUses: number; expires: string } | null>(null);
   const [cesMarks, setCesMarks] = useState<string[]>([]);
+  const [cesSides, setCesSides] = useState<Record<string, 'right' | 'left' | 'both'>>({});
+  const [daviesR, setDaviesR] = useState('');
+  const [daviesL, setDaviesL] = useState('');
   const [cesNotes, setCesNotes] = useState('');
   const [phase5Msg, setPhase5Msg] = useState('');
   const [cesSaved, setCesSaved] = useState('');
@@ -41,6 +45,7 @@ export default function Coach({ ctx }: { ctx: Ctx }) {
   const [newBetaExpires, setNewBetaExpires] = useState('2027-02-19');
   const [betaMsg, setBetaMsg] = useState('');
   const [resetToken, setResetToken] = useState('');
+  const [strengthEx, setStrengthEx] = useState('');
   const [resetMsg, setResetMsg] = useState('');
   // Busy key for server calls: the button shows "Saving…" / "Sending…"
   // and cannot be double-tapped while the request is in flight. Without
@@ -112,30 +117,18 @@ export default function Coach({ ctx }: { ctx: Ctx }) {
     ? [{ id: 'local', email: doc.email, displayName: doc.displayName || 'This device', data: doc, updatedAt: doc.lastActive }]
     : clients;
 
-  const alerts: string[] = [];
-  localClients.forEach((c) => {
-    c.data.messages.filter((m) => !m.coachReply).forEach((m) => alerts.push(`New ${m.kind} from ${c.displayName || c.email}`));
-    if (c.data.week13PlanRequested) alerts.push(`Week 13 plan to send to ${c.displayName || c.email}`);
-    if (c.data.sessions) alerts.push(`Unfinished workout for ${c.displayName || c.email}`);
-    // A Week 4 retest is only due once the client has been going about 4
-    // weeks. Before that the alert just sat there from day one.
-    const joinedMs = new Date(c.data.joinedAt || Date.now()).getTime();
-    if (c.data.assessmentDone && c.data.retests.length === 0 && Date.now() - joinedMs >= 21 * 24 * 60 * 60 * 1000) {
-      alerts.push(`Week 4 retest due for ${c.displayName || c.email}`);
-    }
-    const cleanWeeks = c.data.retests.filter((r) => (r as { clean?: boolean }).clean).map((r) => (r as { week?: number }).week || 0);
-    const nextPhase = cleanWeeks.includes(12) ? 4 : cleanWeeks.includes(8) ? 3 : cleanWeeks.includes(4) ? 2 : 0;
-    const curPhase = phaseForDoc(c.data);
-    if (nextPhase > curPhase) alerts.push(`${c.displayName || c.email} passed a retest and is ready for Phase ${nextPhase}`);
-  });
+  // Reminders engine: who needs Derek today, across all clients.
+  const reminders = coachReminders(localClients);
+  const alerts = reminders.map((r) => r.text);
 
   return (
     <div>
       <div className="card gold-frame">
         <h2>Coach dashboard</h2>
+        <p><strong>Reminders — who needs you today</strong></p>
         <p>Needs you: {alerts.length} {alerts.length === 1 ? 'item' : 'items'}</p>
         {alerts.length === 0 && <p>Nothing needs you right now.</p>}
-        {alerts.map((a, i) => <p key={i}>· {a}</p>)}
+        {reminders.map((r, i) => <p key={i}>· {r.text}</p>)}
         {betaInfo && <p className="small muted">Beta code {betaInfo.code}: {betaInfo.uses} of {betaInfo.maxUses} uses, expires {betaInfo.expires}.</p>}
         {api.getMode() === 'server' && (
           <div className="card">
@@ -191,7 +184,7 @@ export default function Coach({ ctx }: { ctx: Ctx }) {
             </p>
             <p className="small muted">Check-ins: {checkinPreferenceText(c.data).replace('Your check-ins: ', '')}</p>
             <div className="row">
-              <button onClick={() => { setSelected(c); setCesMarks(c.data.cesSheet?.marks || []); setCesNotes(c.data.cesSheet?.notes || ''); setCesSaved(''); setPhase5Msg(''); }}>Open client</button>
+              <button onClick={() => { setSelected(c); setCesMarks(c.data.cesSheet?.marks || []); setCesSides(c.data.cesSheet?.sides || {}); setDaviesR(c.data.cesSheet?.davies?.right != null ? String(c.data.cesSheet.davies.right) : ''); setDaviesL(c.data.cesSheet?.davies?.left != null ? String(c.data.cesSheet.davies.left) : ''); setCesNotes(c.data.cesSheet?.notes || ''); setCesSaved(''); setPhase5Msg(''); setStrengthEx(''); }}>Open client</button>
             </div>
           </div>
         ))}
@@ -200,7 +193,7 @@ export default function Coach({ ctx }: { ctx: Ctx }) {
       {selected && (
         <div className="card gold-frame">
           <h3>{selected.displayName || selected.email}</h3>
-          <p>Phase {phaseForDoc(selected.data)} · Findings: {selected.data.assessment?.findings.join(', ') || 'none'} · Workouts: {selected.data.workouts.length} · Check-ins: {selected.data.checkins.length} · Cardio: {selected.data.cardio.reduce((s, c) => s + Number(c.minutes || 0), 0)} min</p>
+          <p>Phase {phaseForDoc(selected.data)} · Findings: {selected.data.assessment?.findings.join(', ') || 'none'} · Workouts: {selected.data.workouts.length} · Check-ins: {selected.data.checkins.length} · Cardio: {cardioCreditedSum(selected.data.cardio)} min</p>
           <p className="small"><strong>Check-in preference: {checkinPreferenceText(selected.data).replace('Your check-ins: ', '')}</strong></p>
           <div className="card">
             <h4 style={{ margin: '0 0 4px' }}>Change this client's check-ins</h4>
@@ -285,6 +278,70 @@ export default function Coach({ ctx }: { ctx: Ctx }) {
                       <div className="progress-bar"><div style={{ width: `${Math.min(100, (val / target) * 100)}%` }} /></div>
                     </div>
                   ))}
+                </div>
+              );
+            })()}
+          </div>
+
+          <div className="card">
+            <h4 style={{ margin: '0 0 4px' }}>Stats and trends</h4>
+            {(() => {
+              const DAY = 24 * 60 * 60 * 1000;
+              const nowMs = Date.now();
+              const weekCounts: number[] = [];
+              const cardioWeeks: number[] = [];
+              for (let w = 3; w >= 0; w -= 1) {
+                const from = nowMs - (w + 1) * 7 * DAY;
+                const to = nowMs - w * 7 * DAY;
+                weekCounts.push(selected.data.workouts.filter((x) => { const t = new Date(String(x.date)).getTime(); return t >= from && t < to; }).length);
+                cardioWeeks.push(cardioCreditedSum(selected.data.cardio, from) - cardioCreditedSum(selected.data.cardio, to));
+              }
+              const ciWeek = selected.data.checkins.filter((x) => new Date(String(x.date)).getTime() >= nowMs - 7 * DAY).length;
+              const rec = recoveryScoreForDoc(selected.data);
+              const maxW = Math.max(1, ...weekCounts);
+              const maxC = Math.max(150, ...cardioWeeks);
+              const bar = (vals: number[], max: number, target?: number) => (
+                <svg viewBox="0 0 340 120" width="100%" role="img" aria-label={`Bar chart, last 4 weeks: ${vals.join(', ')}`}>
+                  {vals.map((v, i) => {
+                    const h = Math.max(4, (v / max) * 90);
+                    const x = 20 + i * 80;
+                    return (
+                      <g key={i}>
+                        <rect x={x} y={100 - h} width={48} height={h} rx={4} fill="#124571" />
+                        <text x={x + 24} y={94 - h} fontSize="12" fill="#124571" textAnchor="middle">{v}</text>
+                        <text x={x + 24} y={114} fontSize="11" fill="#124571" textAnchor="middle">{i === 3 ? 'This week' : `${3 - i} wk ago`}</text>
+                      </g>
+                    );
+                  })}
+                  {target !== undefined && (
+                    <line x1={10} y1={100 - (target / max) * 90} x2={330} y2={100 - (target / max) * 90} stroke="#c9a227" strokeWidth={2} strokeDasharray="5 4" />
+                  )}
+                </svg>
+              );
+              const exList = [...new Set((selected.data.prs || []).map((x) => x.exercise))].sort();
+              const pickedEx = strengthEx || exList[0] || '';
+              const strPoints = pickedEx ? metricSeries(selected.data, 'strength', pickedEx) : [];
+              return (
+                <div>
+                  <p className="small">Check-ins this week: {ciWeek} of 7 · Recovery score: {rec !== null ? `${rec}/100` : 'no check-in yet'} · Retests due: {(() => { const due = retestWeeksDue(selected.data); return due.length ? due.map((w) => (w === 52 ? 'review' : `Week ${w}`)).join(', ') : 'none'; })()}</p>
+                  <h5 style={{ margin: '10px 0 2px' }}>Workouts, last 4 weeks</h5>
+                  {bar(weekCounts, maxW)}
+                  <h5 style={{ margin: '10px 0 2px' }}>Cardio minutes, last 4 weeks (gold line: 150 target)</h5>
+                  {bar(cardioWeeks, maxC, 150)}
+                  <h5 style={{ margin: '10px 0 2px' }}>Strength trend per lift</h5>
+                  {exList.length === 0 ? (
+                    <p className="small muted">No personal records yet. A PR is logged when the client finishes a workout heavier, or with more reps, than last time.</p>
+                  ) : (
+                    <>
+                      <label htmlFor="coach-strength-ex">Which lift?</label>
+                      <select id="coach-strength-ex" value={pickedEx} onChange={(e) => setStrengthEx(e.target.value)}>
+                        {exList.map((e) => <option key={e} value={e}>{e}</option>)}
+                      </select>
+                      <div style={{ marginTop: 8 }}>
+                        <TrendChart points={strPoints} unit="lb" />
+                      </div>
+                    </>
+                  )}
                 </div>
               );
             })()}
@@ -650,19 +707,58 @@ export default function Coach({ ctx }: { ctx: Ctx }) {
           </div>
           {nudgeMsg && <p className="ok">{nudgeMsg}</p>}
 
+          {(selected.data.exerciseFeedback || []).length > 0 && (
+            <div className="card">
+              <h4 style={{ margin: '0 0 4px' }}>Moves the client flagged</h4>
+              {selected.data.exerciseFeedback.map((fb, i) => (
+                <p key={i} className="small" style={{ margin: '4px 0' }}>
+                  <strong>{fb.exerciseName}</strong> · {fb.kind === 'hurts' ? 'This hurts' : "Doesn't like it"} · {fb.reason === 'too-hard' ? 'too hard' : fb.reason === 'hurts' ? 'hurts' : fb.reason === 'no-equipment' ? 'no equipment' : "doesn't like it"} · {new Date(fb.date).toLocaleDateString()}
+                  {fb.kind === 'hurts' && <span style={{ color: '#a11', fontWeight: 700 }}> · PAIN FLAG: check in before it is swapped again.</span>}
+                </p>
+              ))}
+            </div>
+          )}
+
           <h3 style={{ marginTop: 16 }}>CES assessment check sheet</h3>
           <p className="small muted">Coach only. Mark what you see, add notes, save it to the client file. Never a required client self-assessment.</p>
-          <div className="row">
-            {CES_TEMPLATES.map((t) => (
-              <button
-                key={t.id}
-                type="button"
-                onClick={() => setCesMarks((prev) => (prev.includes(t.id) ? prev.filter((x) => x !== t.id) : [...prev, t.id]))}
-                style={cesMarks.includes(t.id) ? { background: '#124571', color: '#fff' } : {}}
-              >
-                {t.plainName}
-              </button>
-            ))}
+          {CES_TEMPLATES.map((t) => (
+            <div key={t.id} style={{ borderTop: '1px solid #d7e3ee', padding: '8px 0' }}>
+              <div className="row space">
+                <span><strong>{t.plainName}</strong></span>
+                <button
+                  type="button"
+                  onClick={() => setCesMarks((prev) => (prev.includes(t.id) ? prev.filter((x) => x !== t.id) : [...prev, t.id]))}
+                  style={cesMarks.includes(t.id) ? { background: '#124571', color: '#fff' } : {}}
+                >
+                  {cesMarks.includes(t.id) ? 'Marked' : 'Mark it'}
+                </button>
+              </div>
+              {cesMarks.includes(t.id) && (
+                <div className="row" style={{ marginTop: 6 }}>
+                  <span className="small">Which side?</span>
+                  {(['right', 'left', 'both'] as const).map((side) => (
+                    <button
+                      key={side}
+                      type="button"
+                      onClick={() => setCesSides((prev) => ({ ...prev, [t.id]: side }))}
+                      style={cesSides[t.id] === side ? { background: '#124571', color: '#fff' } : {}}
+                    >
+                      {side === 'right' ? 'Right' : side === 'left' ? 'Left' : 'Both'}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          ))}
+          <div className="grid2" style={{ marginTop: 10 }}>
+            <div>
+              <label htmlFor="davies-r">Davies test: right hand (touches in 15 seconds)</label>
+              <input id="davies-r" inputMode="numeric" value={daviesR} onChange={(e) => setDaviesR(e.target.value)} placeholder="e.g. 12" />
+            </div>
+            <div>
+              <label htmlFor="davies-l">Davies test: left hand (touches in 15 seconds)</label>
+              <input id="davies-l" inputMode="numeric" value={daviesL} onChange={(e) => setDaviesL(e.target.value)} placeholder="e.g. 12" />
+            </div>
           </div>
           <label htmlFor="ces-notes">Notes (optional)</label>
           <input id="ces-notes" value={cesNotes} onChange={(e) => setCesNotes(e.target.value)} placeholder="What you saw, in your own words" />
@@ -676,9 +772,10 @@ export default function Coach({ ctx }: { ctx: Ctx }) {
                 return;
               }
               try {
-                if (api.getMode() === 'server') await api.coachSaveCesSheet(selected.id, cesMarks, cesNotes);
-                if (api.getMode() === 'local') update((d) => { d.cesSheet = { marks: cesMarks, notes: cesNotes, date: new Date().toISOString() }; });
-                const sheet = { marks: cesMarks, notes: cesNotes, date: new Date().toISOString() };
+                const davies = { right: daviesR ? Number(daviesR) : null, left: daviesL ? Number(daviesL) : null };
+                if (api.getMode() === 'server') await api.coachSaveCesSheet(selected.id, cesMarks, cesNotes, cesSides, davies);
+                if (api.getMode() === 'local') update((d) => { d.cesSheet = { marks: cesMarks, sides: cesSides, davies, notes: cesNotes, date: new Date().toISOString() }; });
+                const sheet = { marks: cesMarks, sides: cesSides, davies, notes: cesNotes, date: new Date().toISOString() };
                 setClients((prev) => prev.map((cl) => (cl.id === selected.id ? { ...cl, data: { ...cl.data, cesSheet: sheet } } : cl)));
                 setSelected((prev) => (prev ? { ...prev, data: { ...prev.data, cesSheet: sheet } } : prev));
                 setCesSaved(`Saved ${cesMarks.length} ${cesMarks.length === 1 ? 'finding' : 'findings'} to ${selected.displayName || selected.email}'s file.`);
@@ -691,7 +788,16 @@ export default function Coach({ ctx }: { ctx: Ctx }) {
             {busy === 'ces' ? 'Saving…' : 'Save check sheet'}
           </button>
           {cesSaved && <p className="ok">{cesSaved}</p>}
-          {selected.data.cesSheet && <p className="small muted">Last saved check sheet: {new Date(selected.data.cesSheet.date).toLocaleDateString()} · {selected.data.cesSheet.marks.length} findings.</p>}
+          {selected.data.cesSheet && (
+            <p className="small muted">
+              Last saved check sheet: {new Date(selected.data.cesSheet.date).toLocaleDateString()} · {selected.data.cesSheet.marks.length} findings
+              {selected.data.cesSheet.sides ? ` · ${Object.keys(selected.data.cesSheet.sides).length} with a side noted` : ''}
+              {selected.data.cesSheet.davies && (selected.data.cesSheet.davies.right != null || selected.data.cesSheet.davies.left != null)
+                ? ` · Davies: right ${selected.data.cesSheet.davies.right ?? '—'}, left ${selected.data.cesSheet.davies.left ?? '—'} touches`
+                : ''}
+              .
+            </p>
+          )}
         </div>
       )}
     </div>

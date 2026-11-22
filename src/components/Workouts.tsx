@@ -1,8 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Ctx } from '../App';
-import { WORKOUTS, CORE_BALANCE_WORKOUT, REFERENCE_TRACKS, PHASES, PHASE_WEEKLY_SETS, daysForTime, splitForDays, TRAINING_STYLES, CES_TEMPLATES, EQUIPMENT_NOTES, effectiveEquipment, resolveExercise, findExerciseByName, CLASS_WORKOUT_FOCUS, applyClassFocus, GOAL_FINISHERS } from '../lib/data';
-import type { TrainingStyle } from '../lib/data';
+import { WORKOUTS, CORE_BALANCE_WORKOUT, REFERENCE_TRACKS, PHASES, PHASE_WEEKLY_SETS, PHASE_VOLUME_RANGE, VOLUME_MUSCLES, weeklyVolumeForSplit, filterGroupForExercise, exerciseNeeds, daysForTime, splitForDays, TRAINING_STYLES, CES_TEMPLATES, EQUIPMENT_NOTES, effectiveEquipment, resolveExercise, findExerciseByName, CLASS_WORKOUT_FOCUS, applyClassFocus, GOAL_FINISHERS } from '../lib/data';
+import type { TrainingStyle, FilterGroup } from '../lib/data';
+import type { ExerciseFeedback } from '../lib/store';
 import { phaseForDoc, hasFullAccess, metCompanionIds, lastTimeFor, awardBadges, daysInMonthSet, currentWeekForDoc } from '../lib/store';
+import { cardioThisWeek } from '../lib/badges';
+import BackToTop from './BackToTop';
 import { cycleForWeek, nextRetestWeek, nextRetestLabel, isDeloadWeek } from '../lib/yearPlan';
 import type { Workout } from '../lib/types';
 import ExampleVideo from './ExampleVideo';
@@ -38,6 +41,9 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
   const [editMinutes, setEditMinutes] = useState('');
   const [regressionPick, setRegressionPick] = useState<Record<string, string>>({});
   const [finisherDone, setFinisherDone] = useState(false);
+  const [feedbackFor, setFeedbackFor] = useState<{ kind: 'dislike' | 'hurts'; exerciseId: string; exerciseName: string } | null>(null);
+  const [muscleFilter, setMuscleFilter] = useState<'all' | FilterGroup>('all');
+  const [equipFilter, setEquipFilter] = useState<string>('all');
   const timerRef = useRef<number | null>(null);
 
   const phase = phaseForDoc(doc);
@@ -67,7 +73,9 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
   // always Full-body. At 5 to 6 days the saved pick wins, defaulting to
   // Push / Pull / Legs for old profiles.
   const daysPerWeek = doc.trainingDays || 3;
-  const style: TrainingStyle = daysPerWeek >= 5 ? (doc.trainingStyle || 'ppl') : 'full-body';
+  // At 4 days and up the saved split pick wins (Upper / Lower, Push /
+  // Pull / Legs, or Short). Below 4 days it is always Full-body.
+  const style: TrainingStyle = daysPerWeek >= 4 ? (doc.trainingStyle || 'full-body') : 'full-body';
   const split = splitForDays(daysPerWeek, phase, style);
   const lastSplitIdx = (() => {
     const lastId = doc.workouts.length ? String(doc.workouts[doc.workouts.length - 1].workoutId || '') : '';
@@ -80,7 +88,7 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
   // that muscle rested. Only the same group twice in a row needs a rest
   // day. Short sessions are a light dose, so they never force a rest day
   // (if you are sore or tired, take the day off anyway).
-  const isRestDay = style === 'ppl'
+  const isRestDay = style === 'ppl' || style === 'upper-lower'
     ? trainedYesterday && lastGroup !== undefined && lastGroup === planned.group
     : style === 'short'
       ? false
@@ -117,10 +125,8 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
     nowCal.getMonth(),
   );
   const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
-  const cardioThisWeek = doc.cardio
-    .filter((c) => new Date(String(c.date)).getTime() >= weekAgo)
-    .reduce((s, c) => s + Number(c.minutes || 0), 0);
-  const cardioMilestone = cardioThisWeek >= 300 ? '300 minute milestone done' : cardioThisWeek >= 200 ? '200 done, next is 300' : cardioThisWeek >= 150 ? '150 done, next is 200' : 'Next milestone is 150';
+  const cardioWeek = cardioThisWeek(doc);
+  const cardioMilestone = cardioWeek >= 300 ? '300 minute milestone done' : cardioWeek >= 200 ? '200 done, next is 300' : cardioWeek >= 150 ? '150 done, next is 200' : 'Next milestone is 150';
   const mainGoal = doc.goals[0];
   const goalLabel = mainGoal?.label || doc.mainGoal || 'your goal';
   const goalNote =
@@ -146,10 +152,10 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
     if (timeMin === 15) {
       return candidates.find((w) => w.id === 'track-block-1') || [...candidates].sort((a, b) => a.minutes - b.minutes)[0];
     }
-    // At 5 to 6 days the best workout is the next day in the client's
-    // own split (Push, Pull, Legs, or the next short session), not just
-    // the longest workout of the phase.
-    if (daysPerWeek >= 5) {
+    // At 4 to 6 days the best workout is the next day in the client's
+    // own split (Push, Pull, Legs, Upper / Lower, or the next short
+    // session), not just the longest workout of the phase.
+    if (daysPerWeek >= 4) {
       const plannedW = WORKOUTS.find((w) => w.id === planned.workoutId)
         || (planned.workoutId === 'core-balance-mobility' ? CORE_BALANCE_WORKOUT : undefined);
       if (plannedW && unlocked(plannedW)) return plannedW;
@@ -377,29 +383,54 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
           </details>
           {last && <p className="small">Last time: {last.w ? `${last.w} lb` : ''}{last.w && last.r ? ' x ' : ''}{last.r ? `${last.r} reps` : ''}</p>}
           <div className="row" style={{ marginTop: 6 }}>
-            <button
-              onClick={() => {
-                update((d) => {
-                  if (!d.dislikedExercises.includes(rawEx.id)) d.dislikedExercises.push(rawEx.id);
-                });
-                setNotice(`Got it. ${rawEx.name} will be swapped out from now on.`);
-                toast(`${rawEx.name} swapped out from now on.`);
-              }}
-            >
+            <button onClick={() => setFeedbackFor({ kind: 'dislike', exerciseId: rawEx.id, exerciseName: rawEx.name })}>
               I don&apos;t like this move
             </button>
-            <button
-              onClick={() => {
-                update((d) => {
-                  if (!d.hurtExercises.includes(rawEx.id)) d.hurtExercises.push(rawEx.id);
-                });
-                setNotice(`${rawEx.name} flagged as hurting. It will be swapped out. Sharp, new, or worsening pain: see a doctor or physical therapist, and tell Derek.`);
-                toast(`${rawEx.name} flagged. It will be swapped out.`);
-              }}
-            >
+            <button onClick={() => setFeedbackFor({ kind: 'hurts', exerciseId: rawEx.id, exerciseName: rawEx.name })}>
               This hurts
             </button>
           </div>
+          {feedbackFor && feedbackFor.exerciseId === rawEx.id && (
+            <div className="card gold-frame" style={{ marginTop: 10 }}>
+              <h4 style={{ margin: '0 0 4px' }}>Why {feedbackFor.kind === 'hurts' ? 'does it hurt' : "don't you like it"}?</h4>
+              <p className="small muted">Derek sees your reason, so he can fix the plan. The move is still swapped out from now on.</p>
+              <div className="row">
+                {([
+                  ['too-hard', 'Too hard'],
+                  ['hurts', 'It hurts'],
+                  ['dont-like', "I don't like it"],
+                  ['no-equipment', 'No equipment for it'],
+                ] as const).map(([reason, label]) => (
+                  <button
+                    key={reason}
+                    className="primary"
+                    onClick={() => {
+                      const fb: ExerciseFeedback = { exerciseId: feedbackFor.exerciseId, exerciseName: feedbackFor.exerciseName, kind: feedbackFor.kind, reason, date: new Date().toISOString() };
+                      update((d) => {
+                        if (feedbackFor.kind === 'dislike') {
+                          if (!d.dislikedExercises.includes(feedbackFor.exerciseId)) d.dislikedExercises.push(feedbackFor.exerciseId);
+                        } else {
+                          if (!d.hurtExercises.includes(feedbackFor.exerciseId)) d.hurtExercises.push(feedbackFor.exerciseId);
+                        }
+                        d.exerciseFeedback = [...(d.exerciseFeedback || []).filter((x) => x.exerciseId !== feedbackFor.exerciseId), fb];
+                      });
+                      if (feedbackFor.kind === 'hurts') {
+                        setNotice(`${feedbackFor.exerciseName} flagged as hurting. It will be swapped out. Sharp, new, or worsening pain: see a doctor or physical therapist, and tell Derek.`);
+                        toast(`${feedbackFor.exerciseName} flagged. It will be swapped out.`);
+                      } else {
+                        setNotice(`Got it. ${feedbackFor.exerciseName} will be swapped out from now on.`);
+                        toast(`${feedbackFor.exerciseName} swapped out from now on.`);
+                      }
+                      setFeedbackFor(null);
+                    }}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+              <button style={{ marginTop: 8 }} onClick={() => setFeedbackFor(null)}>Cancel</button>
+            </div>
+          )}
           <div className="grid2" style={{ marginTop: 10 }}>
             <div>
               <label htmlFor={`w-${ex.id}`}>Weight (lb)</label>
@@ -552,7 +583,7 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
         {!doc.assessmentDone && <p>Do the assessment first. It sets your starting phase, and then your best workout shows here.</p>}
         {doc.assessmentDone && isRestDay && (
           <div>
-            <p><strong>Today is an active rest day.</strong> {style === 'ppl' ? 'You trained those same muscles yesterday, so they rest today. A different muscle group is next.' : 'You trained yesterday. Take 1 to 2 rest days between strength days.'}</p>
+            <p><strong>Today is an active rest day.</strong> {style === 'ppl' || style === 'upper-lower' ? 'You trained those same muscles yesterday, so they rest today. A different muscle group is next.' : 'You trained yesterday. Take 1 to 2 rest days between strength days.'}</p>
             <p className="small muted">Rest well today: a gentle walk, your 2-minute balance hold, and your stretches. No strength workout today. The gym gives the stimulus, recovery builds on it.</p>
             <button onClick={logRestDay}>
               Log my rest day (+5 XP)
@@ -658,9 +689,9 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
           only shows the weekly total, with a link to the one log form. */}
       <div className="card">
         <h3>Cardio this week</h3>
-        <p><strong>{cardioThisWeek} of 150 to 300 minutes this week.</strong> {cardioMilestone}.</p>
-        <div className="progress-bar"><div style={{ width: `${Math.min(100, (cardioThisWeek / 300) * 100)}%` }} /></div>
-        <p className="small muted">Zone 2, easy enough to talk. High intensity counts double.</p>
+        <p><strong>{cardioWeek} of 150 to 300 minutes this week.</strong> {cardioMilestone}.</p>
+        <div className="progress-bar"><div style={{ width: `${Math.min(100, (cardioWeek / 300) * 100)}%` }} /></div>
+        <p className="small muted">Zone 2, easy enough to talk. High intensity counts double automatically when you log it as HIIT.</p>
         <button className="primary" onClick={() => go('cardio')}>Log cardio in the Cardio tab</button>
       </div>
 
@@ -668,6 +699,26 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
         <h3>Fit the workout to your time</h3>
         <p>Shorter workouts need more days: at {timeMin === 45 ? '45 or more' : timeMin} minutes, train {daysNeeded} days a week to hit your Phase {phase} weekly sets ({weeklySets} per muscle). {style === 'ppl' ? 'Push, Pull, and Legs work different muscles, so each muscle gets 2 to 3 days off before its next session.' : style === 'short' ? 'Short sessions are a small daily dose, not a full strength session, so they do not add heavy volume every day.' : 'Full-body days work the same muscles each day, so take 1 to 2 rest days between strength days.'}</p>
         <p className="small muted">15 minutes: 4 days a week. 30 minutes: 3 days a week. 45 or more minutes: {phase >= 3 ? '3' : '2'} days a week. Take 1 to 2 rest days between strength days.</p>
+      </div>
+
+      <div className="card">
+        <h3>Sets per muscle this week</h3>
+        <p className="small muted">From your current split, not from what you logged. Phase {phase} target: {PHASE_VOLUME_RANGE[phase] ? `${PHASE_VOLUME_RANGE[phase][0]} to ${PHASE_VOLUME_RANGE[phase][1]}` : '6 to 10'} sets per muscle per week.</p>
+        {(() => {
+          const vol = weeklyVolumeForSplit(split, ALL_WORKOUTS);
+          const [lo, hi] = PHASE_VOLUME_RANGE[phase] || [6, 10];
+          return VOLUME_MUSCLES.map((m) => {
+            const v = vol[m.id];
+            const verdict = v < lo ? 'under target' : v > hi ? 'over target' : 'on target';
+            return (
+              <div key={m.id} style={{ margin: '6px 0' }}>
+                <p className="small" style={{ margin: '2px 0' }}>{m.label}: {v} sets a week · {verdict}</p>
+                <div className="progress-bar"><div style={{ width: `${Math.min(100, (v / hi) * 100)}%` }} /></div>
+              </div>
+            );
+          });
+        })()}
+        <p className="small muted">Legs run high on purpose: squats, hinges, and single-leg moves all count toward legs, so being over on legs is normal.</p>
       </div>
 
       <div className="card">
@@ -679,9 +730,15 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
               key={d}
               onClick={() => update((doc2) => {
                 doc2.trainingDays = d;
-                // Full-body is not offered at 6 days a week, so a client
-                // on Full-body who picks 6 days moves to Push / Pull / Legs.
-                if (d === 6 && (doc2.trainingStyle || 'full-body') === 'full-body') doc2.trainingStyle = 'ppl';
+                // Full-body and Upper / Lower are not offered at 6 days a
+                // week, so a client on either who picks 6 days moves to
+                // Push / Pull / Legs. Push / Pull / Legs and Short are not
+                // offered at 4 days, so picking 4 days moves back to
+                // Full-body.
+                const cur = doc2.trainingStyle || 'full-body';
+                if (d === 6 && (cur === 'full-body' || cur === 'upper-lower')) doc2.trainingStyle = 'ppl';
+                if (d === 4 && (cur === 'ppl' || cur === 'short')) doc2.trainingStyle = 'full-body';
+                if (d <= 3) doc2.trainingStyle = 'full-body';
               })}
               style={(doc.trainingDays || 3) === d ? { background: '#124571', color: '#fff' } : {}}
             >
@@ -689,16 +746,21 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
             </button>
           ))}
         </div>
-        {(doc.trainingDays || 3) >= 5 && (
+        {(doc.trainingDays || 3) >= 4 && (
           <div>
             <p className="small">How do you want to train {doc.trainingDays} days a week?</p>
             <div className="row">
-              {TRAINING_STYLES.filter((s) => s.id !== 'full-body' || (doc.trainingDays || 3) === 5).map((s) => (
+              {TRAINING_STYLES.filter((s) => {
+                const d = doc.trainingDays || 3;
+                if (d === 4) return s.id === 'full-body' || s.id === 'upper-lower';
+                if (d === 5) return true;
+                return s.id === 'ppl' || s.id === 'short';
+              }).map((s) => (
                 <button
                   key={s.id}
                   onClick={() => {
                     update((doc2) => { doc2.trainingStyle = s.id; });
-                    toast(`${s.name} picked. ${s.id === 'ppl' ? 'Each muscle rests 2 to 3 days between sessions.' : s.id === 'short' ? '15 minutes a day, small dose.' : 'Take 1 to 2 rest days between strength days.'}`);
+                    toast(`${s.name} picked. ${s.id === 'ppl' || s.id === 'upper-lower' ? 'Each muscle rests 2 to 3 days between sessions.' : s.id === 'short' ? '15 minutes a day, small dose.' : 'Take 1 to 2 rest days between strength days.'}`);
                   }}
                   style={style === s.id ? { background: '#124571', color: '#fff' } : {}}
                 >
@@ -708,6 +770,7 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
             </div>
             <p className="small muted">{TRAINING_STYLES.find((s) => s.id === style)?.blurb}</p>
             {style === 'full-body' && <p className="small muted">Full-body trains the same muscles on back-to-back days. It is not offered at 6 days a week.</p>}
+            {style === 'upper-lower' && <p className="small muted">Upper days work chest, back, shoulders, arms, and core. Lower days work legs, glutes, and core. Each muscle rests 2 to 3 days before its next session.</p>}
           </div>
         )}
         <p><strong>{split.label}</strong></p>
@@ -752,7 +815,57 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
         </details>
       </div>
 
-      {WORKOUTS.map((w) => {
+      <div className="card">
+        <h3>Find a workout</h3>
+        <div className="row">
+          <div>
+            <label htmlFor="wk-muscle">Muscle group</label>
+            <select id="wk-muscle" value={muscleFilter} onChange={(e) => setMuscleFilter(e.target.value as 'all' | FilterGroup)}>
+              <option value="all">All muscles</option>
+              <option value="push">Push (chest and shoulders)</option>
+              <option value="pull">Pull (back)</option>
+              <option value="legs">Legs</option>
+              <option value="core">Core</option>
+            </select>
+          </div>
+          <div>
+            <label htmlFor="wk-equip">Equipment</label>
+            <select id="wk-equip" value={equipFilter} onChange={(e) => setEquipFilter(e.target.value)}>
+              <option value="all">Any equipment</option>
+              <option value="none">Bodyweight only</option>
+              <option value="Dumbbells">Dumbbells</option>
+              <option value="Barbell">Barbell</option>
+              <option value="Cable machine">Cable machine</option>
+              <option value="Step platform">Step platform</option>
+              <option value="Resistance bands">Resistance bands</option>
+            </select>
+          </div>
+        </div>
+        {(muscleFilter !== 'all' || equipFilter !== 'all') && (
+          <p className="small muted">
+            Showing {WORKOUTS.filter((w) => {
+              const byMuscle = muscleFilter === 'all' || w.exercises.some((e) => filterGroupForExercise(e.name) === muscleFilter);
+              const byEquip = equipFilter === 'all'
+                ? true
+                : equipFilter === 'none'
+                  ? w.exercises.every((e) => !exerciseNeeds(e))
+                  : w.exercises.some((e) => (exerciseNeeds(e) || '').includes(equipFilter));
+              return byMuscle && byEquip;
+            }).length} of {WORKOUTS.length} workouts.
+            {' '}<button onClick={() => { setMuscleFilter('all'); setEquipFilter('all'); }}>Clear filters</button>
+          </p>
+        )}
+      </div>
+
+      {WORKOUTS.filter((w) => {
+        const byMuscle = muscleFilter === 'all' || w.exercises.some((e) => filterGroupForExercise(e.name) === muscleFilter);
+        const byEquip = equipFilter === 'all'
+          ? true
+          : equipFilter === 'none'
+            ? w.exercises.every((e) => !exerciseNeeds(e))
+            : w.exercises.some((e) => (exerciseNeeds(e) || '').includes(equipFilter));
+        return byMuscle && byEquip;
+      }).map((w) => {
         const locked =
           (w.phase === 4 && !doc.retests.some((r) => (r as { week?: number }).week === 12)) ||
           (w.phase === 5 && !(doc.retests.some((r) => (r as { clean?: boolean }).clean === true) && doc.phase5Approved));
@@ -821,6 +934,7 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
           </div>
         ))}
       </div>
+      <BackToTop />
     </div>
   );
 }

@@ -6,7 +6,7 @@
 // logged, not from the slider positions.
 import { useState } from 'react';
 import type { Ctx } from '../App';
-import { metCompanionIds, loggedToday, recoveryScore } from '../lib/store';
+import { metCompanionIds, loggedToday, recoveryScore, lastLoggedLabel } from '../lib/store';
 import { metricSeries, TrendChart } from './Metrics';
 
 export default function Sleep({ ctx }: { ctx: Ctx }) {
@@ -52,6 +52,7 @@ export default function Sleep({ ctx }: { ctx: Ctx }) {
           Recovery score from your last check-in: {lastCheckin ? `${rec}/100` : 'not set yet, log your first check-in on Today'}. Sleep 40, aches 25, energy 25, rest rhythm 10.
         </p>
         <p className="small muted">Last night: {lastSleep?.hours ?? 'not logged yet'} hours. Most adults do best on 7 to 9 hours.</p>
+        {lastLoggedLabel(doc.sleep) && <p className="small muted">{lastLoggedLabel(doc.sleep)}.</p>}
         {!lastCheckin && (
           <button onClick={() => go('today')}>Log today&apos;s check-in on Today</button>
         )}

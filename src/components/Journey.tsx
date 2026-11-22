@@ -6,6 +6,7 @@ import { phaseForDoc, levelForXp, metCompanionIds, currentWeekForDoc } from '../
 import GuardianAvatar from './GuardianAvatar';
 import JourneyMap from './JourneyMap';
 import CompanionAvatar, { BossAvatar } from './CompanionAvatar';
+import BackToTop from './BackToTop';
 
 // New boss rounds reuse the five boss drawings with new names and higher
 // HP. Bosses are challenges you beat, never friends.
@@ -250,6 +251,7 @@ export default function Journey({ ctx }: { ctx: Ctx }) {
           ))}
         </details>
       </div>
+      <BackToTop />
     </div>
   );
 }

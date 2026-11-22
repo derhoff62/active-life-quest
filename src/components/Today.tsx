@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import type { Ctx } from '../App';
 import * as api from '../lib/api';
-import { PHASES, WORKOUTS, CORE_BALANCE_WORKOUT, WEEK13, CLASS_GOOD_FOR, GOAL_TYPES, splitForDays } from '../lib/data';
+import { PHASES, WORKOUTS, CORE_BALANCE_WORKOUT, WEEK13, CLASS_GOOD_FOR, GOAL_TYPES, splitForDays, foodQuestForDate } from '../lib/data';
 import type { TrainingStyle } from '../lib/data';
-import { phaseForDoc, recoveryScore, levelForXp, titleForLevel, metCompanionIds, currentWeekForDoc, checkinPreferenceText, checkinFrequenciesForMode, normalizeCheckinFrequency, loggedToday, streakDaysForDoc } from '../lib/store';
+import { phaseForDoc, recoveryScore, levelForXp, titleForLevel, metCompanionIds, currentWeekForDoc, checkinPreferenceText, checkinFrequenciesForMode, normalizeCheckinFrequency, loggedToday, streakDaysForDoc, lastLoggedLabel, cardioCreditedSum } from '../lib/store';
 import { cycleForWeek, nextRetestWeek, nextBossWeek, nextRetestLabel, nextBossLabel, isDeloadWeek, challengeForWeek } from '../lib/yearPlan';
 import type { AssessmentVideo } from '../lib/store';
 import GuardianAvatar from './GuardianAvatar';
@@ -33,6 +33,7 @@ export default function Today({ ctx }: { ctx: Ctx }) {
   // could log twice. Disabled + "Saving…" also tells the client the tap
   // landed, instead of the button sitting still.
   const [checkinBusy, setCheckinBusy] = useState(false);
+  const [confirmDiscard, setConfirmDiscard] = useState(false);
   const [questBusy, setQuestBusy] = useState(false);
 
   const phase = phaseForDoc(doc);
@@ -45,11 +46,11 @@ export default function Today({ ctx }: { ctx: Ctx }) {
   const nextWorkout =
     doc.workouts.length === 0
       ? WORKOUTS.find((w) => w.id === 'day1-first')
-      : (doc.trainingDays || 3) >= 5
+      : (doc.trainingDays || 3) >= 4
         ? (() => {
-          // At 5 to 6 days the next workout is the next day in the
-          // client's own split (Push, Pull, Legs, or the next short
-          // session), not a mix of full-body and split days.
+          // At 4 to 6 days the next workout is the next day in the
+          // client's own split (Push, Pull, Legs, Upper / Lower, or the
+          // next short session), not a mix of full-body and split days.
           const style: TrainingStyle = doc.trainingStyle || 'ppl';
           const split = splitForDays(doc.trainingDays || 3, phase, style);
           const idx = split.days.findIndex((d) => d.workoutId === lastWorkoutId);
@@ -71,7 +72,7 @@ export default function Today({ ctx }: { ctx: Ctx }) {
     Object.entries(doc.bossHp || {}).filter(([, hp]) => hp <= 0).map(([id]) => Number(id.replace('boss-week-', ''))),
   );
   const yearNextBoss = nextBossWeek(yearWeek, yearBeatenBossWeeks);
-  const yearCardioTotal = (doc.cardio || []).reduce((s, c) => s + Number(c.minutes || 0), 0);
+  const yearCardioTotal = cardioCreditedSum(doc.cardio);
   const yearStreak = streakDaysForDoc(doc);
   const yearWaists = (doc.measurements || []).map((m) => Number((m as { waist?: string }).waist || 0)).filter((w) => w > 0);
   const yearWaistChange = yearWaists.length >= 2 ? yearWaists[yearWaists.length - 1] - yearWaists[0] : null;
@@ -207,6 +208,30 @@ export default function Today({ ctx }: { ctx: Ctx }) {
         </div>
       </div>
 
+      {unfinished && (
+        <div className="card gold-frame" id="resume-workout">
+          <h3 style={{ margin: 0 }}>Continue where you left off</h3>
+          <p>
+            {(() => {
+              const w = WORKOUTS.find((x) => x.id === unfinished.workoutId) || (unfinished.workoutId === 'core-balance-mobility' ? CORE_BALANCE_WORKOUT : undefined);
+              return w ? `${w.title} · Exercise ${(unfinished.step || 0) + 1} of ${w.exercises.length}` : 'You left a workout partway.';
+            })()}
+          </p>
+          <div className="row">
+            <button className="primary" onClick={() => go('workouts')}>Resume workout</button>
+            {!confirmDiscard ? (
+              <button onClick={() => setConfirmDiscard(true)}>Discard it</button>
+            ) : (
+              <span>
+                Discard this workout and lose your spot?{' '}
+                <button className="primary" onClick={() => { update((d) => { d.sessions = null; }); setConfirmDiscard(false); toast('Unfinished workout discarded.'); }}>Yes, discard it</button>{' '}
+                <button onClick={() => setConfirmDiscard(false)}>Keep it</button>
+              </span>
+            )}
+          </div>
+        </div>
+      )}
+
       {doc.assessmentDone && (
         <div className="card gold-frame">
           <h3 style={{ margin: 0 }}>Where you are: Week {weekInCycle} · {yearCycle.name}</h3>
@@ -226,15 +251,6 @@ export default function Today({ ctx }: { ctx: Ctx }) {
         </div>
       ))}
 
-      {unfinished && (
-        <div className="notice">
-          <strong>Unfinished workout:</strong> you left a workout partway. Pick it back up where you left off.
-          <div className="row" style={{ marginTop: 8 }}>
-            <button className="primary" onClick={() => go('workouts')}>Resume workout</button>
-            <button onClick={() => { update((d) => { d.sessions = null; }); toast('Unfinished workout discarded.'); }}>Discard it</button>
-          </div>
-        </div>
-      )}
 
       {week12Done && !doc.week13Goal && (
         <div className="card gold-frame">
@@ -261,6 +277,7 @@ export default function Today({ ctx }: { ctx: Ctx }) {
           Recovery score from your last check-in: {lastCheckin ? `${rec}/100` : 'not set yet, log your first check-in below'}. Sleep 40, aches 25, energy 25, rest rhythm 10.
         </p>
         <p className="small">Your daily check-in is in the app. Complete your tasks for the day, then log how it went here.</p>
+        {lastLoggedLabel(doc.checkins) && <p className="small muted">{lastLoggedLabel(doc.checkins)}.</p>}
         <p className="small"><strong>{checkinPreferenceText(doc)}</strong></p>
         <label>How do you want to check in with Derek?</label>
         <div className="row">
@@ -355,6 +372,49 @@ export default function Today({ ctx }: { ctx: Ctx }) {
           );
         })()}
       </div>
+
+      {doc.nutritionEnabled && (
+        <div className="card">
+          <h3>Today's food quest</h3>
+          <p className="small muted">One small food step a day. No calorie counting, no tracking. Skip it any time.</p>
+          {(() => {
+            const quest = foodQuestForDate(new Date());
+            const today = new Date().toISOString().slice(0, 10);
+            const done = doc.quests.some((q) => (q as { kind?: string }).kind === 'food-quest' && String(q.date).slice(0, 10) === today);
+            const skipped = doc.quests.some((q) => (q as { kind?: string }).kind === 'food-quest-skip' && String(q.date).slice(0, 10) === today);
+            if (done) return <p className="small ok">Done today: {quest}.</p>;
+            if (skipped) return <p className="small muted">Skipped today: {quest}. A new one comes tomorrow.</p>;
+            return (
+              <div>
+                <p><strong>{quest}</strong></p>
+                <div className="row">
+                  <button
+                    className="primary"
+                    disabled={questBusy}
+                    onClick={() => {
+                      if (questBusy) return;
+                      setQuestBusy(true);
+                      window.setTimeout(() => setQuestBusy(false), 700);
+                      update((d) => { d.quests.push({ id: `q${Date.now()}`, date: new Date().toISOString(), kind: 'food-quest', text: quest } as never); d.xp += 5; });
+                      toast('Food quest done. +5 XP.');
+                    }}
+                  >
+                    {questBusy ? 'Saving…' : 'I did it (+5 XP)'}
+                  </button>
+                  <button
+                    onClick={() => {
+                      update((d) => { d.quests.push({ id: `q${Date.now()}`, date: new Date().toISOString(), kind: 'food-quest-skip', text: quest } as never); });
+                      toast('Skipped. A new food quest comes tomorrow.');
+                    }}
+                  >
+                    Skip today
+                  </button>
+                </div>
+              </div>
+            );
+          })()}
+        </div>
+      )}
 
       <div className="card">
         <h3>Reminder times</h3>

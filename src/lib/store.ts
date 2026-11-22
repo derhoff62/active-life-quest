@@ -57,6 +57,21 @@ export interface AssessmentVideo {
   contentType: string;
 }
 
+export interface ExerciseFeedback {
+  exerciseId: string;
+  exerciseName: string;
+  kind: 'dislike' | 'hurts';
+  reason: 'too-hard' | 'hurts' | 'dont-like' | 'no-equipment';
+  date: string;
+}
+
+export interface BalanceTest {
+  id: string;
+  date: string;
+  leftSec: number;
+  rightSec: number;
+}
+
 export interface ProfileDoc {
   version: number;
   displayName: string;
@@ -105,13 +120,17 @@ export interface ProfileDoc {
   trainingStyle: TrainingStyle;
   dislikedExercises: string[];
   hurtExercises: string[];
+  exerciseFeedback: ExerciseFeedback[];
+  balanceTests: BalanceTest[];
+  doctorCleared: boolean;
+  reducedMotion: boolean;
   focus: Record<string, number>;
   socialPermission: boolean;
   steps: LogEntry[];
   cesStep: Record<string, number>;
   phaseOverride: number | null;
   phase5Approved: boolean;
-  cesSheet?: { marks: string[]; notes: string; date: string };
+  cesSheet?: { marks: string[]; sides?: Record<string, 'right' | 'left' | 'both'>; davies?: { right: number | null; left: number | null }; notes: string; date: string };
   manaLastRefill: string;
   week13Goal: string | null;
   week13PlanRequested: boolean;
@@ -183,6 +202,10 @@ export function defaultProfile(email = '', displayName = ''): ProfileDoc {
     trainingStyle: 'full-body',
     dislikedExercises: [],
     hurtExercises: [],
+    exerciseFeedback: [],
+    balanceTests: [],
+    doctorCleared: false,
+    reducedMotion: false,
     focus: {},
     socialPermission: false,
     steps: [],
@@ -219,7 +242,7 @@ export function normalizeProfile(raw: unknown): ProfileDoc {
     'armorEarned', 'rarityEarned', 'prs', 'workouts', 'cardio', 'checkins',
     'sleep', 'measurements', 'photos', 'quests', 'retests',
     'assessmentVideos', 'progressPhotos', 'messages', 'nudges',
-    'dislikedExercises', 'hurtExercises', 'steps',
+    'dislikedExercises', 'hurtExercises', 'steps', 'exerciseFeedback', 'balanceTests',
   ] as const;
   for (const f of arrFields) {
     if (!Array.isArray((r as Record<string, unknown>)[f])) (out as unknown as Record<string, unknown>)[f] = [];
@@ -269,7 +292,9 @@ export function normalizeProfile(raw: unknown): ProfileDoc {
   if (typeof out.communityOptIn !== 'boolean') out.communityOptIn = false;
   if (typeof out.streakDays !== 'number') out.streakDays = 0;
   if (typeof out.trainingDays !== 'number') out.trainingDays = 3;
-  if (out.trainingStyle !== 'full-body' && out.trainingStyle !== 'ppl' && out.trainingStyle !== 'short') out.trainingStyle = 'full-body';
+  if (typeof out.doctorCleared !== 'boolean') out.doctorCleared = false;
+  if (typeof out.reducedMotion !== 'boolean') out.reducedMotion = false;
+  if (out.trainingStyle !== 'full-body' && out.trainingStyle !== 'ppl' && out.trainingStyle !== 'short' && out.trainingStyle !== 'upper-lower') out.trainingStyle = 'full-body';
   return out;
 }
 
@@ -387,6 +412,54 @@ export function loggedToday(entries: { date?: string }[] | undefined, kind?: str
   });
 }
 
+/** Credited cardio minutes for one log entry. Clients log ACTUAL minutes
+ * plus the intensity; high-intensity (HIIT) minutes count double in the
+ * weekly total, so 20 hard minutes count as 40. Zone 2 counts as logged.
+ * Old entries with no zone count as logged. */
+export function cardioCreditMinutes(entry: { minutes?: unknown; zone?: unknown }): number {
+  const mins = Number(entry.minutes || 0);
+  if (!Number.isFinite(mins) || mins <= 0) return 0;
+  return entry.zone === 'HIIT' ? mins * 2 : mins;
+}
+
+/** Credited cardio minutes across entries, optionally only since a time. */
+export function cardioCreditedSum(entries: { date?: string; minutes?: unknown; zone?: unknown }[] | undefined, sinceMs?: number): number {
+  return (entries || [])
+    .filter((c) => sinceMs === undefined || new Date(String(c.date)).getTime() >= sinceMs)
+    .reduce((s, c) => s + cardioCreditMinutes(c), 0);
+}
+
+/** "Last logged 12 Nov" for a log list, or null when nothing is logged. */
+export function lastLoggedLabel(entries: { date?: string }[] | undefined): string | null {
+  const list = (entries || []).filter((e) => e.date);
+  if (list.length === 0) return null;
+  const last = list[list.length - 1];
+  return `Last logged ${new Date(String(last.date)).toLocaleDateString()}`;
+}
+
+/** Whole days since the last check-in, 0 when one was logged today. */
+export function missedCheckinDays(doc: ProfileDoc): number {
+  const days = (doc.checkins || []).map((c) => String(c.date || '').slice(0, 10));
+  if (days.length === 0) return Number.POSITIVE_INFINITY;
+  const last = days.sort()[days.length - 1];
+  return Math.floor((Date.now() - new Date(`${last}T12:00:00`).getTime()) / (24 * 60 * 60 * 1000));
+}
+
+/** Recovery score from the last check-in actually logged, or null. */
+export function recoveryScoreForDoc(doc: ProfileDoc): number | null {
+  const last = (doc.checkins || [])[(doc.checkins || []).length - 1] as { energy?: number; sleepHours?: number; soreness?: number } | undefined;
+  if (!last) return null;
+  const lastSleep = (doc.sleep || [])[(doc.sleep || []).length - 1] as { hours?: number } | undefined;
+  return recoveryScore(last.sleepHours ?? lastSleep?.hours ?? 7, last.soreness ?? 3, last.energy ?? 7, true);
+}
+
+/** Best balance hold so far, in seconds, from the baseline and tests. */
+export function bestBalanceSec(doc: ProfileDoc): number {
+  const base = Math.max(doc.balanceBaseline?.left || 0, doc.balanceBaseline?.right || 0);
+  const tests = Math.max(0, ...(doc.balanceTests || []).map((t) => Math.max(t.leftSec || 0, t.rightSec || 0)));
+  return Math.max(base, tests);
+}
+
 /** Day numbers (1-31) of entries that fall in the given month and year.
  * A calendar must never light up a day just because an old entry shares
  * the same day number in a different month. */
@@ -452,16 +525,14 @@ export function earnedArmorIds(doc: ProfileDoc): string[] {
   const prs = doc.prs || [];
   const badges = doc.badges || [];
   const checkins = doc.checkins || [];
-  const cardioWeek = cardio
-    .filter((c) => new Date(String(c.date)).getTime() >= weekAgo)
-    .reduce((s, c) => s + Number(c.minutes || 0), 0);
+  const cardioWeek = cardioCreditedSum(cardio, weekAgo);
   const bossesBeaten = Object.values(doc.bossHp || {}).filter((hp) => hp <= 0).length;
   const balanceBest = Math.max(doc.balanceBaseline?.left || 0, doc.balanceBaseline?.right || 0);
   const checkinStreak = checkins.length;
   const retests = doc.retests || [];
   const hasRetest = (w: number) => retests.some((r) => (r as { week?: number }).week === w);
   const bossBeaten = (id: string) => (doc.bossHp || {})[id] !== undefined && (doc.bossHp || {})[id]! <= 0;
-  const cardioTotal = cardio.reduce((s, c) => s + Number(c.minutes || 0), 0);
+  const cardioTotal = cardioCreditedSum(cardio);
   const out = new Set<string>();
   const add = (id: string, ok: boolean) => { if (ok) out.add(id); };
   add('travelers-boots', workouts.length >= 1);
@@ -520,9 +591,7 @@ export function awardBadges(doc: ProfileDoc): string[] {
   const retests = doc.retests || [];
   if (!Array.isArray(doc.badges)) doc.badges = [];
   const workoutsWeek = workouts.filter((w) => new Date(String(w.date)).getTime() >= weekAgo).length;
-  const cardioWeek = cardio
-    .filter((c) => new Date(String(c.date)).getTime() >= weekAgo)
-    .reduce((s, c) => s + Number(c.minutes || 0), 0);
+  const cardioWeek = cardioCreditedSum(cardio, weekAgo);
   const add = (id: string, ok: boolean) => { if (ok && !doc.badges.includes(id)) doc.badges.push(id); };
   // Week 1 Finished means a full first week has passed with at least one
   // workout, not just the first workout logged.
@@ -556,7 +625,7 @@ export function awardBadges(doc: ProfileDoc): string[] {
   add('twenty-five-workouts', workouts.length >= 25);
   add('fifty-workouts', workouts.length >= 50);
   add('two-week-checkin', checkinStreakDays(doc) >= 14);
-  add('cardio-1000', cardio.reduce((s, c) => s + Number(c.minutes || 0), 0) >= 1000);
+  add('cardio-1000', cardioCreditedSum(cardio) >= 1000);
   add('sleep-30', (doc.sleep || []).length >= 30);
   add('measurement-tracker', (doc.measurements || []).length >= 6);
   // 3-Day Check-In Streak means 3 check-in days in a row, not 3 total.

@@ -10,7 +10,7 @@ import type { Ctx } from '../App';
 import * as api from '../lib/api';
 import type { LeaderboardEntry, LeaderboardResponse } from '../lib/api';
 import Switch from './Switch';
-import { streakDaysForDoc } from '../lib/store';
+import { streakDaysForDoc, cardioCreditMinutes } from '../lib/store';
 
 function ordinal(n: number): string {
   if (n % 100 >= 11 && n % 100 <= 13) return `${n}th`;
@@ -45,7 +45,7 @@ export default function Community({ ctx }: { ctx: Ctx }) {
     const inMonth = (list: { date?: string }[]) =>
       (list || []).filter((e) => String(e.date || '').slice(0, 7) === monthKey);
     const cardioMinutes = inMonth(doc.cardio || []).reduce(
-      (s, e) => s + Number((e as { minutes?: number }).minutes || 0),
+      (s, e) => s + cardioCreditMinutes(e as { minutes?: unknown; zone?: unknown }),
       0,
     );
     const me: LeaderboardEntry = {

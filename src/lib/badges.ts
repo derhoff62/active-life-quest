@@ -35,6 +35,7 @@ import {
   earnedArmorIds,
   loggedToday,
   phaseForDoc,
+  cardioCreditedSum,
   type ProfileDoc,
 } from './store';
 
@@ -52,9 +53,8 @@ function yesterdayStr(): string {
 
 export function cardioThisWeek(doc: ProfileDoc): number {
   const weekAgo = Date.now() - 7 * DAY;
-  return (doc.cardio || [])
-    .filter((c) => new Date(String(c.date)).getTime() >= weekAgo)
-    .reduce((s, c) => s + Number(c.minutes || 0), 0);
+  // Credited minutes: high-intensity minutes count double.
+  return cardioCreditedSum(doc.cardio, weekAgo);
 }
 
 export function unreadCount(doc: ProfileDoc): number {
@@ -68,8 +68,8 @@ export function workoutDueToday(doc: ProfileDoc): boolean {
   if (!doc.assessmentDone) return false;
   if (doc.lastWorkoutDate === todayStr()) return false;
   // Rest is per muscle group: a full-body day yesterday means today is a
-  // rest day; a Push/Pull/Legs or short session yesterday leaves a
-  // different group due today.
+  // rest day; a Push/Pull/Legs, Upper/Lower, or short session yesterday
+  // leaves a different group due today.
   if (doc.lastWorkoutDate === yesterdayStr() && (doc.trainingStyle || 'full-body') === 'full-body') return false;
   return true;
 }

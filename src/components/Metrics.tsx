@@ -9,7 +9,7 @@
 // come first; the scale is last.
 import { useState } from 'react';
 import type { ProfileDoc } from '../lib/store';
-import { metCompanionIds } from '../lib/store';
+import { metCompanionIds, cardioCreditMinutes } from '../lib/store';
 
 type MetricKey =
   | 'weight' | 'waist' | 'chest' | 'hips' | 'arms' | 'thighs'
@@ -91,11 +91,10 @@ export function metricSeries(doc: ProfileDoc, key: MetricKey, exercise?: string)
       .map((p) => ({ ...p, label: `${p.value.toLocaleString()} steps` }))
       .sort(byDate);
   }
-  // Cardio: one point per log, minutes.
+  // Cardio: one point per log, credited minutes (HIIT counts double).
   return (doc.cardio || [])
-    .map((c) => ({ date: String(c.date), value: num((c as { minutes?: unknown }).minutes), label: '' }))
-    .filter((p): p is Point => p.value !== null)
-    .map((p) => ({ ...p, label: `${p.value} min` }))
+    .map((c) => ({ date: String(c.date), value: cardioCreditMinutes(c as { minutes?: unknown; zone?: unknown }), label: (c as { zone?: string }).zone === 'HIIT' ? `${Number((c as { minutes?: number }).minutes || 0)} min HIIT = ${cardioCreditMinutes(c as { minutes?: unknown; zone?: unknown })} credited` : `${cardioCreditMinutes(c as { minutes?: unknown; zone?: unknown })} min` }))
+    .filter((p): p is Point => p.value !== null && p.value > 0)
     .sort(byDate);
 }
 
@@ -166,7 +165,7 @@ export default function Metrics({ doc, update, toast }: MetricsProps) {
   const cardioWeek = metric === 'cardio'
     ? (doc.cardio || [])
       .filter((c) => Date.now() - new Date(String(c.date)).getTime() < 7 * 24 * 60 * 60 * 1000)
-      .reduce((s, c) => s + Number((c as { minutes?: number }).minutes || 0), 0)
+      .reduce((s, c) => s + cardioCreditMinutes(c as { minutes?: unknown; zone?: unknown }), 0)
     : null;
 
   function logMeasurement() {
@@ -315,6 +314,10 @@ export default function Metrics({ doc, update, toast }: MetricsProps) {
       {!readOnly && metric === 'weight' && (
         <div id="weigh-in" style={{ marginTop: 12 }}>
           <label htmlFor="metric-weigh">Once-a-week weigh-in (lb, same day and time)</label>
+          {(() => {
+            const weighIns = (doc.measurements || []).filter((m) => (m as { kind?: string }).kind === 'weigh-in');
+            return weighIns.length > 0 ? <p className="small muted">Last logged {new Date(String(weighIns[weighIns.length - 1].date)).toLocaleDateString()}.</p> : <p className="small muted">No weigh-in logged yet.</p>;
+          })()}
           <input id="metric-weigh" inputMode="decimal" value={weigh} onChange={(e) => { setWeigh(e.target.value); setWeighMsg(''); }} placeholder="e.g. 188" />
           <button style={{ marginTop: 8 }} onClick={logWeighIn}>Log weigh-in</button>
           {weighMsg && <p className={weighMsg.startsWith('You already') || weighMsg.startsWith('Enter') ? 'error' : 'ok'}>{weighMsg}</p>}

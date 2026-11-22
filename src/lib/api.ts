@@ -224,10 +224,10 @@ export async function coachSetPhase5(userId: string, approved: boolean) {
     body: JSON.stringify({ userId, approved }),
   });
 }
-export async function coachSaveCesSheet(userId: string, marks: string[], notes: string) {
+export async function coachSaveCesSheet(userId: string, marks: string[], notes: string, sides?: Record<string, 'right' | 'left' | 'both'>, davies?: { right: number | null; left: number | null }) {
   return req<{ ok: boolean }>('/api/coach/ces-sheet', {
     method: 'POST',
-    body: JSON.stringify({ userId, marks, notes }),
+    body: JSON.stringify({ userId, marks, notes, sides, davies }),
   });
 }
 

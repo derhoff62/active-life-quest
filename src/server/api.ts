@@ -631,8 +631,9 @@ app.get("/api/community/leaderboard", async (c) => {
         : [];
     const workouts = inMonth(d.workouts).length;
     const checkins = inMonth(d.checkins).length;
+    // Credited minutes: high-intensity (HIIT) minutes count double.
     const cardioMinutes = inMonth(d.cardio).reduce(
-      (s, e) => s + Number(e.minutes || 0),
+      (s, e) => s + (e.zone === "HIIT" ? Number(e.minutes || 0) * 2 : Number(e.minutes || 0)),
       0,
     );
     // Streak: consecutive days ending today or yesterday with a workout
@@ -1403,6 +1404,17 @@ app.post("/api/coach/ces-sheet", async (c) => {
   const userId = body && typeof body.userId === "string" ? body.userId : "";
   const marks = Array.isArray(body?.marks) ? body.marks.filter((m: unknown) => typeof m === "string") : [];
   const notes = body && typeof body.notes === "string" ? body.notes.trim().slice(0, 1000) : "";
+  const sides: Record<string, "right" | "left" | "both"> = {};
+  if (body?.sides && typeof body.sides === "object") {
+    for (const [k, v] of Object.entries(body.sides as Record<string, unknown>)) {
+      if (v === "right" || v === "left" || v === "both") sides[k] = v;
+    }
+  }
+  const dv = (body?.davies || {}) as { right?: unknown; left?: unknown };
+  const davies = {
+    right: typeof dv.right === "number" ? dv.right : null,
+    left: typeof dv.left === "number" ? dv.left : null,
+  };
   if (!userId) {
     return c.json({ error: "Client not found." }, 404);
   }
@@ -1410,7 +1422,7 @@ app.post("/api/coach/ces-sheet", async (c) => {
   if (!doc) {
     return c.json({ error: "Client not found." }, 404);
   }
-  doc.cesSheet = { marks, notes, date: new Date().toISOString() };
+  doc.cesSheet = { marks, sides, davies, notes, date: new Date().toISOString() };
   await saveProfileDoc(db, userId, doc);
   return c.json({ ok: true });
 });

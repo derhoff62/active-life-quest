@@ -6,7 +6,8 @@ import Metrics from './Metrics';
 import Community from './Community';
 import { GOAL_TYPES, BADGES } from '../lib/data';
 import { cycleForWeek, nextRetestWeek, nextBossWeek, nextRetestLabel, nextBossLabel } from '../lib/yearPlan';
-import { levelForXp, titleForLevel, daysInMonthSet, streakDaysForDoc, metCompanionIds, currentWeekForDoc } from '../lib/store';
+import { levelForXp, titleForLevel, daysInMonthSet, streakDaysForDoc, metCompanionIds, currentWeekForDoc, cardioCreditedSum, lastLoggedLabel } from '../lib/store';
+import BackToTop from './BackToTop';
 
 export default function Progress({ ctx }: { ctx: Ctx }) {
   const { doc, update, toast, go } = ctx;
@@ -36,7 +37,7 @@ export default function Progress({ ctx }: { ctx: Ctx }) {
   // Streak is worked out from the dates of workouts and check-ins, so it
   // can never sit at 0 forever the way the stored field did.
   const streak = streakDaysForDoc(doc);
-  const cardioTotal = cardioArr.reduce((s, c) => s + Number(c.minutes || 0), 0);
+  const cardioTotal = cardioCreditedSum(cardioArr);
   // Where you are: week in this stretch, and the stretch name. No totals.
   const yearWeek = currentWeekForDoc(doc);
   const { cycle: yearCycle, weekInCycle: yearWeekInCycle } = cycleForWeek(yearWeek);
@@ -53,6 +54,28 @@ export default function Progress({ ctx }: { ctx: Ctx }) {
     return Date.now() - d.getTime() < 7 * 24 * 60 * 60 * 1000;
   }).length;
   const last = workouts[workouts.length - 1] as { title?: string; date?: string } | undefined;
+  // What changed since last week: this week vs the week before.
+  const weekMs = 7 * 24 * 60 * 60 * 1000;
+  const nowMs = Date.now();
+  const inRange = (arr: { date?: string }[], from: number, to: number) => arr.filter((x) => { const t = new Date(String(x.date)).getTime(); return t >= from && t < to; });
+  const workoutsThisWk = inRange(workouts, nowMs - weekMs, nowMs).length;
+  const workoutsLastWk = inRange(workouts, nowMs - 2 * weekMs, nowMs - weekMs).length;
+  const cardioThisWk = cardioCreditedSum(cardioArr, nowMs - weekMs);
+  const cardioLastWk = cardioCreditedSum(inRange(cardioArr, nowMs - 2 * weekMs, nowMs - weekMs) as never);
+  const weighIns = measurements.filter((m) => (m as { kind?: string }).kind === 'weigh-in');
+  const lastWeigh = weighIns.length ? Number((weighIns[weighIns.length - 1] as { weight?: number }).weight || 0) : null;
+  const prevWeigh = weighIns.length >= 2 ? Number((weighIns[weighIns.length - 2] as { weight?: number }).weight || 0) : null;
+  const waistVals = measurements.map((m) => Number((m as { waist?: string }).waist || 0)).filter((w) => w > 0);
+  const lastWaist = waistVals.length ? waistVals[waistVals.length - 1] : null;
+  const prevWaist = waistVals.length >= 2 ? waistVals[waistVals.length - 2] : null;
+  const fmtDelta = (d: number, unit: string) => `${d > 0 ? '+' : ''}${d} ${unit}`;
+  const changedParts: string[] = [
+    `Workouts: ${workoutsThisWk} this week, ${workoutsLastWk} last week`,
+    `Cardio: ${cardioThisWk} min this week, ${cardioLastWk} last week`,
+  ];
+  if (lastWeigh !== null && prevWeigh !== null && lastWeigh > 0 && prevWeigh > 0) changedParts.push(`Weight: ${fmtDelta(Math.round((lastWeigh - prevWeigh) * 10) / 10, 'lb')} since your last weigh-in`);
+  if (lastWaist !== null && prevWaist !== null) changedParts.push(`Waist: ${fmtDelta(Math.round((lastWaist - prevWaist) * 10) / 10, 'in')} since your last measurement`);
+  changedParts.push(`Streak: ${streak} ${streak === 1 ? 'day' : 'days'}`);
   const lastSleep = sleepArr[sleepArr.length - 1] as { hours?: number } | undefined;
   const latestPr = prs[prs.length - 1];
   const latestMeasure = [...measurements].reverse()[0] as { waist?: string; weight?: number } | undefined;
@@ -81,6 +104,7 @@ export default function Progress({ ctx }: { ctx: Ctx }) {
         <p>Week {yearWeekInCycle} · {yearCycle.name} · {yearCycle.goal}</p>
         <p className="small">{nextRetestLabel(yearNextRetest)} {nextBossLabel(yearNextBoss)}</p>
         <p>Workouts this week: {workoutsThisWeek} · Cardio logged: {cardioTotal} min · Check-ins: {checkins.length}</p>
+        <p className="small"><strong>What changed since last week:</strong> {changedParts.join(' · ')}.</p>
         <p className="small muted">Results so far: {prs.length} personal record{prs.length === 1 ? '' : 's'} · {cardioTotal.toLocaleString()} cardio minutes total{yearWaistChange !== null ? ` · Waist ${yearWaistChange > 0 ? '+' : ''}${yearWaistChange} in since your first measurement` : ''} · {badges.length} badges · {workouts.length} workouts total</p>
         {last && <p className="muted small">Last workout: {last.title} on {new Date(String(last.date)).toLocaleDateString()}.</p>}
         <div className="switch-row">
@@ -177,13 +201,14 @@ export default function Progress({ ctx }: { ctx: Ctx }) {
       <div className="card">
         <h3>Cardio</h3>
         <p><strong>{cardioTotal} minutes logged in total.</strong> Target 150 to 300 minutes a week, Zone 2.</p>
-        <p className="small muted">Zone 2, easy enough to talk. High intensity counts double: log the doubled minutes.</p>
+        <p className="small muted">Zone 2, easy enough to talk. High intensity counts double automatically when you log it as HIIT.</p>
         <button className="primary" onClick={() => go('cardio')}>Log cardio in the Cardio tab</button>
       </div>
 
       <div className="card">
         <h3>Steps (optional)</h3>
         <p className="small muted">Steps are optional. Log today's count if you track them.</p>
+        {lastLoggedLabel(stepsArr) && <p className="small muted">{lastLoggedLabel(stepsArr)}.</p>}
         <div className="row">
           <input inputMode="numeric" value={stepsToday} onChange={(e) => setStepsToday(e.target.value)} placeholder="Steps today" style={{ maxWidth: 140 }} aria-label="Steps today" />
           <button
@@ -296,6 +321,7 @@ export default function Progress({ ctx }: { ctx: Ctx }) {
           <p key={i}>{p.exercise}: {p.weight} lb x {p.reps} on {new Date(p.date).toLocaleDateString()}</p>
         ))}
       </div>
+      <BackToTop />
     </div>
   );
 }

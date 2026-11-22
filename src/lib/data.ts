@@ -652,27 +652,28 @@ export const FOCUS_AREAS: { id: string; label: string }[] = [
 // ------------------------------------------------- WEEKLY SPLITS
 // Training days per week, 2 to 6, with real splits. The split only
 // names the day. The workouts themselves are the phase workouts, the
-// 15-minute track, and the Core, Balance and Mobility day. The labels
-// are honest about what actually runs: phase workouts are full-body A
-// and B, so a 4-day week alternates A and B, it is not an Upper / Lower
-// split (no upper-only or lower-only workout exists in the app). The
-// workout ids follow the client's phase.
+// Push / Pull / Legs and Upper / Lower workouts, the 15-minute track,
+// and the Core, Balance and Mobility day. The workout ids follow the
+// client's phase.
 
-// How a client trains at 5 or 6 days a week. Full-body is the default
-// at 2 to 4 days. At 5 to 6 days the client picks: Push / Pull / Legs,
-// Short daily sessions, or (5 days only) Full-body. Full-body is NOT
-// offered at 6 days: six full-body strength days in a row trains the
-// same muscles on back-to-back days, which breaks the 1 to 2 rest days
-// between strength days rule for each muscle group.
-export type TrainingStyle = 'full-body' | 'ppl' | 'short';
+// How a client trains at 4 to 6 days a week. Full-body is the default
+// at 2 to 3 days. At 4 to 5 days the client can pick Upper / Lower, so
+// the same muscles are never trained on back-to-back days. At 5 to 6
+// days the client picks: Push / Pull / Legs, Short daily sessions,
+// Upper / Lower (5 days only), or (5 days only) Full-body. Full-body is
+// NOT offered at 6 days: six full-body strength days in a row trains
+// the same muscles on back-to-back days, which breaks the 1 to 2 rest
+// days between strength days rule for each muscle group.
+export type TrainingStyle = 'full-body' | 'ppl' | 'short' | 'upper-lower';
 
 export const TRAINING_STYLES: { id: TrainingStyle; name: string; blurb: string }[] = [
+  { id: 'upper-lower', name: 'Upper / Lower', blurb: 'Upper days work chest, back, shoulders, arms, and core. Lower days work legs, glutes, and core. Each muscle rests 2 to 3 days before its next session. Day 7 is a full rest day.' },
   { id: 'ppl', name: 'Push / Pull / Legs', blurb: 'One muscle group a day, each group twice a week. Each muscle rests 2 to 3 days before its next session. Day 7 is a full rest day.' },
   { id: 'short', name: 'Short daily sessions', blurb: '15 minutes a day, small dose, not a full strength session. Day 7 is a full rest day. If you are sore or tired, take the day off instead.' },
   { id: 'full-body', name: 'Full-body A/B', blurb: 'The same muscles every strength day, so take 1 to 2 rest days between strength days. Not offered at 6 days a week.' },
 ];
 
-export interface SplitDay { name: string; workoutId: string; group?: 'push' | 'pull' | 'legs' | 'short' | 'full'; }
+export interface SplitDay { name: string; workoutId: string; group?: 'push' | 'pull' | 'legs' | 'short' | 'full' | 'upper' | 'lower'; }
 export function splitForDays(days: number, phase = 1, style: TrainingStyle = 'full-body'): { label: string; days: SplitDay[] } {
   const p = Math.min(Math.max(phase, 1), 5);
   const a = `p${p}a`;
@@ -680,6 +681,10 @@ export function splitForDays(days: number, phase = 1, style: TrainingStyle = 'fu
   const push = `p${p}push`;
   const pull = `p${p}pull`;
   const legs = `p${p}legs`;
+  const upperA = `p${p}upper-a`;
+  const upperB = `p${p}upper-b`;
+  const lowerA = `p${p}lower-a`;
+  const lowerB = `p${p}lower-b`;
   if (days <= 3) {
     return {
       label: 'Full-body, 2 to 3 days a week',
@@ -691,6 +696,17 @@ export function splitForDays(days: number, phase = 1, style: TrainingStyle = 'fu
     };
   }
   if (days === 4) {
+    if (style === 'upper-lower') {
+      return {
+        label: 'Upper / Lower, 4 days a week',
+        days: [
+          { name: 'Day 1: Upper A', workoutId: upperA, group: 'upper' },
+          { name: 'Day 2: Lower A', workoutId: lowerA, group: 'lower' },
+          { name: 'Day 3: Upper B', workoutId: upperB, group: 'upper' },
+          { name: 'Day 4: Lower B', workoutId: lowerB, group: 'lower' },
+        ],
+      };
+    }
     return {
       label: 'Full-body A and B, 4 days a week',
       days: [
@@ -698,6 +714,34 @@ export function splitForDays(days: number, phase = 1, style: TrainingStyle = 'fu
         { name: 'Day 2: Full-body B', workoutId: b, group: 'full' },
         { name: 'Day 3: Full-body A', workoutId: a, group: 'full' },
         { name: 'Day 4: Full-body B', workoutId: b, group: 'full' },
+      ],
+    };
+  }
+  if (style === 'upper-lower') {
+    if (days === 5) {
+      return {
+        label: 'Upper / Lower plus Core, Balance and Mobility, 5 days a week',
+        days: [
+          { name: 'Day 1: Upper A', workoutId: upperA, group: 'upper' },
+          { name: 'Day 2: Lower A', workoutId: lowerA, group: 'lower' },
+          { name: 'Day 3: Upper B', workoutId: upperB, group: 'upper' },
+          { name: 'Day 4: Lower B', workoutId: lowerB, group: 'lower' },
+          { name: 'Day 5: Core, Balance and Mobility', workoutId: 'core-balance-mobility', group: 'short' },
+        ],
+      };
+    }
+    // 6 days: Upper / Lower is not offered. Six Upper / Lower days
+    // trains the same muscles with only one rest day between, so the
+    // split falls back to Push / Pull / Legs instead.
+    return {
+      label: 'Push / Pull / Legs, 6 days a week',
+      days: [
+        { name: 'Day 1: Push', workoutId: push, group: 'push' },
+        { name: 'Day 2: Pull', workoutId: pull, group: 'pull' },
+        { name: 'Day 3: Legs', workoutId: legs, group: 'legs' },
+        { name: 'Day 4: Push', workoutId: push, group: 'push' },
+        { name: 'Day 5: Pull', workoutId: pull, group: 'pull' },
+        { name: 'Day 6: Legs', workoutId: legs, group: 'legs' },
       ],
     };
   }
@@ -839,6 +883,197 @@ export const PPL_WORKOUTS: Workout[] = [
 // rest timer, swaps, class focus, PRs, and XP all treat them exactly
 // like the full-body workouts.
 WORKOUTS.push(...PPL_WORKOUTS);
+
+// ------------------------------------------------- UPPER / LOWER
+// Upper days (chest, back, shoulders, arms, core) and Lower days
+// (legs, glutes, core) for 4 to 5 training days a week. Built ONLY
+// from moves already in the app (cloned by name, so how-to, regression,
+// swap, and video all come along). No new moves, nothing new to film.
+// Same loads as the phase full-body workouts, so a Phase 1 client never
+// gets Phase 4/5 loads or power moves on an Upper / Lower day; compound
+// lifts first; tempo is slow on the lowering (P1 4/2/1, P2 3/2/1,
+// P3-5 3/1/1); rest follows the phase (P3 main lifts 90s-2min,
+// accessories 0-60s; P4 main lifts 3-5min); each muscle rests 2 to 3
+// days between its sessions; start with your fix-it warm-up
+// (corrective work first, as the assessment flagged it). Phase gating
+// is the same as the full-body workouts: the Workout.phase field drives
+// the existing unlock checks, so Phase 4 stays locked behind the Week
+// 12 retest and Phase 5 behind a clean retest plus Coach approval.
+// No brand names anywhere client-visible.
+
+type UlRow = [string, number, string, number];
+function ulWorkout(id: string, title: string, phase: number, minutes: number, note: string, tempo: string, rows: UlRow[]): Workout {
+  return { id, title, phase, day: title.replace(`Phase ${phase} `, ''), minutes, note, exercises: rows.map(([name, sets, reps, restSec]) => pplEx(name, sets, reps, restSec, tempo)) };
+}
+
+export const UPPER_LOWER_WORKOUTS: Workout[] = [
+  ulWorkout('p1upper-a', 'Phase 1 Upper A', 1, 30, 'Upper day: chest, back, shoulders, and core. Compound lifts first. Lower for 3 to 4 seconds. Start with your fix-it warm-up. Each muscle rests 2 to 3 days before its next Upper day.', '4/2/1', [
+    ['Dumbbell Bench Press', 2, '12 reps', 60], ['Seated Cable Row', 2, '12 reps', 60], ['Dumbbell Overhead Press', 2, '12 reps', 60], ['Plank', 2, '20 seconds', 30],
+  ]),
+  ulWorkout('p1upper-b', 'Phase 1 Upper B', 1, 30, 'Upper day: chest, back, shoulders, and core. Compound lifts first. Lower for 3 to 4 seconds. Start with your fix-it warm-up. Each muscle rests 2 to 3 days before its next Upper day.', '4/2/1', [
+    ['Push-Up', 2, '12 reps', 60], ['Lat Pulldown', 2, '12 reps', 60], ['Single-Arm Dumbbell Row', 2, '12 reps', 60], ['Side Plank', 2, '15 seconds each side', 30],
+  ]),
+  ulWorkout('p1lower-a', 'Phase 1 Lower A', 1, 30, 'Lower day: legs, glutes, and core. Compound lifts first. Lower for 3 to 4 seconds. Start with your fix-it warm-up. Each muscle rests 2 to 3 days before its next Lower day.', '4/2/1', [
+    ['Dumbbell Goblet Squat', 2, '12 reps', 60], ['Split Squat', 2, '10 reps each leg', 60], ['Glute Bridge', 2, '15 reps', 30], ['Bird Dog', 2, '8 reps each side', 30],
+  ]),
+  ulWorkout('p1lower-b', 'Phase 1 Lower B', 1, 30, 'Lower day: legs, glutes, and core. Compound lifts first. Lower for 3 to 4 seconds. Start with your fix-it warm-up. Each muscle rests 2 to 3 days before its next Lower day.', '4/2/1', [
+    ['Romanian Deadlift', 2, '12 reps', 60], ['Step-Up', 2, '10 reps each leg', 60], ['Single-Leg Romanian Deadlift', 2, '8 reps each leg', 60], ['Dead Bug', 2, '8 reps', 30],
+  ]),
+  ulWorkout('p2upper-a', 'Phase 2 Upper A', 2, 35, 'Upper day: chest, back, shoulders, and core. Compound lifts first. Lower for 3 seconds. Start with your fix-it warm-up. Each muscle rests 2 to 3 days before its next Upper day.', '3/2/1', [
+    ['Dumbbell Bench Press', 3, '10 reps', 45], ['Seated Cable Row', 3, '10 reps', 45], ['Dumbbell Overhead Press', 3, '10 reps', 45], ['Plank', 3, '30 seconds', 30],
+  ]),
+  ulWorkout('p2upper-b', 'Phase 2 Upper B', 2, 35, 'Upper day: chest, back, shoulders, and core. Compound lifts first. Lower for 3 seconds. Start with your fix-it warm-up. Each muscle rests 2 to 3 days before its next Upper day.', '3/2/1', [
+    ['Push-Up', 3, '10 reps', 45], ['Lat Pulldown', 3, '10 reps', 45], ['Single-Arm Dumbbell Row', 3, '10 reps each arm', 45], ['Side Plank', 3, '30 seconds each side', 30],
+  ]),
+  ulWorkout('p2lower-a', 'Phase 2 Lower A', 2, 35, 'Lower day: legs, glutes, and core. Compound lifts first. Lower for 3 seconds. Start with your fix-it warm-up. Each muscle rests 2 to 3 days before its next Lower day.', '3/2/1', [
+    ['Barbell Back Squat', 3, '8 reps', 60], ['Split Squat', 3, '10 reps each leg', 45], ['Glute Bridge', 3, '12 reps', 30], ['Bird Dog', 3, '8 reps each side', 30],
+  ]),
+  ulWorkout('p2lower-b', 'Phase 2 Lower B', 2, 35, 'Lower day: legs, glutes, and core. Compound lifts first. Lower for 3 seconds. Start with your fix-it warm-up. Each muscle rests 2 to 3 days before its next Lower day.', '3/2/1', [
+    ['Romanian Deadlift', 3, '10 reps', 45], ['Step-Up', 3, '10 reps each leg', 45], ['Single-Leg Romanian Deadlift', 3, '8 reps each leg', 45], ['Dead Bug', 3, '8 reps', 30],
+  ]),
+  ulWorkout('p3upper-a', 'Phase 3 Upper A', 3, 40, 'Upper day: chest, back, shoulders, and core. Main lifts get 90 seconds to 2 minutes of rest. Accessories get 0 to 60 seconds. Start with your fix-it warm-up. Each muscle rests 2 to 3 days before its next Upper day.', '3/1/1', [
+    ['Dumbbell Bench Press', 3, '8 reps', 90], ['Seated Cable Row', 3, '10 reps', 45], ['Dumbbell Overhead Press', 3, '8 reps', 90], ['Plank', 3, '40 seconds', 30],
+  ]),
+  ulWorkout('p3upper-b', 'Phase 3 Upper B', 3, 40, 'Upper day: chest, back, shoulders, and core. Main lifts get 90 seconds to 2 minutes of rest. Accessories get 0 to 60 seconds. Start with your fix-it warm-up. Each muscle rests 2 to 3 days before its next Upper day.', '3/1/1', [
+    ['Push-Up', 3, '8 reps', 45], ['Lat Pulldown', 3, '8 reps', 90], ['Single-Arm Dumbbell Row', 3, '8 reps each arm', 45], ['Pallof Press', 3, '10 reps each side', 30],
+  ]),
+  ulWorkout('p3lower-a', 'Phase 3 Lower A', 3, 40, 'Lower day: legs, glutes, and core. Main lifts get 90 seconds to 2 minutes of rest. Accessories get 0 to 60 seconds. Start with your fix-it warm-up. Each muscle rests 2 to 3 days before its next Lower day.', '3/1/1', [
+    ['Barbell Back Squat', 4, '6 reps', 120], ['Split Squat', 3, '10 reps each leg', 45], ['Glute Bridge', 3, '12 reps', 30], ['Bird Dog', 3, '8 reps each side', 30],
+  ]),
+  ulWorkout('p3lower-b', 'Phase 3 Lower B', 3, 40, 'Lower day: legs, glutes, and core. Main lifts get 90 seconds to 2 minutes of rest. Accessories get 0 to 60 seconds. Start with your fix-it warm-up. Each muscle rests 2 to 3 days before its next Lower day.', '3/1/1', [
+    ['Barbell Deadlift', 4, '6 reps', 120], ['Step-Up', 3, '10 reps each leg', 45], ['Single-Leg Romanian Deadlift', 3, '8 reps each leg', 45], ['Dead Bug', 3, '8 reps', 30],
+  ]),
+  ulWorkout('p4upper-a', 'Phase 4 Upper A', 4, 45, 'Upper day: maximal strength. Rest 3 to 5 minutes between sets on main lifts. Only after Phase 3 and a clean Week 12 retest. Start with your fix-it warm-up. Each muscle rests 2 to 3 days before its next Upper day.', '3/1/1', [
+    ['Dumbbell Bench Press', 4, '5 reps', 180], ['Seated Cable Row', 4, '5 reps', 120], ['Dumbbell Overhead Press', 4, '5 reps', 180], ['Plank', 3, '45 seconds', 60],
+  ]),
+  ulWorkout('p4upper-b', 'Phase 4 Upper B', 4, 45, 'Upper day: maximal strength. Rest 3 to 5 minutes between sets on main lifts. Only after Phase 3 and a clean Week 12 retest. Start with your fix-it warm-up. Each muscle rests 2 to 3 days before its next Upper day.', '3/1/1', [
+    ['Push-Up', 4, '5 reps', 120], ['Lat Pulldown', 4, '5 reps', 180], ['Single-Arm Dumbbell Row', 4, '5 reps each arm', 120], ['Pallof Press', 3, '10 reps each side', 60],
+  ]),
+  ulWorkout('p4lower-a', 'Phase 4 Lower A', 4, 45, 'Lower day: maximal strength. Rest 3 to 5 minutes between sets on main lifts. Only after Phase 3 and a clean Week 12 retest. Start with your fix-it warm-up. Each muscle rests 2 to 3 days before its next Lower day.', '3/1/1', [
+    ['Barbell Back Squat', 5, '3 reps', 240], ['Split Squat', 4, '5 reps each leg', 120], ['Glute Bridge', 3, '12 reps', 60], ['Bird Dog', 3, '8 reps each side', 60],
+  ]),
+  ulWorkout('p4lower-b', 'Phase 4 Lower B', 4, 45, 'Lower day: maximal strength. Rest 3 to 5 minutes between sets on main lifts. Only after Phase 3 and a clean Week 12 retest. Start with your fix-it warm-up. Each muscle rests 2 to 3 days before its next Lower day.', '3/1/1', [
+    ['Barbell Deadlift', 5, '3 reps', 240], ['Step-Up', 4, '5 reps each leg', 120], ['Single-Leg Romanian Deadlift', 4, '5 reps each leg', 120], ['Dead Bug', 3, '8 reps', 60],
+  ]),
+  ulWorkout('p5upper-a', 'Phase 5 Upper A', 5, 45, 'Upper day: power. Fast, controlled, explosive reps. Locked until a clean form retest AND Derek approves it in Coach. Start with your fix-it warm-up. Each muscle rests 2 to 3 days before its next Upper day.', '3/1/1', [
+    ['Dumbbell Bench Press', 3, '5 reps', 180], ['Dumbbell Overhead Press', 4, '5 reps', 180], ['Push-Up', 4, '5 reps', 180], ['Plank', 3, '30 seconds', 60],
+  ]),
+  ulWorkout('p5upper-b', 'Phase 5 Upper B', 5, 45, 'Upper day: power. Fast, controlled, explosive reps. Locked until a clean form retest AND Derek approves it in Coach. Start with your fix-it warm-up. Each muscle rests 2 to 3 days before its next Upper day.', '3/1/1', [
+    ['Lat Pulldown', 4, '5 reps', 120], ['Seated Cable Row', 3, '5 reps', 120], ['Single-Arm Dumbbell Row', 3, '5 reps each arm', 120], ['Pallof Press', 3, '10 reps each side', 60],
+  ]),
+  ulWorkout('p5lower-a', 'Phase 5 Lower A', 5, 45, 'Lower day: power. Fast, controlled, explosive reps. Locked until a clean form retest AND Derek approves it in Coach. Start with your fix-it warm-up. Each muscle rests 2 to 3 days before its next Lower day.', '3/1/1', [
+    ['Barbell Back Squat', 4, '3 reps', 240], ['Step-Up', 3, '5 reps each leg', 180], ['Glute Bridge', 3, '12 reps', 60], ['Bird Dog', 3, '8 reps each side', 60],
+  ]),
+  ulWorkout('p5lower-b', 'Phase 5 Lower B', 5, 45, 'Lower day: power. Fast, controlled, explosive reps. Locked until a clean form retest AND Derek approves it in Coach. Start with your fix-it warm-up. Each muscle rests 2 to 3 days before its next Lower day.', '3/1/1', [
+    ['Barbell Deadlift', 4, '3 reps', 240], ['Single-Leg Romanian Deadlift', 3, '5 reps each leg', 120], ['Split Squat', 3, '5 reps each leg', 120], ['Dead Bug', 3, '8 reps', 60],
+  ]),
+];
+
+// Upper / Lower workouts live in the main WORKOUTS list, so phase gating,
+// the rest timer, swaps, class focus, PRs, and XP all treat them exactly
+// like the full-body workouts.
+WORKOUTS.push(...UPPER_LOWER_WORKOUTS);
+
+// ------------------------------------------------- MUSCLE MAP + VOLUME
+// Primary muscle for every move in the app, by exercise name. One muscle
+// per move, so the weekly volume table never double-counts a set. Used
+// for the Workouts search filter and the per-muscle weekly sets table.
+export type MuscleGroup = 'chest' | 'back' | 'shoulders' | 'legs' | 'core';
+export type FilterGroup = 'push' | 'pull' | 'legs' | 'core';
+
+export const EXERCISE_MUSCLE: Record<string, MuscleGroup> = {
+  'Dumbbell Bench Press': 'chest',
+  'Push-Up': 'chest',
+  'Dumbbell Overhead Press': 'shoulders',
+  'Lat Pulldown': 'back',
+  'Seated Cable Row': 'back',
+  'Single-Arm Dumbbell Row': 'back',
+  'Dumbbell Goblet Squat': 'legs',
+  'Barbell Back Squat': 'legs',
+  'Romanian Deadlift': 'legs',
+  'Barbell Deadlift': 'legs',
+  'Split Squat': 'legs',
+  'Step-Up': 'legs',
+  'Single-Leg Romanian Deadlift': 'legs',
+  'Glute Bridge': 'legs',
+  'Plank': 'core',
+  'Dead Bug': 'core',
+  'Bird Dog': 'core',
+  'Side Plank': 'core',
+  'Pallof Press': 'core',
+};
+
+/** Search filter group for a move: push is chest and shoulders, pull is back. */
+export function filterGroupForExercise(name: string): FilterGroup {
+  const m = EXERCISE_MUSCLE[name];
+  if (m === 'chest' || m === 'shoulders') return 'push';
+  if (m === 'back') return 'pull';
+  if (m === 'legs') return 'legs';
+  return 'core';
+}
+
+/** Weekly sets target range per muscle, by phase. Same ranges as
+ * PHASE_WEEKLY_SETS, as numbers so the volume table can compare. */
+export const PHASE_VOLUME_RANGE: Record<number, [number, number]> = {
+  1: [6, 10],
+  2: [8, 12],
+  3: [10, 15],
+  4: [12, 18],
+  5: [10, 15],
+};
+
+export const VOLUME_MUSCLES: { id: MuscleGroup; label: string }[] = [
+  { id: 'chest', label: 'Chest' },
+  { id: 'back', label: 'Back' },
+  { id: 'shoulders', label: 'Shoulders' },
+  { id: 'legs', label: 'Legs' },
+  { id: 'core', label: 'Core' },
+];
+
+/** Sets per muscle per week, from the workouts in the client's current
+ * split. Counts each exercise once, under its primary muscle. Legs run
+ * high on purpose: squats, hinges, and single-leg moves all count
+ * toward legs, so being over the range on legs is normal. */
+export function weeklyVolumeForSplit(split: { days: SplitDay[] }, workouts: Workout[]): Record<MuscleGroup, number> {
+  const out: Record<MuscleGroup, number> = { chest: 0, back: 0, shoulders: 0, legs: 0, core: 0 };
+  const byId = new Map(workouts.map((w) => [w.id, w]));
+  for (const day of split.days) {
+    const w = byId.get(day.workoutId);
+    if (!w) continue;
+    for (const ex of w.exercises) {
+      const m = EXERCISE_MUSCLE[ex.name];
+      if (m) out[m] += ex.sets;
+    }
+  }
+  return out;
+}
+
+// ------------------------------------------------- DAILY FOOD QUESTS
+// One small rotating food quest a day, shown on Today when Nutrition is
+// on. Skippable, no calorie counting, no tracking. Rotates by the day
+// of the year, so every client sees the same quest on the same day.
+export const FOOD_QUESTS: string[] = [
+  'Add protein to breakfast',
+  'Drink water with lunch',
+  'Add a vegetable to dinner',
+  'Eat a piece of fruit today',
+  'Add protein to lunch',
+  'Drink water before each meal',
+  'Add a vegetable to lunch',
+  'Eat until satisfied, about 80 percent full, at dinner',
+  'Add protein to your afternoon snack',
+  'Swap one sugary drink for water today',
+  'Add a vegetable to breakfast',
+  'Eat a handful of nuts or seeds today',
+  'Add protein to dinner',
+  'Drink a glass of water when you wake up',
+];
+
+export function foodQuestForDate(date: Date): string {
+  const start = new Date(date.getFullYear(), 0, 0);
+  const dayOfYear = Math.floor((date.getTime() - start.getTime()) / (24 * 60 * 60 * 1000));
+  return FOOD_QUESTS[dayOfYear % FOOD_QUESTS.length];
+}
 
 // ------------------------------------------------ REFERENCE TRACKS
 // Adapted reference tracks, built from the moves already in the app.
