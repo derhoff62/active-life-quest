@@ -98,6 +98,12 @@ export default function GuardianAvatar({
   const uid = useId().replace(/[^a-zA-Z0-9]/g, '');
   const id = (n: string) => `${n}-${uid}`;
   const scene: GuardianScene = background ?? CLASS_SCENE[g.classId] ?? 'guardian';
+  // Male vs Female: clearly different silhouettes, not just hair length.
+  // Male: broader shoulders, thicker arms, wider neck, strong jaw + neat beard.
+  // Female: slimmer shoulders and waist, narrower neck, softer jaw, long
+  // hair that falls past the shoulders, lashes and lips. Both strong,
+  // heroic, friendly, and fully clothed. Never sexualized.
+  const isFemale = g.look === 'Female';
 
   // Background scene shapes, drawn behind the figure.
   const sceneArt = (
@@ -302,18 +308,36 @@ export default function GuardianAvatar({
             </g>
           )}
           {/* Neck: connects the head to the shoulders, so the head never floats.
-              Drawn before the torso and head, so it fills the seam. */}
-          <rect x="94" y="48" width="12" height="20" rx="4" fill={`url(#${id('skin')})`} stroke={dark} strokeWidth="2" />
-          {/* Arms, slim, at the sides */}
-          <path d="M82 70 Q74 88 76 106 L83 105 Q82 88 87 74 Z" fill={`url(#${id('tunic')})`} stroke={dark} strokeWidth="2" />
-          <path d="M118 70 Q126 88 124 106 L117 105 Q118 88 113 74 Z" fill={`url(#${id('tunic')})`} stroke={dark} strokeWidth="2" />
-          {/* Body: fitted tunic, narrow shoulders, waist, ends at the hips so the legs show.
-              The top edge (y58) overlaps the bottom of the head (y59) and the neck. */}
-          <path d="M100 58 L118 62 L120 98 L116 122 L84 122 L80 98 L82 62 Z" fill={`url(#${id('tunic')})`} stroke={dark} strokeWidth="2.5" />
+              Drawn before the torso and head, so it fills the seam.
+              Male neck is wider and thicker; female neck is narrower. */}
+          <rect x={isFemale ? 95 : 92} y="48" width={isFemale ? 10 : 16} height="20" rx="4" fill={`url(#${id('skin')})`} stroke={dark} strokeWidth="2" />
+          {/* Arms: male arms are thicker and more muscular; female arms slimmer. */}
+          {isFemale ? (
+            <>
+              <path d="M84 70 Q77 88 79 106 L84 105 Q83 88 88 74 Z" fill={`url(#${id('tunic')})`} stroke={dark} strokeWidth="2" />
+              <path d="M116 70 Q123 88 121 106 L116 105 Q117 88 112 74 Z" fill={`url(#${id('tunic')})`} stroke={dark} strokeWidth="2" />
+            </>
+          ) : (
+            <>
+              <path d="M80 68 Q70 88 73 108 L82 107 Q81 88 88 73 Z" fill={`url(#${id('tunic')})`} stroke={dark} strokeWidth="2" />
+              <path d="M120 68 Q130 88 127 108 L118 107 Q119 88 112 73 Z" fill={`url(#${id('tunic')})`} stroke={dark} strokeWidth="2" />
+              {/* Muscular forearms: thicker upper arm shading */}
+              <path d="M74 88 Q72 98 74 106" fill="none" stroke={dark} strokeWidth="3" opacity="0.35" strokeLinecap="round" />
+              <path d="M126 88 Q128 98 126 106" fill="none" stroke={dark} strokeWidth="3" opacity="0.35" strokeLinecap="round" />
+            </>
+          )}
+          {/* Body: male has broad shoulders and a straight, muscular torso;
+              female has narrower shoulders, a slimmer waist, and a fitted
+              tunic. Top edge (y58) overlaps the bottom of the head (y59). */}
+          {isFemale ? (
+            <path d="M100 58 L114 62 L116 96 L110 122 L90 122 L84 96 L86 62 Z" fill={`url(#${id('tunic')})`} stroke={dark} strokeWidth="2.5" />
+          ) : (
+            <path d="M100 58 L122 62 L124 98 L118 122 L82 122 L76 98 L78 62 Z" fill={`url(#${id('tunic')})`} stroke={dark} strokeWidth="2.5" />
+          )}
           <path d="M86 72 Q84 96 86 118 Q92 120 94 118 Q90 96 92 74 Z" fill="#fff" opacity="0.22" />
           <path d="M114 72 Q116 96 114 118 Q108 120 106 118 Q110 96 108 74 Z" fill="#000" opacity="0.14" />
           {/* Belt */}
-          <rect x="82" y="110" width="36" height="9" rx="4.5" fill={`url(#${id('gold')})`} stroke="#8a6d00" strokeWidth="1.5" />
+          <rect x={isFemale ? 86 : 82} y="110" width={isFemale ? 28 : 36} height="9" rx="4.5" fill={`url(#${id('gold')})`} stroke="#8a6d00" strokeWidth="1.5" />
           <rect x="94" y="111" width="12" height="7" rx="2" fill="#fffdf4" stroke="#8a6d00" strokeWidth="1.5" />
           {/* Glowing gem on chest */}
           <g className="guardian-gem" filter={`url(#${id('glow')})`}>
@@ -321,38 +345,67 @@ export default function GuardianAvatar({
             <polygon points="100,85 104,89 100,94 96,89" fill="#fff" opacity="0.55" />
           </g>
           {/* Hands */}
-          <circle cx="76" cy="108" r="5" fill={`url(#${id('skin')})`} stroke={dark} strokeWidth="1.5" />
-          <circle cx="124" cy="108" r="5" fill={`url(#${id('skin')})`} stroke={dark} strokeWidth="1.5" />
+          <circle cx={isFemale ? 79 : 73} cy="108" r={isFemale ? 4.5 : 5.5} fill={`url(#${id('skin')})`} stroke={dark} strokeWidth="1.5" />
+          <circle cx={isFemale ? 121 : 127} cy="108" r={isFemale ? 4.5 : 5.5} fill={`url(#${id('skin')})`} stroke={dark} strokeWidth="1.5" />
           {/* LOTR style shoulder armor and a cloak clasp at the neck, so the
-              shoulders, neck, and head read as one connected figure. */}
-          <ellipse cx="82" cy="68" rx="11" ry="7" fill={`url(#${id('steel')})`} stroke={dark} strokeWidth="2" />
-          <ellipse cx="118" cy="68" rx="11" ry="7" fill={`url(#${id('steel')})`} stroke={dark} strokeWidth="2" />
+              shoulders, neck, and head read as one connected figure.
+              Male pauldrons are bigger and broader; female are smaller. */}
+          <ellipse cx={isFemale ? 86 : 78} cy="68" rx={isFemale ? 9 : 13} ry={isFemale ? 6 : 8} fill={`url(#${id('steel')})`} stroke={dark} strokeWidth="2" />
+          <ellipse cx={isFemale ? 114 : 122} cy="68" rx={isFemale ? 9 : 13} ry={isFemale ? 6 : 8} fill={`url(#${id('steel')})`} stroke={dark} strokeWidth="2" />
           <circle cx="100" cy="64" r="5" fill={`url(#${id('gold')})`} stroke="#8a6d00" strokeWidth="1.5" />
           <circle cx="100" cy="64" r="2.5" fill={gem} stroke="#fff" strokeWidth="1" />
-          {/* Head, smaller for real human proportions */}
+          {/* Head: male has a squarer, stronger jaw; female a softer, rounder face.
+              Same size, different jaw shading so the difference reads at 72px too. */}
           <circle cx="100" cy="42" r="17" fill={`url(#${id('skin')})`} stroke={dark} strokeWidth="2.5" />
-          <ellipse cx="89" cy="50" rx="3.5" ry="2.2" fill="#e88a7a" opacity="0.35" />
-          <ellipse cx="111" cy="50" rx="3.5" ry="2.2" fill="#e88a7a" opacity="0.35" />
-          {/* Hair with strands, or hood for Ranger */}
+          {!isFemale && (
+            <g stroke={dark} strokeWidth="1.5" opacity="0.35" fill="none" strokeLinecap="round">
+              <path d="M86 48 L90 56" />
+              <path d="M114 48 L110 56" />
+            </g>
+          )}
+          <ellipse cx="89" cy="50" rx="3.5" ry="2.2" fill="#e88a7a" opacity={isFemale ? 0.5 : 0.2} />
+          <ellipse cx="111" cy="50" rx="3.5" ry="2.2" fill="#e88a7a" opacity={isFemale ? 0.5 : 0.2} />
+          {/* Hair: Ranger hood first, then sex-specific hair.
+              Female: long hair with a centre part, falling past the shoulders
+              in two shaped locks (not a short blob). Male: short neat hair. */}
           {g.classId === 'Ranger' ? (
             <g>
               <path d="M78 44 Q76 24 100 24 Q124 24 122 44 L115 38 Q111 28 100 28 Q89 28 85 38 Z" fill={`url(#${id('cape')})`} stroke={dark} strokeWidth="2.5" />
               <path d="M88 30 Q94 25 100 25" fill="none" stroke={light} strokeWidth="2" opacity="0.6" />
               <path d="M83 42 Q87 46 92 48" fill="none" stroke={dark} strokeWidth="1.5" opacity="0.4" />
+              {isFemale && (
+                <g fill="#5b3a1e">
+                  <path d="M84 44 Q80 72 83 104 Q88 108 90 100 Q90 70 89 46 Z" />
+                  <path d="M116 44 Q120 72 117 104 Q112 108 110 100 Q110 70 111 46 Z" />
+                </g>
+              )}
             </g>
-          ) : g.look === 'Female' ? (
+          ) : isFemale ? (
             <g>
+              {/* Long hair behind the shoulders, drawn as shaped locks */}
+              <path d="M82 40 Q76 66 80 102 Q84 110 89 104 Q88 74 87 44 Z" fill="#5b3a1e" />
+              <path d="M118 40 Q124 66 120 102 Q116 110 111 104 Q112 74 113 44 Z" fill="#5b3a1e" />
               <path d="M83 44 Q81 24 100 24 Q119 24 117 44 Q112 30 100 30 Q88 30 83 44 Z" fill="#5b3a1e" />
-              <path d="M83 44 Q79 58 82 70 Q86 74 88 66 Q90 52 88 44 Z" fill="#5b3a1e" />
-              <path d="M117 44 Q121 58 118 70 Q114 74 112 66 Q110 52 112 44 Z" fill="#5b3a1e" />
-              <path d="M88 30 Q94 25 100 25 Q106 25 112 30" fill="none" stroke="#8a6238" strokeWidth="2.5" opacity="0.8" />
-              <path d="M83 42 Q81 36 84 32 M117 42 Q119 36 116 32" fill="none" stroke="#5b3a1e" strokeWidth="2" />
+              <path d="M100 25 Q94 26 90 30" fill="none" stroke="#8a6238" strokeWidth="2.5" opacity="0.9" strokeLinecap="round" />
+              <path d="M100 25 Q106 26 110 30" fill="none" stroke="#8a6238" strokeWidth="2.5" opacity="0.9" strokeLinecap="round" />
+              <path d="M84 52 Q82 72 84 92 M116 52 Q118 72 116 92" fill="none" stroke="#8a6238" strokeWidth="2" opacity="0.7" strokeLinecap="round" />
             </g>
           ) : (
             <g>
               <path d="M83 44 Q81 24 100 24 Q119 24 117 44 Q112 30 100 30 Q88 30 83 44 Z" fill="#5b3a1e" />
               <path d="M88 30 Q94 25 100 25 Q106 25 112 30" fill="none" stroke="#8a6238" strokeWidth="2.5" opacity="0.8" />
-              <path d="M83 42 Q81 36 84 32 M117 42 Q119 36 116 32" fill="none" stroke="#5b3a1e" strokeWidth="2" />
+              {/* Short sideburns */}
+              <path d="M83 42 L84 50 L86 50 L86 42 Z" fill="#5b3a1e" />
+              <path d="M117 42 L116 50 L114 50 L114 42 Z" fill="#5b3a1e" />
+            </g>
+          )}
+          {/* Male beard: neat short beard framing the jaw and chin, with a
+              mustache above the mouth. Mouth is drawn over the beard so the
+              smile still shows. Female has no beard. */}
+          {!isFemale && (
+            <g fill="#5b3a1e">
+              <path d="M85 46 Q84 60 100 62 Q116 60 115 46 L111 50 Q109 57 100 58 Q91 57 89 50 Z" />
+              <path d="M92 51 Q96 49 100 51 Q104 49 108 51 Q104 54 100 54 Q96 54 92 51 Z" />
             </g>
           )}
           {/* Crown, Level 10+ */}
@@ -364,14 +417,31 @@ export default function GuardianAvatar({
               <circle cx="110" cy="26" r="2" fill={gem} stroke="#fff" strokeWidth="1" />
             </g>
           )}
-          {/* Face: brows, eyes with highlights, smile */}
-          <path d="M87 38 Q91 36 95 38 M105 38 Q109 36 113 38" fill="none" stroke="#5b3a1e" strokeWidth="2" strokeLinecap="round" />
-          <circle cx="91" cy="44" r="2.6" fill="#1c2b3a" />
-          <circle cx="109" cy="44" r="2.6" fill="#1c2b3a" />
-          <circle cx="92" cy="43" r="0.9" fill="#fff" />
-          <circle cx="110" cy="43" r="0.9" fill="#fff" />
-          <path d="M98 47 Q100 50 102 47" fill="none" stroke="#c98a5a" strokeWidth="1.5" strokeLinecap="round" />
-          <path d="M93 54 Q100 59 107 54" fill="none" stroke="#1c2b3a" strokeWidth="2.5" strokeLinecap="round" />
+          {/* Face: male has thick straight brows; female has arched brows,
+              lashes, and pink lips. */}
+          {isFemale ? (
+            <g>
+              <path d="M87 37 Q91 34 95 37 M105 37 Q109 34 113 37" fill="none" stroke="#5b3a1e" strokeWidth="1.5" strokeLinecap="round" />
+              <circle cx="91" cy="44" r="2.6" fill="#1c2b3a" />
+              <circle cx="109" cy="44" r="2.6" fill="#1c2b3a" />
+              <circle cx="92" cy="43" r="0.9" fill="#fff" />
+              <circle cx="110" cy="43" r="0.9" fill="#fff" />
+              <path d="M88 42 L85 40 M112 42 L115 40" stroke="#1c2b3a" strokeWidth="1.2" strokeLinecap="round" />
+              <path d="M98 47 Q100 50 102 47" fill="none" stroke="#c98a5a" strokeWidth="1.5" strokeLinecap="round" />
+              <path d="M93 53 Q100 58 107 53 Q100 56 93 53 Z" fill="#c25a6b" />
+              <path d="M94 54 Q100 57 106 54" fill="none" stroke="#8a2f3f" strokeWidth="1" strokeLinecap="round" />
+            </g>
+          ) : (
+            <g>
+              <path d="M86 38 L95 37 M105 37 L114 38" fill="none" stroke="#5b3a1e" strokeWidth="2.5" strokeLinecap="round" />
+              <circle cx="91" cy="44" r="2.6" fill="#1c2b3a" />
+              <circle cx="109" cy="44" r="2.6" fill="#1c2b3a" />
+              <circle cx="92" cy="43" r="0.9" fill="#fff" />
+              <circle cx="110" cy="43" r="0.9" fill="#fff" />
+              <path d="M98 47 Q100 50 102 47" fill="none" stroke="#c98a5a" strokeWidth="1.5" strokeLinecap="round" />
+              <path d="M94 54 Q100 58 106 54" fill="none" stroke="#1c2b3a" strokeWidth="2.5" strokeLinecap="round" />
+            </g>
+          )}
           {/* Class weapon */}
           {g.classId === 'Guardian' && (
             <g>
@@ -417,9 +487,9 @@ export default function GuardianAvatar({
               <circle className="guardian-sparkle" style={{ animationDelay: '1.3s' }} cx="136" cy="90" r="1.8" fill={gemLight} />
             </g>
           )}
-          {/* Legs, slim and long, with boots */}
-          <path d="M88 122 L87 178 L96 178 L96 122 Z" fill={dark} />
-          <path d="M104 122 L104 178 L113 178 L112 122 Z" fill={dark} />
+          {/* Legs: male legs thicker, female slimmer, both with boots */}
+          <path d={isFemale ? "M89 122 L88 178 L95 178 L95 122 Z" : "M87 122 L86 178 L97 178 L97 122 Z"} fill={dark} />
+          <path d={isFemale ? "M105 122 L105 178 L112 178 L111 122 Z" : "M103 122 L103 178 L114 178 L113 122 Z"} fill={dark} />
           <ellipse cx="91" cy="182" rx="9" ry="4.5" fill="#3a2410" />
           <ellipse cx="109" cy="182" rx="9" ry="4.5" fill="#3a2410" />
           <ellipse cx="88" cy="180" rx="4" ry="1.6" fill="#a8763e" opacity="0.6" />
