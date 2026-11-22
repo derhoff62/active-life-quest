@@ -10,6 +10,16 @@ export interface GuardianState {
   color: string;
   gem: string;
   cape: boolean;
+  look?: 'Female' | 'Male';
+}
+
+export interface ProgressPhoto {
+  id: string;
+  key: string;
+  date: string;
+  note: string;
+  sizeBytes: number;
+  contentType: string;
 }
 
 export interface ClientMessage {
@@ -71,6 +81,7 @@ export interface ProfileDoc {
   retests: LogEntry[];
   bossHp: Record<string, number>;
   assessmentVideos: AssessmentVideo[];
+  progressPhotos: ProgressPhoto[];
   balanceBaseline: { left: number; right: number } | null;
   messages: ClientMessage[];
   nudges: { id: string; text: string; date: string; read: boolean }[];
@@ -78,6 +89,17 @@ export interface ProfileDoc {
   calorieCalcEnabled: boolean;
   largeText: boolean;
   reminderTimes: { workout: string; checkin: string; streak: string };
+  checkinFrequency: 'daily' | '3x-week' | 'weekly';
+  trainingDays: number;
+  dislikedExercises: string[];
+  hurtExercises: string[];
+  focus: Record<string, number>;
+  socialPermission: boolean;
+  steps: LogEntry[];
+  cesStep: Record<string, number>;
+  phaseOverride: number | null;
+  phase5Approved: boolean;
+  manaLastRefill: string;
   week13Goal: string | null;
   week13PlanRequested: boolean;
   trialStartedAt: string | null;
@@ -124,6 +146,7 @@ export function defaultProfile(email = '', displayName = ''): ProfileDoc {
     retests: [],
     bossHp: {},
     assessmentVideos: [],
+    progressPhotos: [],
     balanceBaseline: null,
     messages: [],
     nudges: [],
@@ -131,6 +154,17 @@ export function defaultProfile(email = '', displayName = ''): ProfileDoc {
     calorieCalcEnabled: false,
     largeText: false,
     reminderTimes: { workout: '07:30', checkin: '20:00', streak: '18:00' },
+    checkinFrequency: 'daily',
+    trainingDays: 3,
+    dislikedExercises: [],
+    hurtExercises: [],
+    focus: {},
+    socialPermission: false,
+    steps: [],
+    cesStep: {},
+    phaseOverride: null,
+    phase5Approved: false,
+    manaLastRefill: now.slice(0, 10),
     week13Goal: null,
     week13PlanRequested: false,
     trialStartedAt: null,
@@ -182,7 +216,99 @@ export function fiberTarget(sex: string): string {
 }
 
 export function phaseForDoc(doc: ProfileDoc): number {
+  if (doc.phaseOverride) return doc.phaseOverride;
   return doc.assessment?.startingPhase ?? 1;
+}
+
+/** Mana refills to full once a day. Call on save; harmless if already done today. */
+export function refillMana(doc: ProfileDoc): void {
+  const today = new Date().toISOString().slice(0, 10);
+  if (doc.manaLastRefill !== today) {
+    doc.mana = 10;
+    doc.manaLastRefill = today;
+  }
+}
+
+/** Last logged weight/reps for an exercise, from workout history. */
+export function lastTimeFor(doc: ProfileDoc, exerciseId: string): { w: string; r: string } | null {
+  for (let i = doc.workouts.length - 1; i >= 0; i -= 1) {
+    const w = doc.workouts[i] as { log?: Record<string, { w?: string; r?: string }> };
+    const entry = w.log?.[exerciseId];
+    if (entry && (entry.w || entry.r)) return { w: entry.w || '', r: entry.r || '' };
+  }
+  return null;
+}
+
+/** Gear earned, worked out from what the client has actually done, so
+ * armor is never stuck at zero. Level pieces by level, sets by phase
+ * unlocks, workouts, PRs, cardio, badges, boss rounds, balance, check-ins. */
+export function earnedArmorIds(doc: ProfileDoc): string[] {
+  const level = levelForXp(doc.xp);
+  const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+  const cardioWeek = doc.cardio
+    .filter((c) => new Date(String(c.date)).getTime() >= weekAgo)
+    .reduce((s, c) => s + Number(c.minutes || 0), 0);
+  const bossesBeaten = Object.values(doc.bossHp || {}).filter((hp) => hp <= 0).length;
+  const balanceBest = Math.max(doc.balanceBaseline?.left || 0, doc.balanceBaseline?.right || 0);
+  const checkinStreak = doc.checkins.length;
+  const out = new Set<string>();
+  const add = (id: string, ok: boolean) => { if (ok) out.add(id); };
+  add('travelers-boots', doc.workouts.length >= 1);
+  add('apprentice-gloves', level >= 2);
+  add('sturdy-belt', level >= 3);
+  add('trail-cloak', level >= 4);
+  add('iron-bracers', level >= 5);
+  add('wanderers-helm', level >= 6);
+  add('sturdy-pauldrons', level >= 7);
+  add('trail-leggings', level >= 8);
+  add('guardians-tabard', level >= 9);
+  add('veterans-chestplate', level >= 10);
+  add('peakforged-helm', phaseForDoc(doc) >= 4);
+  add('peakforged-chestplate', doc.workouts.some((w) => Number((w as { phase?: number }).phase || 0) === 4 || String(w.workoutId || '').startsWith('p4')));
+  add('peakforged-greaves', doc.workouts.filter((w) => String(w.workoutId || '').startsWith('p4')).length >= 4);
+  add('peakforged-gauntlets', doc.prs.length >= 1 && phaseForDoc(doc) >= 4);
+  add('stormforged-helm', phaseForDoc(doc) >= 5);
+  add('stormforged-chestplate', doc.workouts.some((w) => String(w.workoutId || '').startsWith('p5')));
+  add('stormforged-greaves', doc.workouts.filter((w) => String(w.workoutId || '').startsWith('p5')).length >= 4);
+  add('stormforged-gauntlets', doc.prs.length >= 1 && phaseForDoc(doc) >= 5);
+  add('blade-long-game', doc.guardian?.classId === 'Guardian' && doc.prs.length >= 3);
+  add('bow-steady-steps', doc.guardian?.classId === 'Ranger' && balanceBest >= 30);
+  add('staff-deep-rest', doc.guardian?.classId === 'Spellweaver' && checkinStreak >= 7);
+  add('trailwarden-cloak', doc.workouts.length >= 3);
+  add('ember-shortblade', doc.prs.length >= 3);
+  add('riverstep-boots', cardioWeek >= 150);
+  add('sunforged-chestplate', phaseForDoc(doc) >= 2);
+  add('stormcaller-longbow', bossesBeaten >= 1);
+  add('gauntlets-many-wins', doc.badges.length >= 8);
+  add('voidforged-greatblade', bossesBeaten >= 3);
+  add('mantle-long-road', doc.workouts.length >= 25);
+  add('circlet-full-journey', phaseForDoc(doc) >= 5);
+  return [...out];
+}
+
+/** Award badges that have actually been earned. Call after workouts,
+ * check-ins, cardio, PRs, and retests. Never removes a badge. */
+export function awardBadges(doc: ProfileDoc): string[] {
+  const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+  const workoutsWeek = doc.workouts.filter((w) => new Date(String(w.date)).getTime() >= weekAgo).length;
+  const cardioWeek = doc.cardio
+    .filter((c) => new Date(String(c.date)).getTime() >= weekAgo)
+    .reduce((s, c) => s + Number(c.minutes || 0), 0);
+  const balanceBest = Math.max(doc.balanceBaseline?.left || 0, doc.balanceBaseline?.right || 0);
+  const add = (id: string, ok: boolean) => { if (ok && !doc.badges.includes(id)) doc.badges.push(id); };
+  add('week1', doc.workouts.length >= 1);
+  add('three-in-a-row', workoutsWeek >= 3);
+  add('two-to-three-strength', workoutsWeek >= 2 && workoutsWeek <= 3);
+  add('150-club', cardioWeek >= 150);
+  add('first-pr', doc.prs.length >= 1);
+  add('five-prs', doc.prs.length >= 5);
+  add('balance-breakthrough', balanceBest >= 30);
+  add('phase-1-finisher', phaseForDoc(doc) >= 2);
+  add('phase-2-finisher', phaseForDoc(doc) >= 3);
+  add('phase-3-finisher', doc.retests.some((r) => (r as { week?: number }).week === 12));
+  add('three-day-checkin', doc.checkins.length >= 3);
+  add('week-1-finished', doc.workouts.length >= 2);
+  return doc.badges;
 }
 
 // Current journey week, from retests done, or from the phase if no retest yet.

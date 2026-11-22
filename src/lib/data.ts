@@ -573,6 +573,263 @@ export const WORKOUTS: Workout[] = [
   },
 ];
 
+
+// ------------------------------------------- CORE / BALANCE / MOBILITY DAY
+// The 5th training day in a 5-day week. Uses moves already in the app.
+
+export const CORE_BALANCE_WORKOUT: Workout = {
+  id: 'core-balance-mobility',
+  title: 'Core, Balance and Mobility Day',
+  phase: 1,
+  day: 'Core day',
+  minutes: 15,
+  note: 'No heavy lifting today. Core, balance, and mobility only. A good 5th day in the week.',
+  exercises: [
+    e('plank', 'Plank', 2, '30 seconds', 30,
+      ['Rest on forearms and toes, body in one straight line.', 'Squeeze your glutes and brace your belly.', 'Breathe steadily.'],
+      'Plank on knees instead of toes.', 'Dead bug', '4/2/1'),
+    e('bird-dog', 'Bird Dog', 2, '8 reps each side', 30,
+      ['Start on hands and knees, back flat.', 'Reach one arm forward and the opposite leg back.', 'Hold for 2 seconds, then switch sides without rocking your hips.'],
+      'Lift only the arm, or only the leg.', 'Dead bug', '4/2/1'),
+    e('dead-bug', 'Dead Bug', 2, '8 reps', 30,
+      ['Lie on your back, arms up, knees bent at 90 degrees.', 'Slowly lower one arm and the opposite leg toward the floor.', 'Return and switch sides.'],
+      'Lower only the arms, or only the legs.', 'Plank on knees', '4/2/1'),
+    e('glute-bridge', 'Glute Bridge', 2, '12 reps', 30,
+      ['Lie on your back, knees bent, feet flat.', 'Push through your heels and lift your hips.', 'Lower slowly for 3 to 4 seconds.'],
+      'Shorten the lift. Raise your hips only halfway.', 'Hip thrust with a dumbbell', '4/2/1'),
+    e('side-plank', 'Side Plank', 2, '15 seconds each side', 30,
+      ['Lie on your side, elbow under your shoulder.', 'Lift your hips into a straight line.', 'Hold and breathe. Switch sides.'],
+      'Side plank on knees instead of feet.', 'Dead bug', '4/2/1'),
+  ],
+};
+
+// ------------------------------------------------------- FOCUS AREAS
+// 8 sliders in the assessment: what the client wants to focus on.
+// 1 means not a focus, 5 means a big focus. They shape the plan's
+// emphasis only. They never lock a goal or a workout.
+
+export const FOCUS_AREAS: { id: string; label: string }[] = [
+  { id: 'strength', label: 'Getting stronger' },
+  { id: 'balance', label: 'Balance' },
+  { id: 'mobility', label: 'Moving freely' },
+  { id: 'cardio', label: 'Cardio and endurance' },
+  { id: 'weight-loss', label: 'Losing weight' },
+  { id: 'sleep', label: 'Sleep and recovery' },
+  { id: 'consistency', label: 'Showing up regularly' },
+  { id: 'pain-free', label: 'Moving with less discomfort' },
+];
+
+// ------------------------------------------------- WEEKLY SPLITS
+// Training days per week, 2 to 6, with real splits. The split only
+// names the day. The workouts themselves are the phase workouts, the
+// 15-minute track, and the Core, Balance and Mobility day.
+
+export interface SplitDay { name: string; workoutId: string; }
+export function splitForDays(days: number): { label: string; days: SplitDay[] } {
+  if (days <= 3) {
+    return {
+      label: 'Full-body, 2 to 3 days a week',
+      days: [
+        { name: 'Day 1: Full-body A', workoutId: 'p1a' },
+        { name: 'Day 2: Full-body B', workoutId: 'p1b' },
+        ...(days >= 3 ? [{ name: 'Day 3: Full-body A', workoutId: 'p1a' }] : []),
+      ],
+    };
+  }
+  if (days === 4) {
+    return {
+      label: 'Upper / Lower, 4 days a week',
+      days: [
+        { name: 'Day 1: Upper body', workoutId: 'p1a' },
+        { name: 'Day 2: Lower body', workoutId: 'p1b' },
+        { name: 'Day 3: Upper body', workoutId: 'p1a' },
+        { name: 'Day 4: Lower body', workoutId: 'p1b' },
+      ],
+    };
+  }
+  if (days === 5) {
+    return {
+      label: 'Upper / Lower plus Core, Balance and Mobility, 5 days a week',
+      days: [
+        { name: 'Day 1: Upper body', workoutId: 'p1a' },
+        { name: 'Day 2: Lower body', workoutId: 'p1b' },
+        { name: 'Day 3: Upper body', workoutId: 'p1a' },
+        { name: 'Day 4: Lower body', workoutId: 'p1b' },
+        { name: 'Day 5: Core, Balance and Mobility', workoutId: 'core-balance-mobility' },
+      ],
+    };
+  }
+  return {
+    label: 'Push / Pull / Legs twice, 6 days a week',
+    days: [
+      { name: 'Day 1: Push', workoutId: 'p1a' },
+      { name: 'Day 2: Pull', workoutId: 'p1b' },
+      { name: 'Day 3: Legs', workoutId: 'p1a' },
+      { name: 'Day 4: Push', workoutId: 'p1b' },
+      { name: 'Day 5: Pull', workoutId: 'p1a' },
+      { name: 'Day 6: Legs', workoutId: 'p1b' },
+    ],
+  };
+}
+
+// ------------------------------------------------ REFERENCE TRACKS
+// Adapted reference tracks, built from the moves already in the app.
+// Neutral names only. No brand credit anywhere client-visible. Each
+// track reuses existing exercises, so nothing new needs filming.
+// High-volume is reduced volume only, for advanced clients. Performance
+// stays locked behind Phase 5, like the Phase 5 workouts.
+
+function trackEx(name: string, sets: number, reps: string, restSec: number): Exercise {
+  const found = findExerciseByName(name);
+  if (!found) throw new Error(`Reference track exercise not found: ${name}`);
+  return { ...found, sets, reps, restSec };
+}
+
+export interface ReferenceTrack {
+  id: string;
+  name: string;
+  blurb: string;
+  minutes: number;
+  locked?: string;
+  advancedOnly?: boolean;
+  exercises: Exercise[];
+}
+
+export const REFERENCE_TRACKS: ReferenceTrack[] = [
+  {
+    id: 'track-over-40',
+    name: 'Over-40 Track',
+    blurb: 'Joint-friendly, slow and controlled. Good for beginners over 40.',
+    minutes: 30,
+    exercises: [
+      trackEx('Dumbbell Goblet Squat', 2, '12 reps', 60),
+      trackEx('Seated Cable Row', 2, '12 reps', 60),
+      trackEx('Glute Bridge', 2, '12 reps', 30),
+      trackEx('Bird Dog', 2, '8 reps each side', 30),
+      trackEx('Plank', 2, '20 seconds', 30),
+    ],
+  },
+  {
+    id: 'track-muscle-builder',
+    name: 'Muscle Builder Track',
+    blurb: 'Heavier sets in the 6 to 12 rep range. For building muscle once form is solid.',
+    minutes: 45,
+    exercises: [
+      trackEx('Barbell Back Squat', 4, '6 reps', 120),
+      trackEx('Barbell Deadlift', 4, '6 reps', 120),
+      trackEx('Dumbbell Bench Press', 3, '8 reps', 90),
+      trackEx('Single-Arm Dumbbell Row', 3, '8 reps each arm', 45),
+      trackEx('Plank', 3, '40 seconds', 30),
+    ],
+  },
+  {
+    id: 'track-high-volume',
+    name: 'High-Volume Track',
+    blurb: 'More sets than usual, reduced volume from the full version. Advanced clients only. Stop if form slips.',
+    minutes: 45,
+    advancedOnly: true,
+    exercises: [
+      trackEx('Dumbbell Goblet Squat', 4, '10 reps', 45),
+      trackEx('Dumbbell Bench Press', 4, '10 reps', 45),
+      trackEx('Lat Pulldown', 4, '10 reps', 45),
+      trackEx('Romanian Deadlift', 4, '10 reps', 45),
+      trackEx('Step-Up', 3, '10 reps each leg', 45),
+    ],
+  },
+  {
+    id: 'track-primer',
+    name: 'Primer Track',
+    blurb: 'A short primer before the main workout. Light, easy, and quick.',
+    minutes: 15,
+    exercises: [
+      trackEx('Glute Bridge', 2, '12 reps', 30),
+      trackEx('Bird Dog', 2, '8 reps each side', 30),
+      trackEx('Dead Bug', 2, '8 reps', 30),
+      trackEx('Plank', 2, '20 seconds', 30),
+    ],
+  },
+  {
+    id: 'track-primer-pro',
+    name: 'Primer Pro Track',
+    blurb: 'A longer primer with more moves, for days when you have more time.',
+    minutes: 20,
+    exercises: [
+      trackEx('Glute Bridge', 2, '15 reps', 30),
+      trackEx('Bird Dog', 2, '8 reps each side', 30),
+      trackEx('Dead Bug', 2, '8 reps', 30),
+      trackEx('Split Squat', 2, '10 reps each leg', 45),
+      trackEx('Side Plank', 2, '15 seconds each side', 30),
+    ],
+  },
+  {
+    id: 'track-suspension',
+    name: 'Suspension Track',
+    blurb: 'Uses a suspension trainer, straps that hang. Bodyweight only, no barbell.',
+    minutes: 30,
+    exercises: [
+      trackEx('Split Squat', 2, '10 reps each leg', 45),
+      trackEx('Push-Up', 2, '8 reps', 45),
+      trackEx('Single-Arm Dumbbell Row', 2, '10 reps each arm', 45),
+      trackEx('Plank', 2, '30 seconds', 30),
+      trackEx('Glute Bridge', 2, '12 reps', 30),
+    ],
+  },
+  {
+    id: 'track-unilateral',
+    name: 'Unilateral Track',
+    blurb: 'One side at a time. Weaker side first, then match it on the stronger side.',
+    minutes: 30,
+    exercises: [
+      trackEx('Single-Leg Romanian Deadlift', 2, '8 reps each leg', 60),
+      trackEx('Single-Arm Dumbbell Row', 3, '10 reps each arm', 45),
+      trackEx('Split Squat', 2, '10 reps each leg', 45),
+      trackEx('Step-Up', 2, '10 reps each leg', 45),
+      trackEx('Side Plank', 2, '15 seconds each side', 30),
+    ],
+  },
+  {
+    id: 'track-performance',
+    name: 'Performance Track',
+    blurb: 'Fast, explosive moves for power. Locked until Phase 5.',
+    minutes: 50,
+    locked: 'Locked until Phase 5. You need a clean form retest and Derek approval in Coach.',
+    exercises: [
+      trackEx('Barbell Back Squat', 4, '3 reps', 240),
+      trackEx('Barbell Deadlift', 4, '3 reps', 240),
+      trackEx('Push-Up', 4, '5 reps', 180),
+      trackEx('Step-Up', 4, '5 reps each leg', 180),
+      trackEx('Single-Leg Romanian Deadlift', 3, '5 reps each leg', 120),
+    ],
+  },
+  {
+    id: 'track-advanced-builder',
+    name: 'Advanced Builder Track',
+    blurb: 'Heavier and longer than the Muscle Builder track. Advanced clients only, no failure sets.',
+    minutes: 50,
+    advancedOnly: true,
+    exercises: [
+      trackEx('Barbell Back Squat', 5, '3 reps', 240),
+      trackEx('Barbell Deadlift', 5, '3 reps', 240),
+      trackEx('Dumbbell Bench Press', 4, '5 reps', 180),
+      trackEx('Dumbbell Overhead Press', 4, '5 reps', 180),
+      trackEx('Lat Pulldown', 4, '5 reps', 120),
+    ],
+  },
+  {
+    id: 'track-strong',
+    name: 'Strong Track',
+    blurb: 'Heavy low-rep lifting for your strongest lifts. Only after Phase 3 and a clean Week 12 retest.',
+    minutes: 50,
+    exercises: [
+      trackEx('Barbell Back Squat', 5, '3 reps', 240),
+      trackEx('Barbell Deadlift', 5, '3 reps', 240),
+      trackEx('Dumbbell Bench Press', 4, '5 reps', 180),
+      trackEx('Seated Cable Row', 4, '5 reps', 120),
+      trackEx('Plank', 3, '45 seconds', 60),
+    ],
+  },
+];
+
 // ---------------------------------------------------------- EQUIPMENT
 // The Muse prototype had 14 equipment options. The assessment asks this
 // question, and workouts swap out moves the user cannot do with what they
@@ -1247,7 +1504,7 @@ export const SPELLS: Spell[] = [
     id: 'shield-wall',
     name: 'Shield Wall',
     classId: 'Guardian',
-    cost: 10,
+    cost: 3,
     damage: 15,
     blurb: 'Raise your shield and stand firm. Blocks the next boss hit and steadies your form.',
   },
@@ -1255,7 +1512,7 @@ export const SPELLS: Spell[] = [
     id: 'stone-grip',
     name: 'Stone Grip',
     classId: 'Guardian',
-    cost: 12,
+    cost: 4,
     damage: 20,
     blurb: 'Grip like stone and lift with everything you have. Extra damage on heavy lifts.',
   },
@@ -1263,7 +1520,7 @@ export const SPELLS: Spell[] = [
     id: 'steady-aim',
     name: 'Steady Aim',
     classId: 'Ranger',
-    cost: 10,
+    cost: 3,
     damage: 15,
     blurb: 'Breathe, aim, and strike true. A clean hit that never misses the target.',
   },
@@ -1271,7 +1528,7 @@ export const SPELLS: Spell[] = [
     id: 'forest-step',
     name: 'Forest Step',
     classId: 'Ranger',
-    cost: 12,
+    cost: 4,
     damage: 20,
     blurb: 'Move quick and quiet through the trees. Extra damage on balance and single-leg rounds.',
   },
@@ -1279,7 +1536,7 @@ export const SPELLS: Spell[] = [
     id: 'deep-rest',
     name: 'Deep Rest',
     classId: 'Spellweaver',
-    cost: 10,
+    cost: 3,
     damage: 15,
     blurb: 'Rest is a spell too. Recover mana and come back stronger for the next workout, not instead of it.',
   },
@@ -1287,7 +1544,7 @@ export const SPELLS: Spell[] = [
     id: 'clear-mind',
     name: 'Clear Mind',
     classId: 'Spellweaver',
-    cost: 12,
+    cost: 4,
     damage: 20,
     blurb: 'Clear your mind and focus on the next set. Extra damage on check-in and consistency rounds.',
   },
@@ -1295,7 +1552,7 @@ export const SPELLS: Spell[] = [
     id: 'second-wind',
     name: 'Second Wind',
     classId: 'any',
-    cost: 20,
+    cost: 6,
     damage: 30,
     blurb: 'Every class can learn this at Level 9. Catch your breath, find your strength, and hit hard when it matters most.',
   },

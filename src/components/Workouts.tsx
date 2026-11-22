@@ -1,8 +1,22 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Ctx } from '../App';
-import { WORKOUTS, PHASES, PHASE_WEEKLY_SETS, daysForTime, CES_TEMPLATES, EQUIPMENT_NOTES, effectiveEquipment, resolveExercise } from '../lib/data';
-import { phaseForDoc, hasFullAccess, metCompanionIds } from '../lib/store';
+import { WORKOUTS, CORE_BALANCE_WORKOUT, REFERENCE_TRACKS, PHASES, PHASE_WEEKLY_SETS, daysForTime, splitForDays, CES_TEMPLATES, EQUIPMENT_NOTES, effectiveEquipment, resolveExercise, findExerciseByName } from '../lib/data';
+import { phaseForDoc, hasFullAccess, metCompanionIds, lastTimeFor, awardBadges } from '../lib/store';
 import type { Workout } from '../lib/types';
+
+function resolveForDoc(ex: Parameters<typeof resolveExercise>[0], doc: { equipment: string[]; dislikedExercises?: string[]; hurtExercises?: string[] }) {
+  const disliked = (doc.dislikedExercises || []).includes(ex.id) || (doc.hurtExercises || []).includes(ex.id);
+  if (!disliked) return resolveExercise(ex, doc.equipment);
+  const candidates: string[] = [];
+  if (ex.swap) candidates.push(ex.swap);
+  for (const name of candidates) {
+    const c = findExerciseByName(name);
+    if (c && !resolveExercise(c, doc.equipment).unavailable) {
+      return { exercise: { ...c, sets: ex.sets, reps: ex.reps, restSec: ex.restSec, tempo: ex.tempo ?? c.tempo }, swappedFrom: ex.name, missingEquipment: 'you marked it', unavailable: false };
+    }
+  }
+  return { exercise: ex, swappedFrom: null, missingEquipment: 'you marked it', unavailable: true };
+}
 
 export default function Workouts({ ctx }: { ctx: Ctx }) {
   const { doc, update } = ctx;
@@ -70,7 +84,7 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
   const unlocked = (w: Workout) =>
     w.phase <= phase &&
     !(w.phase === 4 && !doc.retests.some((r) => (r as { week?: number }).week === 12)) &&
-    !(w.phase === 5 && !doc.retests.some((r) => (r as { clean?: boolean }).clean === true)) &&
+    !(w.phase === 5 && !(doc.retests.some((r) => (r as { clean?: boolean }).clean === true) && doc.phase5Approved)) &&
     (full || w.id === 'day1-first') &&
     w.exercises.every((e) => !resolveExercise(e, doc.equipment).unavailable);
   const best: Workout | null = useMemo(() => {
@@ -105,7 +119,13 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
     return undefined;
   }, [restRunning, restLeft]);
 
-  const active: Workout | undefined = useMemo(() => WORKOUTS.find((w) => w.id === activeId), [activeId]);
+  const ALL_WORKOUTS: Workout[] = useMemo(() => [...WORKOUTS, CORE_BALANCE_WORKOUT], []);
+  const active: Workout | undefined = useMemo(() => {
+    const found = ALL_WORKOUTS.find((w) => w.id === activeId);
+    if (found) return found;
+    const track = REFERENCE_TRACKS.find((t) => t.id === activeId);
+    return track ? { id: track.id, title: track.name, phase, day: 'Reference track', minutes: track.minutes, exercises: track.exercises, note: track.blurb } : undefined;
+  }, [activeId, ALL_WORKOUTS, phase]);
 
   function startWorkout(w: Workout) {
     if (!doc.assessmentDone) {
@@ -118,7 +138,7 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
     }
     if (w.phase === 5) {
       const clean = doc.retests.some((r) => (r as { clean?: boolean }).clean === true);
-      if (!clean) {
+      if (!clean || !doc.phase5Approved) {
         setNotice('Phase 5 is locked until a clean form retest AND Derek approves it in Coach.');
         return;
       }
@@ -148,6 +168,22 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
     if (met.has('bram') && workoutsThisWeek === 0) { bonus += 5; bonusNames.push('Bram'); }
     if (met.has('ash') && workoutsThisWeek >= 1) { bonus += 5; bonusNames.push('Ash'); }
     if (met.has('rowan') && minutes >= active.minutes * 0.8) { bonus += 5; bonusNames.push('Rowan'); }
+    // Personal records: heavier weight or more reps than the last time on
+    // the same move. Each new PR is +10 XP and shows on Progress.
+    let prCount = 0;
+    const prNames: string[] = [];
+    for (const ex of active.exercises) {
+      const entry = log[ex.id];
+      if (!entry || !entry.w) continue;
+      const prev = lastTimeFor(doc, ex.id);
+      const w = Number(entry.w);
+      const prevW = prev ? Number(prev.w) : 0;
+      const already = doc.prs.some((pr) => pr.exercise === ex.name);
+      if (w > prevW && !already) {
+        prCount += 1;
+        prNames.push(ex.name);
+      }
+    }
     update((d) => {
       d.workouts.push({
         id: `w${Date.now()}`,
@@ -160,17 +196,29 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
       });
       d.sessions = null;
       d.lastWorkoutDate = new Date().toISOString().split('T')[0];
-      d.xp += 50 + bonus;
-      if (!d.badges.includes('week1') && d.workouts.length >= 1) d.badges.push('week1');
+      d.mana = Math.min(10, d.mana + 2);
+      for (const ex of active.exercises) {
+        const entry = log[ex.id];
+        if (!entry || !entry.w) continue;
+        const w = Number(entry.w);
+        const prev = doc.prs.filter((pr) => pr.exercise === ex.name);
+        const best = prev.length ? Math.max(...prev.map((pr) => pr.weight)) : 0;
+        if (w > best) {
+          d.prs.push({ exercise: ex.name, weight: w, reps: Number(entry.r) || 0, date: new Date().toISOString() });
+        }
+      }
+      d.xp += 50 + bonus + prCount * 10;
+      awardBadges(d);
     });
     setActiveId(null);
     setLog({});
-    setNotice(`Workout saved. ${minutes} minutes, +${50 + bonus} XP.${bonusNames.length ? ` Includes +5 XP from ${bonusNames.join(' and ')}.` : ''}`);
+    setNotice(`Workout saved. ${minutes} minutes, +${50 + bonus + prCount * 10} XP.${bonusNames.length ? ` Includes +5 XP from ${bonusNames.join(' and ')}.` : ''}${prCount ? ` New PR${prCount === 1 ? '' : 's'}: ${prNames.join(', ')} (+10 XP each).` : ''} Mana +2.`);
   }
 
   if (active) {
     const rawEx = active.exercises[step];
-    const resolved = resolveExercise(rawEx, doc.equipment);
+    const resolved = resolveForDoc(rawEx, doc);
+    const last = lastTimeFor(doc, rawEx.id);
     const ex = resolved.exercise;
     const isLast = step >= active.exercises.length - 1;
     return (
@@ -196,15 +244,19 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
           <div className="card gold-frame">
             <h3>Fix-it warm-up first</h3>
             <p>Do your corrective moves before the workout. They stay the same until your Week 4, 8, or 12 retest clears them.</p>
-            {myTemplates.map((t) => (
-              <details key={t.id}>
-                <summary>{t.plainName}</summary>
-                <p><strong>Inhibit:</strong> {t.inhibit}</p>
-                <p><strong>Lengthen:</strong> {t.lengthen}</p>
-                <p><strong>Activation:</strong> {t.activation}</p>
-                <p><strong>Integration:</strong> {t.integration}</p>
-              </details>
-            ))}
+            {myTemplates.map((t) => {
+              const stepN = Math.min((doc.cesStep?.[t.id] || 0) + 1, t.progression.length);
+              return (
+                <details key={t.id}>
+                  <summary>{t.plainName}</summary>
+                  <p><strong>Inhibit:</strong> {t.inhibit}</p>
+                  <p><strong>Lengthen:</strong> {t.lengthen}</p>
+                  <p><strong>Activation:</strong> {t.activation}</p>
+                  <p><strong>Integration:</strong> {t.integration}</p>
+                  <p className="small muted">Next step {stepN} of {t.progression.length}: {t.progression[stepN - 1]}</p>
+                </details>
+              );
+            })}
           </div>
         )}
         <div className="card">
@@ -217,10 +269,33 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
             {ex.swap && <p><strong>Swap:</strong> {ex.swap}</p>}
             {ex.videoLabel && <p className="small muted">Video: {ex.videoLabel}</p>}
           </details>
+          {last && <p className="small">Last time: {last.w ? `${last.w} lb` : ''}{last.w && last.r ? ' x ' : ''}{last.r ? `${last.r} reps` : ''}</p>}
+          <div className="row" style={{ marginTop: 6 }}>
+            <button
+              onClick={() => {
+                update((d) => {
+                  if (!d.dislikedExercises.includes(rawEx.id)) d.dislikedExercises.push(rawEx.id);
+                });
+                setNotice(`Got it. ${rawEx.name} will be swapped out from now on.`);
+              }}
+            >
+              I don&apos;t like this move
+            </button>
+            <button
+              onClick={() => {
+                update((d) => {
+                  if (!d.hurtExercises.includes(rawEx.id)) d.hurtExercises.push(rawEx.id);
+                });
+                setNotice(`${rawEx.name} flagged as hurting. It will be swapped out. Sharp, new, or worsening pain: see a doctor or physical therapist, and tell Derek.`);
+              }}
+            >
+              This hurts
+            </button>
+          </div>
           <div className="grid2" style={{ marginTop: 10 }}>
             <div>
               <label htmlFor={`w-${ex.id}`}>Weight (lb)</label>
-              <input id={`w-${ex.id}`} inputMode="decimal" value={log[ex.id]?.w || ''} onChange={(e) => setLog((p) => ({ ...p, [ex.id]: { ...(p[ex.id] || { w: '', s: '', r: '' }), w: e.target.value } }))} placeholder="Last time: see Progress" />
+              <input id={`w-${ex.id}`} inputMode="decimal" value={log[ex.id]?.w || ''} onChange={(e) => setLog((p) => ({ ...p, [ex.id]: { ...(p[ex.id] || { w: '', s: '', r: '' }), w: e.target.value } }))} placeholder={last?.w ? `Last: ${last.w} lb` : 'lb'} />
             </div>
             <div>
               <label htmlFor={`r-${ex.id}`}>Reps done</label>
@@ -343,7 +418,7 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
           <div>
             <p><strong>{best.title}</strong> · Phase {best.phase} · about {best.minutes} minutes</p>
             <p className="small">Picked for your goal ({goalLabel}), your gear ({effectiveEquipment(doc.equipment).join(', ')}), and {timeMin === 45 ? '45 or more' : timeMin} minutes. {goalNote}</p>
-            <p className="small muted">{best.exercises.map((e) => resolveExercise(e, doc.equipment).exercise.name).join(' · ')}</p>
+            <p className="small muted">{best.exercises.map((e) => resolveForDoc(e, doc).exercise.name).join(' · ')}</p>
             <button className="primary" onClick={() => startWorkout(best)}>Start this workout</button>
           </div>
         )}
@@ -435,11 +510,65 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
         <p className="small muted">15 minutes: 4 days a week. 30 minutes: 3 days a week. 45 or more minutes: {phase >= 3 ? '3' : '2'} days a week. Take 1 to 2 rest days between strength days.</p>
       </div>
 
+      <div className="card">
+        <h3>My week: training days and splits</h3>
+        <p className="small">How many days a week do you train?</p>
+        <div className="row">
+          {[2, 3, 4, 5, 6].map((d) => (
+            <button
+              key={d}
+              onClick={() => update((doc2) => { doc2.trainingDays = d; })}
+              style={(doc.trainingDays || 3) === d ? { background: '#124571', color: '#fff' } : {}}
+            >
+              {d} days
+            </button>
+          ))}
+        </div>
+        <p><strong>{splitForDays(doc.trainingDays || 3).label}</strong></p>
+        {splitForDays(doc.trainingDays || 3).days.map((day) => {
+          const wid = day.workoutId === 'core-balance-mobility' ? day.workoutId : `p${Math.min(phase, 5)}${day.workoutId.slice(2)}`;
+          const w = ALL_WORKOUTS.find((x) => x.id === wid) || ALL_WORKOUTS.find((x) => x.id === day.workoutId);
+          return (
+            <p key={day.name} className="small" style={{ margin: '4px 0' }}>
+              {day.name}: {w ? w.title : day.workoutId}
+              {' '}
+              <button onClick={() => w && startWorkout(w)}>Start</button>
+            </p>
+          );
+        })}
+        <p className="small muted">Take 1 to 2 rest days between strength days. The other days are active rest days.</p>
+      </div>
+
+      <div className="card">
+        <h3>Reference tracks</h3>
+        <p className="small muted">Extra tracks to try, built from the same moves. No brand credit, just the workout.</p>
+        <details>
+          <summary>Show reference tracks</summary>
+          {REFERENCE_TRACKS.map((t) => {
+            const locked = !!t.locked && phase < 5;
+            const trackWorkout: Workout = { id: t.id, title: t.name, phase, day: 'Reference track', minutes: t.minutes, exercises: t.exercises, note: t.blurb };
+            return (
+              <div key={t.id} style={{ borderTop: '1px solid #d7e3ee', padding: '8px 0' }}>
+                <p><strong>{t.name}</strong> · about {t.minutes} min</p>
+                <p className="small muted">{t.blurb}</p>
+                {t.advancedOnly && <p className="small muted">Advanced clients only. Stop if form slips.</p>}
+                <p className="small">{t.exercises.map((e2) => e2.name).join(' · ')}</p>
+                {locked ? (
+                  <p className="small muted">{t.locked}</p>
+                ) : (
+                  <button className="primary" onClick={() => startWorkout(trackWorkout)}>Start this track</button>
+                )}
+              </div>
+            );
+          })}
+        </details>
+      </div>
+
       {WORKOUTS.map((w) => {
         const locked =
           (w.phase === 4 && !doc.retests.some((r) => (r as { week?: number }).week === 12)) ||
-          (w.phase === 5 && !doc.retests.some((r) => (r as { clean?: boolean }).clean === true));
-        const resolved = w.exercises.map((e) => resolveExercise(e, doc.equipment));
+          (w.phase === 5 && !(doc.retests.some((r) => (r as { clean?: boolean }).clean === true) && doc.phase5Approved));
+        const resolved = w.exercises.map((e) => resolveForDoc(e, doc));
         const swapped = resolved.filter((r) => r.swappedFrom);
         return (
           <div className="card" key={w.id}>
