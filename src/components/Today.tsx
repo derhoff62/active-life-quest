@@ -14,9 +14,7 @@ export default function Today({ ctx }: { ctx: Ctx }) {
   const [checkinNote, setCheckinNote] = useState('');
   const [checkinMsg, setCheckinMsg] = useState('');
   const [energy, setEnergy] = useState(7);
-  const [sleepH, setSleepH] = useState(7);
   const [soreness, setSoreness] = useState(3);
-  const [sleepMsg, setSleepMsg] = useState('');
   const [goalPick, setGoalPick] = useState('');
   const [goalWhy, setGoalWhy] = useState('');
   const [goalMsg, setGoalMsg] = useState('');
@@ -34,7 +32,6 @@ export default function Today({ ctx }: { ctx: Ctx }) {
   // could log twice. Disabled + "Saving…" also tells the client the tap
   // landed, instead of the button sitting still.
   const [checkinBusy, setCheckinBusy] = useState(false);
-  const [sleepBusy, setSleepBusy] = useState(false);
   const [questBusy, setQuestBusy] = useState(false);
 
   const phase = phaseForDoc(doc);
@@ -282,8 +279,12 @@ export default function Today({ ctx }: { ctx: Ctx }) {
                 window.setTimeout(() => setCheckinBusy(false), 700);
                 // One check-in a day earns XP. Tapping again tomorrow earns
                 // again. Tapping twice today does not.
+                // Sleep hours for the check-in come from last night's
+                // logged sleep (Sleep tab), not a slider here: the sleep
+                // slider moved to the Sleep tab. Default 7 until the
+                // first sleep log.
                 update((d) => {
-                  d.checkins.push({ id: `c${Date.now()}`, date: new Date().toISOString(), energy, sleepHours: sleepH, soreness, note: checkinNote });
+                  d.checkins.push({ id: `c${Date.now()}`, date: new Date().toISOString(), energy, sleepHours: lastSleep?.hours ?? 7, soreness, note: checkinNote });
                   d.xp += met.has('hoot') ? 15 : 10;
                   d.mana = Math.min(10, d.mana + 1);
                 });
@@ -358,37 +359,12 @@ export default function Today({ ctx }: { ctx: Ctx }) {
         })()}
       </div>
 
+      {/* Sleep is logged in the Sleep tab now, not here. This card only
+          shows last night and the recovery score, with a link there. */}
       <div className="card">
         <h3>Sleep and recovery</h3>
-        <p className="muted small">Last night: {lastSleep?.hours ?? 'not logged yet'} hours.</p>
-        {loggedToday(doc.sleep) ? (
-          <p className="small ok">Sleep logged today. Log again tomorrow morning.</p>
-        ) : (
-          <div>
-            <label>Hours slept: {sleepH}</label>
-            <input type="range" min={0} max={12} step={0.5} value={sleepH} onChange={(e) => setSleepH(Number(e.target.value))} />
-            <button
-              className="primary"
-              style={{ marginTop: 10 }}
-              disabled={sleepBusy}
-              onClick={() => {
-                if (sleepBusy) return;
-                setSleepBusy(true);
-                window.setTimeout(() => setSleepBusy(false), 700);
-                update((d) => {
-                  d.sleep.push({ id: `s${Date.now()}`, date: new Date().toISOString(), hours: sleepH });
-                  d.xp += met.has('mara') ? 10 : 5;
-                  d.mana = Math.min(10, d.mana + 1);
-                });
-                setSleepMsg('Sleep logged. +5 XP, and +1 mana for resting well.');
-                toast(met.has('mara') ? 'Sleep logged. +10 XP.' : 'Sleep logged. +5 XP.');
-              }}
-            >
-              {sleepBusy ? 'Saving…' : `Log sleep (+5 XP${met.has('mara') ? ', +5 from Mara' : ''})`}
-            </button>
-            {sleepMsg && <p className="ok">{sleepMsg}</p>}
-          </div>
-        )}
+        <p className="muted small">Last night: {lastSleep?.hours ?? 'not logged yet'} hours. Recovery score: {lastCheckin ? `${rec}/100` : 'not set yet, log your first check-in above'}.</p>
+        <button className="primary" onClick={() => go('sleep')}>Log sleep in the Sleep tab</button>
       </div>
 
       <div className="card">

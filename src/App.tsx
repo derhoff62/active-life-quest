@@ -7,6 +7,8 @@ import Onboarding from './components/Onboarding';
 import Assessment from './components/Assessment';
 import Today from './components/Today';
 import Workouts from './components/Workouts';
+import Cardio from './components/Cardio';
+import Sleep from './components/Sleep';
 import Journey from './components/Journey';
 import Nutrition from './components/Nutrition';
 import Progress from './components/Progress';
@@ -16,7 +18,7 @@ import ToastHost from './components/Toast';
 import { showToast } from './lib/toast';
 import Coach from './components/Coach';
 
-export type Tab = 'today' | 'assessment' | 'workouts' | 'journey' | 'nutrition' | 'progress' | 'armor' | 'faq' | 'coach';
+export type Tab = 'today' | 'assessment' | 'workouts' | 'cardio' | 'sleep' | 'journey' | 'nutrition' | 'progress' | 'armor' | 'faq' | 'coach';
 
 /** If one tab throws while rendering, show a small card for that tab
  * instead of blanking the whole app. The header and nav stay up, so the
@@ -45,6 +47,8 @@ const TABS: { id: Tab; label: string; icon: string }[] = [
   { id: 'today', label: 'Today', icon: '☀' },
   { id: 'assessment', label: 'Assessment', icon: '✓' },
   { id: 'workouts', label: 'Workouts', icon: '◆' },
+  { id: 'cardio', label: 'Cardio', icon: '♥' },
+  { id: 'sleep', label: 'Sleep', icon: '☾' },
   { id: 'journey', label: 'Journey', icon: '✦' },
   { id: 'nutrition', label: 'Nutrition', icon: '●' },
   { id: 'progress', label: 'Progress', icon: '▲' },
@@ -292,6 +296,8 @@ export default function App() {
           {doc.guardianPicked && tab === 'today' && <Today ctx={ctx} />}
           {tab === 'assessment' && <Assessment ctx={ctx} />}
           {tab === 'workouts' && <Workouts ctx={ctx} />}
+          {tab === 'cardio' && <Cardio ctx={ctx} />}
+          {tab === 'sleep' && <Sleep ctx={ctx} />}
           {tab === 'journey' && <Journey ctx={ctx} />}
           {tab === 'nutrition' && <Nutrition ctx={ctx} />}
           {tab === 'progress' && <Progress ctx={ctx} />}

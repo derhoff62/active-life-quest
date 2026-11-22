@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Ctx } from '../App';
 import { WORKOUTS, CORE_BALANCE_WORKOUT, REFERENCE_TRACKS, PHASES, PHASE_WEEKLY_SETS, daysForTime, splitForDays, TRAINING_STYLES, CES_TEMPLATES, EQUIPMENT_NOTES, effectiveEquipment, resolveExercise, findExerciseByName, CLASS_WORKOUT_FOCUS, applyClassFocus, GOAL_FINISHERS } from '../lib/data';
 import type { TrainingStyle } from '../lib/data';
-import { phaseForDoc, hasFullAccess, metCompanionIds, lastTimeFor, awardBadges, loggedToday, daysInMonthSet } from '../lib/store';
+import { phaseForDoc, hasFullAccess, metCompanionIds, lastTimeFor, awardBadges, daysInMonthSet } from '../lib/store';
 import type { Workout } from '../lib/types';
 import ExampleVideo from './ExampleVideo';
 
@@ -21,7 +21,7 @@ function resolveForDoc(ex: Parameters<typeof resolveExercise>[0], doc: { equipme
 }
 
 export default function Workouts({ ctx }: { ctx: Ctx }) {
-  const { doc, update, toast } = ctx;
+  const { doc, update, toast, go } = ctx;
   const [activeId, setActiveId] = useState<string | null>(doc.sessions?.workoutId || null);
   const [step, setStep] = useState(doc.sessions?.step || 0);
   const [log, setLog] = useState<Record<string, { w: string; s: string; r: string }>>(
@@ -33,8 +33,6 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
   const [finishMinutes, setFinishMinutes] = useState('');
   const [notice, setNotice] = useState('');
   const [timeMin, setTimeMin] = useState<15 | 30 | 45>(30);
-  const [cardioMin, setCardioMin] = useState('');
-  const [cardioMsg, setCardioMsg] = useState('');
   const [editId, setEditId] = useState<string | null>(null);
   const [editMinutes, setEditMinutes] = useState('');
   const [regressionPick, setRegressionPick] = useState<Record<string, string>>({});
@@ -633,37 +631,14 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
         {notice && <p className="notice" style={{ marginTop: 8 }}>{notice}</p>}
       </div>
 
+      {/* Cardio is logged in the Cardio tab now, not here. This card
+          only shows the weekly total, with a link to the one log form. */}
       <div className="card">
-        <h3>Log cardio</h3>
+        <h3>Cardio this week</h3>
         <p><strong>{cardioThisWeek} of 150 to 300 minutes this week.</strong> {cardioMilestone}.</p>
         <div className="progress-bar"><div style={{ width: `${Math.min(100, (cardioThisWeek / 300) * 100)}%` }} /></div>
-        <p className="small muted">Milestones at 150, then 200, then 300 minutes. Zone 2, easy enough to talk. High intensity counts double: log the doubled minutes.</p>
-        <div className="row">
-          <input inputMode="numeric" value={cardioMin} onChange={(e) => { setCardioMin(e.target.value); setCardioMsg(''); }} placeholder="Minutes" style={{ maxWidth: 140 }} aria-label="Cardio minutes" />
-          <button
-            className="primary"
-            onClick={() => {
-              const mins = Number(cardioMin);
-              if (!cardioMin || Number.isNaN(mins) || mins <= 0 || mins > 600) {
-                setCardioMsg('Enter minutes from 1 to 600.');
-                return;
-              }
-              // Minutes always count. XP is once a day: logging twice does
-              // not earn twice.
-              const xpToday = !loggedToday(doc.cardio);
-              update((d) => {
-                d.cardio.push({ id: `k${Date.now()}`, date: new Date().toISOString(), minutes: mins, zone: 'Zone 2' });
-                if (xpToday) d.xp += metCompanionIds(doc).has('sylva') ? 15 : 10;
-              });
-              setCardioMsg(`Cardio logged: ${mins} minutes${xpToday ? ` (+10 XP${metCompanionIds(doc).has('sylva') ? ', +5 from Sylva' : ''})` : ' (already earned cardio XP today)'}.`);
-              toast(`Cardio logged: ${mins} minutes${xpToday ? ', +10 XP' : ''}.`);
-              setCardioMin('');
-            }}
-          >
-            Log cardio (+10 XP)
-          </button>
-        </div>
-        {cardioMsg && <p className={cardioMsg.startsWith('Enter') ? 'error' : 'ok'}>{cardioMsg}</p>}
+        <p className="small muted">Zone 2, easy enough to talk. High intensity counts double.</p>
+        <button className="primary" onClick={() => go('cardio')}>Log cardio in the Cardio tab</button>
       </div>
 
       <div className="card">

@@ -104,7 +104,7 @@ export function latestMetric(doc: ProfileDoc, key: MetricKey): Point | null {
   return s.length ? s[s.length - 1] : null;
 }
 
-function TrendChart({ points, unit }: { points: Point[]; unit: string }) {
+export function TrendChart({ points, unit }: { points: Point[]; unit: string }) {
   if (points.length < 2) {
     return <p className="muted">Log 2 entries to see a trend line here.</p>;
   }
@@ -258,9 +258,9 @@ export default function Metrics({ doc, update, toast }: MetricsProps) {
             {metric === 'weight' && 'No weigh-ins yet. Log one below, once a week, same day and time.'}
             {isBody && 'No measurements for this one yet. Log one below.'}
             {metric === 'strength' && 'No personal records yet. Log a heavier weight or more reps than last time in a workout and it shows here.'}
-            {metric === 'sleep' && 'No sleep logged yet. Log it on Today.'}
+            {metric === 'sleep' && 'No sleep logged yet. Log it in the Sleep tab.'}
             {metric === 'steps' && 'No steps logged yet. Log them below on Progress.'}
-            {metric === 'cardio' && 'No cardio logged yet. Log it below on Progress.'}
+            {metric === 'cardio' && 'No cardio logged yet. Log it in the Cardio tab.'}
           </p>
         ) : (
           <>
@@ -321,10 +321,13 @@ export default function Metrics({ doc, update, toast }: MetricsProps) {
         <p className="small muted" style={{ marginTop: 12 }}>Personal records are recorded when you finish a workout. Log a heavier weight or more reps than last time and it counts here.</p>
       )}
       {!readOnly && metric === 'sleep' && (
-        <p className="small muted" style={{ marginTop: 12 }}>Sleep is logged on Today, with your daily check-in.</p>
+        <p className="small muted" style={{ marginTop: 12 }}>Sleep is logged in the Sleep tab.</p>
       )}
-      {!readOnly && (metric === 'steps' || metric === 'cardio') && (
-        <p className="small muted" style={{ marginTop: 12 }}>Log {metric === 'steps' ? 'steps' : 'cardio'} below on this page. It shows up here.</p>
+      {!readOnly && metric === 'steps' && (
+        <p className="small muted" style={{ marginTop: 12 }}>Log steps below on this page. It shows up here.</p>
+      )}
+      {!readOnly && metric === 'cardio' && (
+        <p className="small muted" style={{ marginTop: 12 }}>Log cardio in the Cardio tab. It shows up here.</p>
       )}
     </div>
   );

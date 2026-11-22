@@ -93,7 +93,7 @@ input, select, textarea {
   min-height: 48px;
 }
 label { display: block; font-weight: 600; margin: 12px 0 4px; }
-/* Bottom padding must clear the fixed nav: 9 tabs in a 6-column wrap
+/* Bottom padding must clear the fixed nav: 11 tabs in a 6-column wrap
    (2 rows of 52px buttons) plus the safe area. */
 .app { max-width: 720px; margin: 0 auto; padding: 0 12px calc(150px + env(safe-area-inset-bottom)); }
 html { scroll-padding-bottom: calc(150px + env(safe-area-inset-bottom)); }
@@ -126,7 +126,7 @@ html { scroll-padding-bottom: calc(150px + env(safe-area-inset-bottom)); }
    the bar stands out from page content.
    Grid, not flex-wrap: flex items refuse to shrink below their label
    width, so only 5 fit per row and the second row grows wide and tall.
-   Six equal grid columns give 6 tabs on row 1 and 3 on row 2, every
+   Six equal grid columns give 6 tabs on row 1 and 5 on row 2, every
    button the same width and 52px tall. The gold dot is absolutely
    positioned on the top edge, so it never adds height to the row. */
 .nav {

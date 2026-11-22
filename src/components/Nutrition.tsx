@@ -1,6 +1,6 @@
 import type { Ctx } from '../App';
 import Switch from './Switch';
-import { NUTRITION, HIIT } from '../lib/data';
+import { NUTRITION } from '../lib/data';
 import { proteinRange, fiberTarget } from '../lib/store';
 
 const RULES = [
@@ -120,21 +120,8 @@ export default function Nutrition({ ctx }: { ctx: Ctx }) {
             );
           })}
 
-          {/* Cardio: its own card. HIIT examples and precautions are separate lists. */}
-          <div className="card">
-            <h3>Cardio</h3>
-            <p>The best type of cardio is the one you stick to.</p>
-            <p>Aim for 150 to 300 minutes a week of Zone 2, easy enough to talk.</p>
-            <p>High intensity counts double: 20 minutes hard counts as 40.</p>
-            <h4>High-intensity (HIIT) examples</h4>
-            <ul className="nut-examples">
-              {HIIT.examples.map((e, i) => <li key={i}>{e}</li>)}
-            </ul>
-            <h4>Be careful with HIIT</h4>
-            <ul className="nut-examples">
-              {HIIT.precautions.map((e, i) => <li key={i}>{e}</li>)}
-            </ul>
-          </div>
+          {/* Cardio lives in its own tab now, with its log form and
+              HIIT examples. It used to be a card here, in Nutrition. */}
 
           {doc.calorieCalcEnabled ? (
             <div className="card gold-frame">

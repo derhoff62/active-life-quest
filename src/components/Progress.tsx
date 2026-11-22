@@ -4,10 +4,10 @@ import * as api from '../lib/api';
 import Switch from './Switch';
 import Metrics from './Metrics';
 import { GOAL_TYPES, BADGES } from '../lib/data';
-import { levelForXp, titleForLevel, metCompanionIds, loggedToday, daysInMonthSet, streakDaysForDoc } from '../lib/store';
+import { levelForXp, titleForLevel, daysInMonthSet, streakDaysForDoc } from '../lib/store';
 
 export default function Progress({ ctx }: { ctx: Ctx }) {
-  const { doc, update, toast } = ctx;
+  const { doc, update, toast, go } = ctx;
   // Old accounts saved before a field existed have it as undefined.
   // App normalizes on load, but never crash this tab on a missing list.
   const workouts = doc.workouts || [];
@@ -21,7 +21,6 @@ export default function Progress({ ctx }: { ctx: Ctx }) {
   const goals = doc.goals || [];
   const progressPhotos = doc.progressPhotos || [];
   const retests = doc.retests || [];
-  const [cardioMin, setCardioMin] = useState('');
   const [stepsToday, setStepsToday] = useState('');
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState('');
@@ -30,8 +29,6 @@ export default function Progress({ ctx }: { ctx: Ctx }) {
   const [photoMsg, setPhotoMsg] = useState('');
   const [photoError, setPhotoError] = useState('');
   const [showGoals, setShowGoals] = useState(true);
-  const [cardioMsg, setCardioMsg] = useState('');
-  const [cardioBusy, setCardioBusy] = useState(false);
 
   const level = levelForXp(doc.xp);
   // Streak is worked out from the dates of workouts and check-ins, so it
@@ -155,37 +152,13 @@ export default function Progress({ ctx }: { ctx: Ctx }) {
           weigh-in are logged here. The old waist-only form lived here. */}
       <Metrics doc={doc} update={update} toast={toast} />
 
+      {/* Cardio is logged in the Cardio tab now, not here. This card
+          only points there, so there is one log form. */}
       <div className="card">
-        <h3>Log cardio</h3>
-        <div className="row">
-          <input inputMode="numeric" value={cardioMin} onChange={(e) => { setCardioMin(e.target.value); setCardioMsg(''); }} placeholder="Minutes" style={{ maxWidth: 140 }} aria-label="Cardio minutes" />
-          <button
-            className="primary"
-            disabled={cardioBusy}
-            onClick={() => {
-              if (cardioBusy) return;
-              const mins = Number(cardioMin);
-              if (!cardioMin || Number.isNaN(mins) || mins <= 0 || mins > 600) {
-                setCardioMsg('Enter minutes from 1 to 600.');
-                return;
-              }
-              setCardioBusy(true);
-              window.setTimeout(() => setCardioBusy(false), 700);
-              const xpToday = !loggedToday(doc.cardio);
-              update((d) => {
-                d.cardio.push({ id: `k${Date.now()}`, date: new Date().toISOString(), minutes: mins, zone: 'Zone 2' });
-                if (xpToday) d.xp += metCompanionIds(doc).has('sylva') ? 15 : 10;
-              });
-              setCardioMsg(`Cardio logged: ${mins} minutes${xpToday ? ` (+10 XP${metCompanionIds(doc).has('sylva') ? ', +5 from Sylva' : ''})` : ' (already earned cardio XP today)'}.`);
-              toast(`Cardio logged: ${mins} minutes${xpToday ? ', +10 XP' : ''}.`);
-              setCardioMin('');
-            }}
-          >
-            {cardioBusy ? 'Saving…' : `Log cardio (+10 XP${metCompanionIds(doc).has('sylva') ? ', +5 from Sylva' : ''})`}
-          </button>
-        </div>
-        {cardioMsg && <p className={cardioMsg.startsWith('Enter') ? 'error' : 'ok'}>{cardioMsg}</p>}
+        <h3>Cardio</h3>
+        <p><strong>{cardioTotal} minutes logged in total.</strong> Target 150 to 300 minutes a week, Zone 2.</p>
         <p className="small muted">Zone 2, easy enough to talk. High intensity counts double: log the doubled minutes.</p>
+        <button className="primary" onClick={() => go('cardio')}>Log cardio in the Cardio tab</button>
       </div>
 
       <div className="card">
