@@ -463,7 +463,11 @@ export default function Today({ ctx }: { ctx: Ctx }) {
         )}
         {doc.goals.length === 0 && <p className="small muted">No goal picked yet. Pick one here and it shapes your plan.</p>}
         <label htmlFor="today-goal">What is your main goal?</label>
-        <select id="today-goal" value={goalPick || doc.goals[0]?.type || 'weight-loss'} onChange={(e) => setGoalPick(e.target.value)}>
+        {/* No saved goal means no selection: the old code defaulted the
+           dropdown to 'weight-loss', so it showed "Lose weight" as picked
+           while the line above correctly said "No goal picked yet". */}
+        <select id="today-goal" value={goalPick || doc.goals[0]?.type || ''} onChange={(e) => setGoalPick(e.target.value)}>
+          <option value="" disabled>Pick a goal…</option>
           {GOAL_TYPES.map((g) => (
             <option key={g.id} value={g.id}>{g.label}</option>
           ))}
@@ -474,7 +478,12 @@ export default function Today({ ctx }: { ctx: Ctx }) {
           className="primary"
           style={{ marginTop: 10 }}
           onClick={() => {
-            const type = goalPick || doc.goals[0]?.type || 'weight-loss';
+            const type = goalPick || doc.goals[0]?.type || '';
+            if (!type) {
+              setGoalMsg('Pick a goal first, then save it.');
+              toast('Pick a goal first, then save it.');
+              return;
+            }
             const gt = GOAL_TYPES.find((g) => g.id === type);
             update((d) => {
               d.goals = [{ type: type as never, label: gt?.label || 'My goal', why: goalWhy, started: new Date().toISOString() }];

@@ -142,7 +142,20 @@ html { scroll-padding-bottom: calc(150px + env(safe-area-inset-bottom)); }
   font-weight: 700; border-radius: 10px;
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;
 }
-.nav button:active:not(:disabled) { transform: scale(0.93); filter: brightness(0.82); background: #dbe7f2; }
+/* Press feedback on nav tabs is JS-driven as well as :active (see App.tsx
+   pressedTab): the earlier :active-only rule did not visibly shrink or
+   darken a held tab in a live still test, it only went white to light
+   grey. The pressed state is now much stronger: scale 0.88, a clearly
+   darker steel-blue background, and an inset shadow, so a held tab is
+   obvious at a glance and distinct from both the white idle state and
+   the solid-navy selected state. */
+.nav button:active:not(:disabled), .nav button.pressed {
+  transform: scale(0.88); filter: brightness(0.78); background: #a9c4de;
+  box-shadow: inset 0 2px 8px rgba(18, 69, 113, 0.35);
+}
+@media (prefers-reduced-motion: reduce) {
+  .nav button:active:not(:disabled), .nav button.pressed { transform: none; }
+}
 .nav button .nav-icon { font-size: 1rem; line-height: 1; color: var(--blue); }
 .nav button .nav-label { line-height: 1.05; overflow-wrap: anywhere; text-align: center; }
 .nav button.active {

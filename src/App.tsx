@@ -68,6 +68,7 @@ export default function App() {
   const [doc, setDoc] = useState<ProfileDoc | null>(null);
   const [auth, setAuth] = useState<{ email: string; displayName: string } | null>(null);
   const [tab, setTab] = useState<Tab>('today');
+  const [pressedTab, setPressedTab] = useState<string | null>(null);
   const [serverMode, setServerMode] = useState(false);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
@@ -423,7 +424,16 @@ export default function App() {
 
         <nav className="nav" aria-label="Sections">
           {TABS.map((t) => (
-            <button key={t.id} className={tab === t.id ? 'active' : ''} onClick={() => go(t.id)} aria-current={tab === t.id ? 'page' : undefined}>
+            <button
+              key={t.id}
+              className={`${tab === t.id ? 'active' : ''}${pressedTab === t.id ? ' pressed' : ''}`}
+              onPointerDown={() => setPressedTab(t.id)}
+              onPointerUp={() => setPressedTab(null)}
+              onPointerLeave={() => setPressedTab(null)}
+              onPointerCancel={() => setPressedTab(null)}
+              onClick={() => { setPressedTab(null); go(t.id); }}
+              aria-current={tab === t.id ? 'page' : undefined}
+            >
               <span className="nav-icon" aria-hidden="true">{t.icon}</span>
               <span className="nav-label">{t.label}</span>
               {t.id === 'today' && unread > 0 && <span className="badge">{unread}</span>}
