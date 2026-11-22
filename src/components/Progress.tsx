@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { Ctx } from '../App';
+import Switch from './Switch';
 import { GOAL_TYPES, BADGES } from '../lib/data';
 import { levelForXp, titleForLevel, metCompanionIds } from '../lib/store';
 
@@ -38,8 +39,14 @@ export default function Progress({ ctx }: { ctx: Ctx }) {
         <p>Level {level} · {titleForLevel(level)} · {doc.xp} XP · Streak {doc.streakDays} days</p>
         <p>Workouts this week: {workoutsThisWeek} · Cardio logged: {cardioTotal} min · Check-ins: {doc.checkins.length}</p>
         {last && <p className="muted small">Last workout: {last.title} on {new Date(String(last.date)).toLocaleDateString()}.</p>}
-        <div className="row">
-          <button onClick={() => update((d) => { d.largeText = !d.largeText; })}>Bigger text: {doc.largeText ? 'on' : 'off'}</button>
+        <div className="switch-row">
+          <span><strong>Bigger text</strong></span>
+          <Switch
+            checked={doc.largeText}
+            onChange={() => update((d) => { d.largeText = !d.largeText; })}
+            label="Bigger text on or off"
+            hint="Tap to turn bigger text on or off"
+          />
         </div>
       </div>
 
