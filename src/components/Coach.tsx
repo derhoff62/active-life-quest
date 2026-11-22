@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import type { Ctx } from '../App';
 import * as api from '../lib/api';
 import { CES_TEMPLATES } from '../lib/data';
+import Metrics, { latestMetric } from './Metrics';
 import type { ProfileDoc } from '../lib/store';
 import { checkinPreferenceText, checkinFrequenciesForMode, normalizeCheckinFrequency, normalizeProfile, phaseForDoc } from '../lib/store';
 
@@ -287,6 +288,24 @@ export default function Coach({ ctx }: { ctx: Ctx }) {
                 </div>
               );
             })()}
+          </div>
+
+          {/* Metrics tracker, read-only: the same numbers the client sees
+              in Progress, with the same trend lines. Weight, waist, chest,
+              hips, arms, thighs, strength per lift, sleep, steps, cardio. */}
+          <div className="card">
+            <h4 style={{ margin: '0 0 4px' }}>Metrics</h4>
+            {(() => {
+              const w = latestMetric(selected.data, 'weight');
+              const waist = latestMetric(selected.data, 'waist');
+              return (
+                <p className="small">
+                  Latest: {w ? `weight ${w.label}` : 'no weigh-in yet'}
+                  {waist ? ` · waist ${waist.label}` : ''} · {selected.data.measurements.length} measurement entries · {selected.data.prs.length} PRs.
+                </p>
+              );
+            })()}
+            <Metrics doc={selected.data} />
           </div>
 
           <div className="card">

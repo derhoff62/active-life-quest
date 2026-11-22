@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { Ctx } from '../App';
 import * as api from '../lib/api';
 import Switch from './Switch';
+import Metrics from './Metrics';
 import { GOAL_TYPES, BADGES } from '../lib/data';
 import { levelForXp, titleForLevel, metCompanionIds, loggedToday, daysInMonthSet, streakDaysForDoc } from '../lib/store';
 
@@ -20,9 +21,6 @@ export default function Progress({ ctx }: { ctx: Ctx }) {
   const goals = doc.goals || [];
   const progressPhotos = doc.progressPhotos || [];
   const retests = doc.retests || [];
-  const [waist, setWaist] = useState('');
-  const [clothes, setClothes] = useState('');
-  const [weigh, setWeigh] = useState('');
   const [cardioMin, setCardioMin] = useState('');
   const [stepsToday, setStepsToday] = useState('');
   const [photoFile, setPhotoFile] = useState<File | null>(null);
@@ -33,7 +31,6 @@ export default function Progress({ ctx }: { ctx: Ctx }) {
   const [photoError, setPhotoError] = useState('');
   const [showGoals, setShowGoals] = useState(true);
   const [cardioMsg, setCardioMsg] = useState('');
-  const [weighMsg, setWeighMsg] = useState('');
   const [cardioBusy, setCardioBusy] = useState(false);
 
   const level = levelForXp(doc.xp);
@@ -140,7 +137,7 @@ export default function Progress({ ctx }: { ctx: Ctx }) {
                 <p>Your numbers: last night {lastSleep?.hours ?? 'not logged yet'} hours of sleep. Sleep logs: {sleepArr.length}. Recovery is part of training for every class.</p>
               )}
               {g.type === 'weight-loss' && (
-                <p>Your numbers: {measurements.length} measurements logged. {latestMeasure ? `Latest: ${latestMeasure.waist ? `waist ${latestMeasure.waist} in` : ''}${latestMeasure.waist && latestMeasure.weight ? ', ' : ''}${latestMeasure.weight ? `weight ${latestMeasure.weight} lb` : ''}.` : 'Log a waist measurement or weigh-in below to start the trend.'}</p>
+                <p>Your numbers: {measurements.length} measurements logged. {latestMeasure ? `Latest: ${latestMeasure.waist ? `waist ${latestMeasure.waist} in` : ''}${latestMeasure.waist && latestMeasure.weight ? ', ' : ''}${latestMeasure.weight ? `weight ${latestMeasure.weight} lb` : ''}.` : 'Log a measurement or weigh-in in Metrics to start the trend.'}</p>
               )}
               {g.type === 'own-words' && (
                 <p>Your numbers: {workouts.length} workouts finished, {checkins.length} check-ins.</p>
@@ -153,65 +150,10 @@ export default function Progress({ ctx }: { ctx: Ctx }) {
         })}
       </div>
 
-      <div className="card">
-        <h3>Weight loss, the steady way</h3>
-        <p>Do not live on the scale. Weight swings a few pounds day to day with water, food, and sleep, and muscle gain can hide fat loss. Track measurements, photos, how clothes fit, and strength first.</p>
-        <label htmlFor="p-waist">Waist (inches)</label>
-        <input id="p-waist" inputMode="decimal" value={waist} onChange={(e) => setWaist(e.target.value)} placeholder="e.g. 38.5" />
-        <label htmlFor="p-clothes">How do clothes fit?</label>
-        <input id="p-clothes" value={clothes} onChange={(e) => setClothes(e.target.value)} placeholder="e.g. Belt one notch tighter" />
-        <button
-          className="primary"
-          style={{ marginTop: 10 }}
-          onClick={() => {
-            if (!waist && !clothes) return;
-            update((d) => {
-              d.measurements.push({ id: `m${Date.now()}`, date: new Date().toISOString(), waist: waist || undefined, clothesFit: clothes });
-            });
-            toast('Measurement logged.');
-            setWaist('');
-            setClothes('');
-          }}
-        >
-          Log measurement
-        </button>
-        <label htmlFor="p-weigh" style={{ marginTop: 14 }}>Optional once-a-week weigh-in (lb, same day and time)</label>
-        <input id="p-weigh" inputMode="decimal" value={weigh} onChange={(e) => { setWeigh(e.target.value); setWeighMsg(''); }} placeholder="e.g. 188" />
-        <button
-          style={{ marginTop: 8 }}
-          onClick={() => {
-            if (!weigh || Number.isNaN(Number(weigh)) || Number(weigh) <= 0) {
-              setWeighMsg('Enter your weight in pounds.');
-              return;
-            }
-            // Once a week, same day and time: a weigh-in in the last 6 days
-            // is already this week's one.
-            const sixDaysAgo = Date.now() - 6 * 24 * 60 * 60 * 1000;
-            const recent = measurements.some(
-              (m) => (m as { kind?: string }).kind === 'weigh-in' && new Date(String(m.date)).getTime() >= sixDaysAgo,
-            );
-            if (recent) {
-              setWeighMsg('You already weighed in this week. Same day and time next week, and only the trend over weeks matters.');
-              return;
-            }
-            update((d) => {
-              d.measurements.push({ id: `m${Date.now()}`, date: new Date().toISOString(), weight: Number(weigh), kind: 'weigh-in' });
-            });
-            setWeigh('');
-            setWeighMsg('Weigh-in logged.');
-            toast('Weigh-in logged.');
-          }}
-        >
-          Log weigh-in
-        </button>
-        {weighMsg && <p className={weighMsg.startsWith('You already') || weighMsg.startsWith('Enter') ? 'error' : 'ok'}>{weighMsg}</p>}
-        {measurements.slice(-5).reverse().map((m) => (
-          <p key={m.id as string} className="small">
-            {new Date(String(m.date)).toLocaleDateString()}: {m.waist ? `waist ${m.waist} in` : ''} {m.weight ? `weight ${m.weight} lb` : ''} {m.clothesFit ? `, ${m.clothesFit}` : ''}
-          </p>
-        ))}
-        <p className="small muted">Progress photos are private to you and Derek. Upload one below and it shows in Coach.</p>
-      </div>
+      {/* Metrics tracker: one metric at a time, with a trend line.
+          Measurements (waist, chest, hips, arms, thighs) and the once-a-week
+          weigh-in are logged here. The old waist-only form lived here. */}
+      <Metrics doc={doc} update={update} toast={toast} />
 
       <div className="card">
         <h3>Log cardio</h3>
