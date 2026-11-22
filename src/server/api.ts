@@ -250,7 +250,19 @@ async function getProfileDoc(
   if (rows.length === 0) {
     return null;
   }
-  return rows[0].data ?? {};
+  const stored = rows[0].data ?? {};
+  // Legacy rows were stored wrapped as { data: profile }. Unwrap them.
+  if (
+    stored &&
+    typeof stored === 'object' &&
+    'data' in stored &&
+    typeof (stored as Record<string, unknown>).data === 'object' &&
+    (stored as Record<string, unknown>).data !== null &&
+    !('assessmentDone' in stored)
+  ) {
+    return (stored as Record<string, unknown>).data as Record<string, unknown>;
+  }
+  return stored;
 }
 
 async function saveProfileDoc(
@@ -490,7 +502,7 @@ app.get("/api/profile", async (c) => {
     return c.json({ error: "You are not signed in." }, 401);
   }
   const doc = await getProfileDoc(db, user.id);
-  return c.json(doc ?? {});
+  return c.json({ data: doc ?? {} });
 });
 
 app.put("/api/profile", async (c) => {
@@ -498,7 +510,12 @@ app.put("/api/profile", async (c) => {
   if (!body) {
     return c.json({ error: "Profile must be an object." }, 400);
   }
-  const text = JSON.stringify(body);
+  // Client sends { data: profile }. Store the profile itself, not the wrapper.
+  const profile =
+    body.data && typeof body.data === 'object' && !Array.isArray(body.data)
+      ? (body.data as Record<string, unknown>)
+      : body;
+  const text = JSON.stringify(profile);
   if (text.length > PROFILE_MAX_BYTES) {
     return c.json({ error: "Profile is too large." }, 400);
   }

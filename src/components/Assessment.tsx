@@ -27,6 +27,7 @@ export default function Assessment({ ctx }: { ctx: Ctx }) {
     doc.equipment && doc.equipment.length > 0 ? doc.equipment : [...DEFAULT_EQUIPMENT],
   );
   const [done, setDone] = useState(false);
+  const [retaking, setRetaking] = useState(false);
 
   const toggle = (arr: string[], v: string, set: (a: string[]) => void) =>
     set(arr.includes(v) ? arr.filter((x) => x !== v) : [...arr, v]);
@@ -66,9 +67,10 @@ export default function Assessment({ ctx }: { ctx: Ctx }) {
       d.xp += 60;
     });
     setDone(true);
+    setRetaking(false);
   }
 
-  if (result && (done || doc.assessmentDone)) {
+  if (result && (done || doc.assessmentDone) && !retaking) {
     const templates = CES_TEMPLATES.filter((t) => result.findings.includes(t.id));
     return (
       <div>
@@ -80,7 +82,7 @@ export default function Assessment({ ctx }: { ctx: Ctx }) {
           {result.findings.length > 0 && <p>Movement patterns to work on: {result.findings.map((f) => FINDING_LABELS.find((x) => x.id === f)?.label).join(', ')}.</p>}
           <p>Balance baseline: {result.balanceLeftSec}s left, {result.balanceRightSec}s right. This is a general balance check, not a NASM test.</p>
           <p>Your equipment: {(doc.equipment && doc.equipment.length > 0 ? doc.equipment : DEFAULT_EQUIPMENT).join(', ')}. Workouts swap out moves you cannot do with this gear.</p>
-          <button className="primary" onClick={() => { setDone(false); setStep(0); }}>Retake the assessment</button>
+          <button className="primary" onClick={() => { setDone(false); setRetaking(true); setStep(0); }}>Retake the assessment</button>
         </div>
         {templates.map((t) => (
           <details className="card" key={t.id}>
