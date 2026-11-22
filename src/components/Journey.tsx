@@ -48,6 +48,69 @@ export default function Journey({ ctx }: { ctx: Ctx }) {
       </div>
 
       <div className="card gold-frame">
+        <h2>Combat</h2>
+        <p>A boss round is a practice fight at the end of a land, Weeks 4, 8, and 12. You attack with your class spells, and each spell costs mana. Win the round, do the retest, and the next land opens. Bosses are challenges you beat, not friends.</p>
+        <p className="small muted">Mana: {doc.mana}/10. Mana refills daily, and good sleep and check-ins add more. Spells never block a workout, quest, check-in, or retest. Pick a boss, then use a spell. The bar drops with every hit.</p>
+        {BOSS_ROUNDS.map((r) => {
+          const hp = hpOf(r);
+          const locked = phase < r.unlockPhase;
+          return (
+            <div className="creature" key={r.id} style={{ margin: '12px 0' }}>
+              <div className="avatar" aria-hidden><BossAvatar id={BOSS_AVATAR[r.id]} /></div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <button
+                  onClick={() => setSelectedBoss(r.id)}
+                  disabled={locked}
+                  style={selectedBoss === r.id ? { background: '#124571', color: '#fff' } : {}}
+                >
+                  {r.name} · {r.land}
+                </button>
+                <div className="progress-bar boss-bar" style={{ marginTop: 8 }}>
+                  <div style={{ width: `${(hp / r.maxHp) * 100}%` }} />
+                </div>
+                <p className="small" style={{ margin: '4px 0 0' }}>
+                  {locked
+                    ? `${r.maxHp} HP · Locked until your Week ${r.week - 4} retest.`
+                    : hp <= 0
+                      ? 'Beaten. You move on to the next land.'
+                      : `${hp} of ${r.maxHp} HP`}
+                </p>
+              </div>
+            </div>
+          );
+        })}
+        <p className="small"><strong>Attacking:</strong> {boss.name}. {bossBeaten ? 'Already beaten.' : bossUnlocked ? `${bossHp} of ${boss.maxHp} HP left.` : `${boss.maxHp} HP · Locked until your Week ${boss.week - 4} retest.`}</p>
+        <div className="row">
+          {mySpells.map((s) => (
+            <button
+              key={s.id}
+              disabled={doc.mana < s.cost || bossBeaten || !bossUnlocked}
+              onClick={() => {
+                if (!bossUnlocked || bossBeaten) return;
+                const emberBonus = met.has('ember');
+                const newHp = Math.max(0, bossHp - s.damage);
+                update((d) => {
+                  d.mana = Math.max(0, d.mana - s.cost);
+                  d.xp += emberBonus ? 10 : 5;
+                  d.bossHp = { ...(d.bossHp || {}), [boss.id]: newHp };
+                });
+                setBossHit(
+                  newHp === 0
+                    ? `${boss.name} beaten. You move on to the next land.`
+                    : `${s.name} dealt ${s.damage} damage. Boss took ${s.damage} damage, ${newHp} of ${boss.maxHp} HP left.${emberBonus ? ' Ember cheers you on (+5 XP).' : ''}`,
+                );
+              }}
+            >
+              {s.name} ({s.cost} mana)
+            </button>
+          ))}
+        </div>
+        {bossHit && <p className="ok">{bossHit}</p>}
+        <p className="small muted">Your class: {doc.guardian?.classId || 'not picked yet'}. {CLASSES.find((c) => c.id === doc.guardian?.classId)?.description || ''}</p>
+      </div>
+
+
+      <div className="card gold-frame">
         <h3>Your guardian</h3>
         <GuardianAvatar guardian={doc.guardian} level={levelForXp(doc.xp)} size="medium" background={phase >= 3 ? 'peaks' : phase >= 2 ? 'shores' : 'forest'} />
         <p className="small muted" style={{ textAlign: 'center' }}>
@@ -112,64 +175,6 @@ export default function Journey({ ctx }: { ctx: Ctx }) {
             </div>
           </div>
         ))}
-        <h3 style={{ marginTop: 16 }}>Boss fight (practice)</h3>
-        <p>Mana: {doc.mana}/10. Mana refills daily, and good sleep and check-ins add more. Spells never block a workout, quest, check-in, or retest. Pick a boss, then use a spell. The bar drops with every hit.</p>
-        {BOSS_ROUNDS.map((r) => {
-          const hp = hpOf(r);
-          const locked = phase < r.unlockPhase;
-          return (
-            <div className="creature" key={r.id} style={{ margin: '12px 0' }}>
-              <div className="avatar" aria-hidden><BossAvatar id={BOSS_AVATAR[r.id]} /></div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <button
-                  onClick={() => setSelectedBoss(r.id)}
-                  disabled={locked}
-                  style={selectedBoss === r.id ? { background: '#124571', color: '#fff' } : {}}
-                >
-                  {r.name} · {r.land}
-                </button>
-                <div className="progress-bar boss-bar" style={{ marginTop: 8 }}>
-                  <div style={{ width: `${(hp / r.maxHp) * 100}%` }} />
-                </div>
-                <p className="small" style={{ margin: '4px 0 0' }}>
-                  {locked
-                    ? `${r.maxHp} HP · Locked until your Week ${r.week - 4} retest.`
-                    : hp <= 0
-                      ? 'Beaten. You move on to the next land.'
-                      : `${hp} of ${r.maxHp} HP`}
-                </p>
-              </div>
-            </div>
-          );
-        })}
-        <p className="small"><strong>Attacking:</strong> {boss.name}. {bossBeaten ? 'Already beaten.' : bossUnlocked ? `${bossHp} of ${boss.maxHp} HP left.` : `${boss.maxHp} HP · Locked until your Week ${boss.week - 4} retest.`}</p>
-        <div className="row">
-          {mySpells.map((s) => (
-            <button
-              key={s.id}
-              disabled={doc.mana < s.cost || bossBeaten || !bossUnlocked}
-              onClick={() => {
-                if (!bossUnlocked || bossBeaten) return;
-                const emberBonus = met.has('ember');
-                const newHp = Math.max(0, bossHp - s.damage);
-                update((d) => {
-                  d.mana = Math.max(0, d.mana - s.cost);
-                  d.xp += emberBonus ? 10 : 5;
-                  d.bossHp = { ...(d.bossHp || {}), [boss.id]: newHp };
-                });
-                setBossHit(
-                  newHp === 0
-                    ? `${boss.name} beaten. You move on to the next land.`
-                    : `${s.name} dealt ${s.damage} damage. Boss took ${s.damage} damage, ${newHp} of ${boss.maxHp} HP left.${emberBonus ? ' Ember cheers you on (+5 XP).' : ''}`,
-                );
-              }}
-            >
-              {s.name} ({s.cost} mana)
-            </button>
-          ))}
-        </div>
-        {bossHit && <p className="ok">{bossHit}</p>}
-        <p className="small muted">Your class: {doc.guardian?.classId || 'not picked yet'}. {CLASSES.find((c) => c.id === doc.guardian?.classId)?.description || ''}</p>
       </div>
 
       <div className="card">

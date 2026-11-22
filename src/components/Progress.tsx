@@ -48,6 +48,7 @@ export default function Progress({ ctx }: { ctx: Ctx }) {
   const now = new Date();
   const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
   const trained = new Set(workouts.map((w) => new Date(String(w.date)).getDate()));
+  const restDays = new Set(doc.quests.filter((q) => (q as { kind?: string }).kind === 'rest-day').map((q) => new Date(String(q.date)).getDate()));
   const activeDays = new Set([
     ...workouts.map((w) => new Date(String(w.date)).toDateString()),
     ...checkins.map((w) => new Date(String(w.date)).toDateString()),
@@ -79,7 +80,9 @@ export default function Progress({ ctx }: { ctx: Ctx }) {
               key={day}
               style={{
                 width: 28, height: 28, display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                borderRadius: 8, background: trained.has(day) ? '#124571' : '#eef5fb', color: trained.has(day) ? '#fff' : '#124571',
+                borderRadius: 8,
+                background: trained.has(day) ? '#124571' : restDays.has(day) ? '#1e7a46' : '#eef5fb',
+                color: trained.has(day) || restDays.has(day) ? '#fff' : '#124571',
                 fontSize: 12,
               }}
             >
@@ -87,7 +90,7 @@ export default function Progress({ ctx }: { ctx: Ctx }) {
             </span>
           ))}
         </div>
-        <p className="small muted">Navy days are days you trained. {activeDays.size} active days in total logged.</p>
+        <p className="small muted">Navy days are days you trained, green days are active rest days. {activeDays.size} active days in total logged.</p>
       </div>
 
       <div className="card">
@@ -131,6 +134,7 @@ export default function Progress({ ctx }: { ctx: Ctx }) {
                 <p>Your numbers: {workouts.length} workouts finished, {checkins.length} check-ins.</p>
               )}
               {g.type === 'endurance' && <p>Cardio this week: {cardioTotal} min of the 150 to 300 target. Milestones at 150, then 200, then 300.</p>}
+              {g.type === 'eat-better' && <p>Your numbers: Nutrition is {doc.nutritionEnabled ? 'on' : 'off'}. {checkins.length} check-ins logged. Protein at most meals, whole foods most of the time, and eat until satisfied, about 80 percent full.</p>}
               {g.type === 'weight-loss' && <p>Weight loss, the steady way: measurements, photos, strength, and how clothes fit first. The scale is last, once a week, same day and time, and only the trend over weeks matters.</p>}
             </details>
           );
@@ -177,7 +181,7 @@ export default function Progress({ ctx }: { ctx: Ctx }) {
             {new Date(String(m.date)).toLocaleDateString()}: {m.waist ? `waist ${m.waist} in` : ''} {m.weight ? `weight ${m.weight} lb` : ''} {m.clothesFit ? `, ${m.clothesFit}` : ''}
           </p>
         ))}
-        <p className="small muted">Progress photos are private to you and Derek. In this version, note the date you took one in a check-in message to Derek.</p>
+        <p className="small muted">Progress photos are private to you and Derek. Upload one below and it shows in Coach.</p>
       </div>
 
       <div className="card">
