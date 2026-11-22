@@ -49,12 +49,12 @@ export default function Today({ ctx }: { ctx: Ctx }) {
 
   return (
     <div>
-      <div className="card gold-frame">
+      <div className="card gold-frame guardian-hero">
         <GuardianAvatar guardian={doc.guardian} level={level} size="large" />
         <p className="small muted" style={{ textAlign: 'center' }}>
           {doc.guardian ? `${doc.guardian.name} the ${doc.guardian.classId}` : 'Your guardian'} · Level {level} {titleForLevel(level)} · {doc.xp} XP
         </p>
-        <div className="progress-bar" aria-label={`Level ${level}, ${xpIntoLevel} of ${needForNext} XP to Level ${level + 1}`}>
+        <div className="progress-bar xp-glow" aria-label={`Level ${level}, ${xpIntoLevel} of ${needForNext} XP to Level ${level + 1}`}>
           <div style={{ width: `${xpPct}%` }} />
         </div>
         <p className="small muted" style={{ textAlign: 'center' }}>{xpIntoLevel} of {needForNext} XP to Level {level + 1}</p>
