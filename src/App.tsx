@@ -47,6 +47,7 @@ export default function App() {
   const [betaCode, setBetaCode] = useState('');
   const [betaMsg, setBetaMsg] = useState('');
   const [betaBusy, setBetaBusy] = useState(false);
+  const [confirmSignOut, setConfirmSignOut] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -226,18 +227,26 @@ export default function App() {
         )}
 
         <footer className="appfoot">
-          <button
-            onClick={() => {
-              if (window.confirm('Sign out? Your progress is saved to your account.')) {
-                api.logout();
-                clearLocal();
-                setAuth(null);
-                setDoc(defaultProfile());
-              }
-            }}
-          >
-            Sign out
-          </button>{' '}
+          {!confirmSignOut ? (
+            <button onClick={() => setConfirmSignOut(true)}>Sign out</button>
+          ) : (
+            <span>
+              Sign out? Your progress is saved to your account.{' '}
+              <button
+                className="primary"
+                onClick={() => {
+                  api.logout();
+                  clearLocal();
+                  setAuth(null);
+                  setDoc(defaultProfile());
+                  setConfirmSignOut(false);
+                }}
+              >
+                Yes, sign out
+              </button>{' '}
+              <button onClick={() => setConfirmSignOut(false)}>Cancel</button>
+            </span>
+          )}{' '}
           · Active Life Personal Training by Derek · Derek cannot fix, treat, diagnose, or cure pain.
         </footer>
 
