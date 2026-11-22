@@ -41,7 +41,7 @@ Other commands:
 ```bash
 npm run build    # tsc -b && vite build
 npm run preview  # vite preview
-npm run deploy   # wrangler pages deploy dist
+npm run deploy   # wrangler pages deploy dist --project-name active-life-quest (Pages only, never `wrangler deploy`)
 ```
 
 ## Database setup
@@ -55,18 +55,32 @@ The `ACTIVEBETA` row is seeded by the API on first redeem if the `beta_codes` ta
 
 ## Deploy to Cloudflare Pages
 
+> **Pages only, not a Worker.** This app must be a Cloudflare Pages
+> project. A Worker project gets a `*.workers.dev` address, has no
+> entrypoint in this repo, fails at the Deploying step with
+> `npx wrangler deploy`, and serves the Cloudflare "There is nothing
+> here yet" placeholder. Pages Functions in `functions/api/` only run
+> on Pages. See `DEPLOY.md` for the full plain-language steps.
+
 1. Push this repo to GitHub as `derhoff62/active-life-quest`.
-2. In Cloudflare, create a Pages project and connect that GitHub repo.
-3. Build command: `npm run build`
-4. Build output directory: `dist`
-5. Set these environment variables in Pages settings (production and preview):
+2. In Cloudflare, Workers & Pages > Create, and pick the **Pages**
+   option (in the current wizard it is a button near the bottom of the
+   Create page, not the Worker option at the top). If a Worker project
+   called `active-life-quest` already exists, delete it first.
+3. Connect that GitHub repo, branch `main`.
+4. Build command: `npm run build`
+5. Build output directory: `dist`
+6. Deploy command: **leave empty**. Do not use `npx wrangler deploy`.
+   A Pages project deploys `dist` itself.
+7. Set these environment variables in Pages settings (production and preview):
    - `DATABASE_URL`: Neon connection string
    - `SESSION_SECRET`: a long random string (set now, kept in reserve; sessions in v1 are opaque random ids stored in the database)
    - `COACH_PIN_HASH`: leave blank at first deploy. Derek sets the Coach PIN on first Coach sign-in, and the API stores its hash in the `settings` table.
    - `BETA_CODE`: `ACTIVEBETA`
    - `BETA_USES`: `25`
    - `BETA_EXPIRES`: `2027-02-19`
-6. Deploy. `GET /api/health` should return `{"ok": true}`. Any database endpoint without `DATABASE_URL` returns 503 with a plain message telling you to set it.
+8. Deploy. The live address must end in `.pages.dev`, never
+   `.workers.dev`. `GET /api/health` should return `{"ok": true}`. Any database endpoint without `DATABASE_URL` returns 503 with a plain message telling you to set it.
 
 ## PWA install on iPhone
 
