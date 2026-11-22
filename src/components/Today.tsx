@@ -190,13 +190,26 @@ export default function Today({ ctx }: { ctx: Ctx }) {
       </div>
 
       <div className="card">
-        <h3>Your helpers</h3>
-        {CREATURES.slice(0, 3).map((c) => (
-          <div className="creature" key={c.id} style={{ margin: '8px 0' }}>
-            <div className="avatar" aria-hidden>{c.kind === 'dragon' ? '🐉' : c.kind === 'elf' ? '🧝' : '🧙'}</div>
-            <p><strong>{c.name}</strong> ({c.kind}): {c.line}</p>
-          </div>
-        ))}
+        <h3>Your companions</h3>
+        <p className="small muted">People and animals you befriend along the road. Bosses are not companions.</p>
+        {CREATURES.map((c) => {
+          const avatar =
+            c.id === 'ash' ? '🐺'
+            : c.id === 'ember' ? '🐲'
+            : c.id === 'kaelith' ? '🐉'
+            : c.id === 'sylva' ? '🧝'
+            : c.id === 'bram' ? '🧔'
+            : c.id === 'tilda' ? '🧑‍🍳'
+            : c.id === 'pip' ? '🧙'
+            : c.id === 'hoot' ? '🦉'
+            : '✨';
+          return (
+            <div className="creature" key={c.id} style={{ margin: '8px 0' }}>
+              <div className="avatar" aria-hidden>{avatar}</div>
+              <p><strong>{c.name}</strong> ({c.kind}): {c.line}</p>
+            </div>
+          );
+        })}
         <button onClick={() => go('journey')}>Meet them all on Journey</button>
       </div>
 

@@ -1054,7 +1054,7 @@ export const CREATURES: Creature[] = [
     name: 'Kaelith',
     kind: 'Dragon',
     place: 'Week 12 final-round gate',
-    line: 'Kaelith guards the gate to the final round, not as a boss to beat, but as a guide who opens it once your retest is done.',
+    line: 'Kaelith is a dragon you befriend at the Week 12 gate. She is not a boss. She opens the gate once your retest is done.',
   },
   {
     id: 'tilda',
@@ -1077,6 +1077,20 @@ export const CREATURES: Creature[] = [
     place: 'Progress',
     line: 'Hoot watches from the rafters, counts your wins, and hoots softly every time you show up.',
   },
+  {
+    id: 'ash',
+    name: 'Ash',
+    kind: 'Dire wolf',
+    place: 'Journey',
+    line: 'Ash is a dire wolf you befriend by showing up steady, week after week. He walks beside you and guards the road while you train.',
+  },
+  {
+    id: 'ember',
+    name: 'Ember',
+    kind: 'Small dragon',
+    place: 'Journey',
+    line: 'Ember is a small friendly dragon you befriend after your first boss round. She is not a boss. She keeps your fire lit and cheers your wins.',
+  },
 ];
 
 // -------------------------------------------------------------------- STORY
@@ -1088,6 +1102,7 @@ export const STORY: { firstLine: string; expanded: string[] } = {
     'The road runs through three lands. Sapphire Forest comes first, green and quiet, where the Forest Castle stands. Then Crystal Shores, where the Lake Castle shines. Then Navy Peaks, where the Navy Castle waits at the top of the climb. Each land has its own monsters, and each monster guards a lesson.',
     'In Weeks 1 to 4, the guardian meets The Slump and the Stiff Hips Goblin. In Weeks 5 to 8, the Achy Knees Troll and the Tired Back Beast block the road. In Weeks 9 to 12, the Wobbly Balance Sprite dances on the mountain path. At the end of each stretch, in Week 4, Week 8, and Week 12, a boss round tests everything the guardian has learned.',
     'The monsters are challenges, not friends. When you beat a monster with steady work, it is done and you move on. The Slump clears. The goblin is gone. The troll stays behind you. The beast is beaten. The sprite is gone, and you stay standing. Every win is yours, and the road ahead is open.',
+    'Along the road you befriend people and animals: Bram, Sylva, Tilda, Pip, Hoot, Kaelith, Ash the dire wolf, and Ember the small dragon. They walk with you. The monsters do not.',
     'Mana is the fuel for your spells. You earn mana by finishing workouts, checking in, and beating boss rounds. Spend it on spells that fit your class, or save it for the big rounds. A guardian who rests well earns more than a guardian who grinds without sleep.',
     'The journey follows five phases, from slow and steady control to real strength and then power. Each phase unlocks new gear, new moves, and new ground. After Week 12, the retest shows how far you have come, and Week 13 starts a new loop. Nothing resets. The phases cycle back to 1, 2, or 3 based on your retest and your new goal, and the story keeps going with you in it.',
   ],

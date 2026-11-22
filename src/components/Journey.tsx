@@ -5,7 +5,7 @@ import { phaseForDoc, levelForXp } from '../lib/store';
 import GuardianAvatar from './GuardianAvatar';
 
 const AVATAR: Record<string, string> = {
-  Bram: '🧔', Sylva: '🧝', Kaelith: '🐉', Tilda: '🧑‍🍳', Pip: '🧙', Hoot: '🦉',
+  Bram: '🧔', Sylva: '🧝', Kaelith: '🐉', Tilda: '🧑‍🍳', Pip: '🧙', Hoot: '🦉', Ash: '🐺', Ember: '🐲',
   'The Slump': '😴', 'Stiff Hips Goblin': '👺', 'Achy Knees Troll': '🧌', 'Tired Back Beast': '🐻', 'Wobbly Balance Sprite': '🧚',
 };
 
@@ -57,7 +57,8 @@ export default function Journey({ ctx }: { ctx: Ctx }) {
       </div>
 
       <div className="card">
-        <h3>Meet the creatures</h3>
+        <h3>Your companions</h3>
+        <p className="small muted">People and animals you befriend along the road. Bosses are not companions. They are challenges you beat.</p>
         {CREATURES.map((c) => (
           <div className="creature" key={c.id} style={{ margin: '10px 0' }}>
             <div className="avatar" aria-hidden>{AVATAR[c.name] || '✨'}</div>
