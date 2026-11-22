@@ -16,14 +16,14 @@
 * { box-sizing: border-box; }
 html, body { margin: 0; padding: 0; }
 body {
-  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-family: 'Quest Sans', system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   background: var(--blue-light);
   color: var(--ink);
   line-height: 1.55;
   font-size: 16px;
 }
 body.large-text { font-size: 18px; }
-h1, h2, h3 { color: var(--navy); line-height: 1.25; margin: 0 0 8px; }
+h1, h2, h3 { font-family: 'Quest Display', 'Quest Sans', system-ui, sans-serif; color: var(--navy); line-height: 1.25; margin: 0 0 8px; }
 h1 { font-size: 1.6rem; }
 h2 { font-size: 1.25rem; }
 h3 { font-size: 1.05rem; }
