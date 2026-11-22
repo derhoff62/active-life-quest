@@ -198,15 +198,22 @@ export default function Today({ ctx }: { ctx: Ctx }) {
           ))}
         </div>
         <p className="small muted">Daily check-in is in the app: you complete your tasks in the app, no call. Live video call with Derek, 30 minutes, up to once a week. Pick 1, 2, 3, or 4 a month. You request times in the app, Derek confirms the time and sends the call link, or you schedule it outside the app. The app itself does not do the video call. Recorded video is not a check-in type. It is only for form-check clips, in the assessment and attached to a message about form.</p>
-        <label>How often do you want to check in with Derek?</label>
-        {doc.checkinMode === 'live-call' && <p className="small muted">Video check-ins are 30 minutes each, at most once a week. Pick 1, 2, 3, or 4 a month.</p>}
-        <div className="row">
-          {checkinFrequenciesForMode(doc.checkinMode).map(({ value: v, label }) => (
-            <button key={v} type="button" onClick={() => update((d) => { d.checkinFrequency = v; })} style={doc.checkinFrequency === v ? { background: '#124571', color: '#fff' } : {}}>
-              {label}
-            </button>
-          ))}
-        </div>
+        {doc.checkinMode === 'live-call' && (
+          <>
+            <label>How many video calls a month?</label>
+            <p className="small muted">Video check-ins are 30 minutes each, at most once a week. Pick 1, 2, 3, or 4 a month.</p>
+            <div className="row">
+              {checkinFrequenciesForMode(doc.checkinMode).map(({ value: v, label }) => (
+                <button key={v} type="button" onClick={() => update((d) => { d.checkinFrequency = v; })} style={doc.checkinFrequency === v ? { background: '#124571', color: '#fff' } : {}}>
+                  {label}
+                </button>
+              ))}
+            </div>
+          </>
+        )}
+        {doc.checkinMode === 'text' && (
+          <p className="small muted">Daily only. Your check-in is in the app every day. There is nothing else to pick for text check-ins.</p>
+        )}
         {showCheckin && (
           <div>
             <label>Energy (1 to 10): {energy}</label>

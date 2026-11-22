@@ -1160,7 +1160,7 @@ app.post("/api/coach/checkin-preference", async (c) => {
   if (!userId) {
     return c.json({ error: "Pick a check-in type." }, 400);
   }
-  const allowed = mode === "live-call" ? ["1x-month", "2x-month", "3x-month", "4x-month"] : ["daily", "3x-week", "weekly"];
+  const allowed = mode === "live-call" ? ["1x-month", "2x-month", "3x-month", "4x-month"] : ["daily"];
   const freq = allowed.includes(frequency) ? frequency : mode === "live-call" ? "1x-month" : "daily";
   const doc = await getProfileDoc(db, userId);
   if (!doc) {

@@ -285,18 +285,29 @@ export default function JourneyMap({
         })}
 
         {/* Companion markers where they are met. Kept at the far edges
-            (x 52 / 308) so they never overlap the centered land titles. */}
+            (x 52 / 308) so they never overlap the centered land titles.
+            The name pill sits below its dot, but if the dot falls in the
+            land's title band (top 72px of the land, where the title and
+            subtitle pills live) the name pill is pushed just below that
+            band. Bram and Sylva meet in Week 1, right in the Forest
+            title band, and their pills used to sit under the "Forest
+            Castle · Weeks 1 to 4" pill, covering its first and last
+            letters. The title pills are drawn last, so a name pill can
+            never paint over them, and the name pill can never be
+            painted over by them. */}
         {CREATURES.map((c, i) => {
           const isMet = met.has(c.id);
           const y = weekToY(c.meetWeek);
           const x = i % 2 === 0 ? 52 : 308;
+          const land = lands.find((l) => c.meetWeek >= l.from && c.meetWeek <= l.to) ?? lands[0];
+          const labelY = Math.max(y + 14, land.y + 72);
           return (
             <g key={c.id}>
               {isMet && <circle className="map-companion-glow" cx={x} cy={y} r="13" fill="#124571" opacity="0.25" />}
               <circle cx={x} cy={y} r="9" fill={isMet ? '#124571' : '#9aa5b1'} stroke="#fff" strokeWidth="2" />
               <text x={x} y={y + 3.5} textAnchor="middle" fontSize="10" fontWeight="700" fill="#fff">{isMet ? c.name[0] : '?'}</text>
               {isMet && (
-                <MapLabel x={x} y={y + 14} w={c.name.length * 8 + 24} h={18} fontSize={11}>
+                <MapLabel x={x} y={labelY} w={c.name.length * 8 + 24} h={18} fontSize={11}>
                   {c.name}
                 </MapLabel>
               )}

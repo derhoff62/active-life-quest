@@ -3,7 +3,7 @@ import type { Ctx } from '../App';
 import * as api from '../lib/api';
 import { CES_TEMPLATES } from '../lib/data';
 import type { ProfileDoc } from '../lib/store';
-import { checkinPreferenceText, checkinFrequenciesForMode, normalizeCheckinFrequency, phaseForDoc } from '../lib/store';
+import { checkinPreferenceText, checkinFrequenciesForMode, normalizeCheckinFrequency, normalizeProfile, phaseForDoc } from '../lib/store';
 
 interface ClientRow {
   id: string;
@@ -44,7 +44,7 @@ export default function Coach({ ctx }: { ctx: Ctx }) {
 
   useEffect(() => {
     if (unlocked && api.getMode() === 'server') {
-      api.coachClients().then((r) => setClients(r.clients)).catch(() => undefined);
+      api.coachClients().then((r) => setClients(r.clients.map((c) => ({ ...c, data: normalizeProfile(c.data) })))).catch(() => undefined);
       api.coachSettings().then(setBetaInfo).catch(() => undefined);
     }
   }, [unlocked]);
@@ -208,27 +208,35 @@ export default function Coach({ ctx }: { ctx: Ctx }) {
                 </button>
               ))}
             </div>
-            <label>How often</label>
-            <div className="row">
-              {checkinFrequenciesForMode(selected.data.checkinMode).map(({ value: v, label }) => (
-                <button
-                  key={v}
-                  type="button"
-                  onClick={async () => {
-                    try {
-                      if (api.getMode() === 'server') await api.coachSetCheckinPreference(selected.id, selected.data.checkinMode || 'text', v);
-                      const patch = (d: ProfileDoc) => ({ ...d, checkinFrequency: v });
-                      setClients((prev) => prev.map((cl) => (cl.id === selected.id ? { ...cl, data: patch(cl.data) } : cl)));
-                      setSelected((prev) => (prev ? { ...prev, data: patch(prev.data) } : prev));
-                      setPrefMsg('Check-in preference saved.');
-                    } catch { setPrefMsg('That could not be saved. Try again.'); }
-                  }}
-                  style={selected.data.checkinFrequency === v ? { background: '#124571', color: '#fff' } : {}}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
+            {selected.data.checkinMode === 'live-call' && (
+              <>
+                <label>How many video calls a month?</label>
+                <p className="small muted">Video check-ins are 30 minutes each, at most once a week. Pick 1, 2, 3, or 4 a month.</p>
+                <div className="row">
+                  {checkinFrequenciesForMode(selected.data.checkinMode).map(({ value: v, label }) => (
+                    <button
+                      key={v}
+                      type="button"
+                      onClick={async () => {
+                        try {
+                          if (api.getMode() === 'server') await api.coachSetCheckinPreference(selected.id, selected.data.checkinMode || 'text', v);
+                          const patch = (d: ProfileDoc) => ({ ...d, checkinFrequency: v });
+                          setClients((prev) => prev.map((cl) => (cl.id === selected.id ? { ...cl, data: patch(cl.data) } : cl)));
+                          setSelected((prev) => (prev ? { ...prev, data: patch(prev.data) } : prev));
+                          setPrefMsg('Check-in preference saved.');
+                        } catch { setPrefMsg('That could not be saved. Try again.'); }
+                      }}
+                      style={selected.data.checkinFrequency === v ? { background: '#124571', color: '#fff' } : {}}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+            {selected.data.checkinMode === 'text' && (
+              <p className="small muted">Daily only. The daily check-in is in the app every day. There is no other text frequency to pick.</p>
+            )}
             {prefMsg && <p className="ok">{prefMsg}</p>}
           </div>
 

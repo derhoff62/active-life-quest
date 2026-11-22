@@ -20,7 +20,7 @@ export default function Onboarding({ ctx }: { ctx: Ctx }) {
   const [why, setWhy] = useState('');
   const [equipment, setEquipment] = useState<string[]>([...DEFAULT_EQUIPMENT]);
   const [checkinMode, setCheckinMode] = useState<'text' | 'live-call'>('text');
-  const [checkinFrequency, setCheckinFrequency] = useState<'daily' | '3x-week' | 'weekly' | 'biweekly' | '1x-month' | '2x-month' | '3x-month' | '4x-month'>('daily');
+  const [checkinFrequency, setCheckinFrequency] = useState<'daily' | '1x-month' | '2x-month' | '3x-month' | '4x-month'>('daily');
 
   const EQUIP = EQUIPMENT_OPTIONS;
 
@@ -120,15 +120,22 @@ export default function Onboarding({ ctx }: { ctx: Ctx }) {
         ))}
       </div>
       <p className="small muted">Daily check-in is in the app: you complete your tasks in the app, no call. Live video call with Derek, 30 minutes, up to once a week. Pick 1, 2, 3, or 4 a month. You request times in the app, Derek confirms the time and sends the call link, or you schedule it outside the app. You can change this later on Today.</p>
-      <label>How often do you want to check in with Derek?</label>
-      {checkinMode === 'live-call' && <p className="small muted">Video check-ins are 30 minutes each, at most once a week. Pick 1, 2, 3, or 4 a month.</p>}
-      <div className="row">
-        {checkinFrequenciesForMode(checkinMode).map(({ value: v, label }) => (
-          <button key={v} type="button" onClick={() => setCheckinFrequency(v)} style={checkinFrequency === v ? { background: '#124571', color: '#fff' } : {}}>
-            {label}
-          </button>
-        ))}
-      </div>
+      {checkinMode === 'live-call' && (
+        <>
+          <label>How many video calls a month?</label>
+          <p className="small muted">Video check-ins are 30 minutes each, at most once a week. Pick 1, 2, 3, or 4 a month.</p>
+          <div className="row">
+            {checkinFrequenciesForMode(checkinMode).map(({ value: v, label }) => (
+              <button key={v} type="button" onClick={() => setCheckinFrequency(v)} style={checkinFrequency === v ? { background: '#124571', color: '#fff' } : {}}>
+                {label}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+      {checkinMode === 'text' && (
+        <p className="small muted">Daily only. Your check-in is in the app every day.</p>
+      )}
       <label>What equipment do you have?</label>
       <div className="equip-list">
         {EQUIP.map((e) => (

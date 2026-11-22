@@ -92,7 +92,7 @@ export interface ProfileDoc {
   calorieCalcEnabled: boolean;
   largeText: boolean;
   reminderTimes: { workout: string; checkin: string; streak: string };
-  checkinFrequency: 'daily' | '3x-week' | 'weekly' | 'biweekly' | '1x-month' | '2x-month' | '3x-month' | '4x-month';
+  checkinFrequency: 'daily' | '1x-month' | '2x-month' | '3x-month' | '4x-month';
   checkinMode: 'text' | 'live-call';
   trainingDays: number;
   dislikedExercises: string[];
@@ -208,6 +208,13 @@ export function normalizeProfile(raw: unknown): ProfileDoc {
   if (!out.focus || typeof out.focus !== 'object') out.focus = {};
   if (!out.cesStep || typeof out.cesStep !== 'object') out.cesStep = {};
   if (!out.guardian) out.guardian = null;
+  // A check-in pick saved by an older version can pair a live video call
+  // with a text frequency, or a text check-in with a weekly frequency.
+  // Text check-in is daily only, and video calls are 30 minutes, at most
+  // once a week, 1 to 4 times a month, so an invalid pick is reset here,
+  // on every load.
+  out.checkinMode = normalizeCheckinMode(out.checkinMode);
+  out.checkinFrequency = normalizeCheckinFrequency(out.checkinMode, out.checkinFrequency);
   if (typeof out.xp !== 'number') out.xp = 0;
   if (typeof out.mana !== 'number') out.mana = 10;
   if (typeof out.level !== 'number') out.level = 1;
@@ -265,9 +272,6 @@ export function checkinModeLabel(mode: string | undefined): string {
 }
 
 export function checkinFrequencyLabel(freq: string | undefined): string {
-  if (freq === '3x-week') return '3 times a week';
-  if (freq === 'weekly') return 'once a week';
-  if (freq === 'biweekly') return 'once every two weeks';
   if (freq === '1x-month') return '1 time a month';
   if (freq === '2x-month') return '2 times a month';
   if (freq === '3x-month') return '3 times a month';
@@ -275,13 +279,14 @@ export function checkinFrequencyLabel(freq: string | undefined): string {
   return 'daily';
 }
 
-/** Daily check-in is in the app: the client completes their tasks in the
- * app, then logs how it went. Text check-ins can be daily, 3 times a week,
- * or once a week. Live video calls with Derek are 30 minutes each, at most
- * once a week, and the client picks 1, 2, 3, or 4 a month. Recorded video
- * is NOT a check-in type: it stays only for form-check clips (assessment,
- * and attached to a message to Derek about form). */
-export type CheckinFrequency = 'daily' | '3x-week' | 'weekly' | 'biweekly' | '1x-month' | '2x-month' | '3x-month' | '4x-month';
+/** Daily check-in is in the app, every day: the client completes their
+ * tasks in the app, then logs how it went. Text check-in is daily only,
+ * there is no other text frequency to pick. Live video calls with Derek
+ * are 30 minutes each, at most once a week, and the client picks 1, 2, 3,
+ * or 4 a month. Recorded video is NOT a check-in type: it stays only for
+ * form-check clips (assessment, and attached to a message to Derek about
+ * form). */
+export type CheckinFrequency = 'daily' | '1x-month' | '2x-month' | '3x-month' | '4x-month';
 export function checkinFrequenciesForMode(mode: string | undefined): { value: CheckinFrequency; label: string }[] {
   if (mode === 'live-call') {
     return [
@@ -291,17 +296,15 @@ export function checkinFrequenciesForMode(mode: string | undefined): { value: Ch
       { value: '4x-month', label: '4 times a month' },
     ];
   }
-  return [
-    { value: 'daily', label: 'Daily' },
-    { value: '3x-week', label: '3 times a week' },
-    { value: 'weekly', label: 'Once a week' },
-  ];
+  // Text check-in is daily only. No frequency picker for text.
+  return [{ value: 'daily', label: 'Daily' }];
 }
 
 export function normalizeCheckinFrequency(mode: string | undefined, freq: string | undefined): CheckinFrequency {
+  if (mode !== 'live-call') return 'daily';
   const allowed = checkinFrequenciesForMode(mode).map((f) => f.value);
   if (freq && allowed.includes(freq as CheckinFrequency)) return freq as CheckinFrequency;
-  return mode === 'live-call' ? '1x-month' : 'daily';
+  return '1x-month';
 }
 
 export function checkinPreferenceText(doc: ProfileDoc): string {

@@ -76,32 +76,37 @@ html { scroll-padding-bottom: calc(150px + env(safe-area-inset-bottom)); }
    now: dark navy bold text on solid white cards with a visible border,
    never muted grey. Active tab is solid navy with white text, a gold
    border, and a gold dot. Thick navy top border and a strong shadow, so
-   the bar stands out from page content. */
+   the bar stands out from page content.
+   Grid, not flex-wrap: flex items refuse to shrink below their label
+   width, so only 5 fit per row and the second row grows wide and tall.
+   Six equal grid columns give 6 tabs on row 1 and 3 on row 2, every
+   button the same width and 52px tall. The gold dot is absolutely
+   positioned on the top edge, so it never adds height to the row. */
 .nav {
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 20;
   background: #fff; border-top: 3px solid var(--navy);
   box-shadow: 0 -6px 20px rgba(18, 69, 113, 0.25);
-  display: flex; flex-wrap: wrap; gap: 6px;
+  display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 6px;
   padding: 8px 8px calc(8px + env(safe-area-inset-bottom));
 }
 .nav button {
-  position: relative; border: 1.5px solid #b9cfe2; background: #fff; min-height: 52px;
-  flex: 1 1 calc(16.666% - 6px);
-  padding: 6px 2px 5px; font-size: 0.8rem; color: var(--navy);
+  position: relative; border: 1.5px solid #b9cfe2; background: #fff; min-height: 52px; min-width: 0;
+  padding: 5px 2px; font-size: 0.72rem; color: var(--navy);
   font-weight: 700; border-radius: 10px;
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;
 }
-.nav button .nav-icon { font-size: 1.1rem; line-height: 1; color: var(--blue); }
-.nav button .nav-label { line-height: 1.1; }
+.nav button .nav-icon { font-size: 1rem; line-height: 1; color: var(--blue); }
+.nav button .nav-label { line-height: 1.05; overflow-wrap: anywhere; text-align: center; }
 .nav button.active {
   background: linear-gradient(135deg, var(--navy), var(--blue));
   color: #fff; font-weight: 800; border: 2px solid var(--gold);
   box-shadow: 0 0 14px rgba(11, 85, 146, 0.45);
 }
 .nav button.active .nav-icon { color: var(--gold); }
-.nav button.active .nav-label::after {
-  content: ''; display: block; width: 8px; height: 8px; margin: 3px auto 0;
-  border-radius: 50%; background: var(--gold);
+.nav button.active::after {
+  content: ''; position: absolute; top: -6px; left: 50%; transform: translateX(-50%);
+  width: 10px; height: 10px; border-radius: 50%; background: var(--gold);
+  border: 2px solid #fff; box-shadow: 0 0 6px rgba(201, 162, 39, 0.8);
 }
 .nav button .badge {
   position: absolute; top: 4px; right: 6px;
