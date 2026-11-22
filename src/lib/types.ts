@@ -137,6 +137,7 @@ export type GoalType =
   | 'endurance'
   | 'consistency'
   | 'sleep'
+  | 'eat-better'
   | 'own-words';
 
 export interface Faq {

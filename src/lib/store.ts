@@ -403,8 +403,9 @@ export function awardBadges(doc: ProfileDoc): string[] {
     .reduce((s, c) => s + Number(c.minutes || 0), 0);
   const balanceBest = Math.max(doc.balanceBaseline?.left || 0, doc.balanceBaseline?.right || 0);
   const add = (id: string, ok: boolean) => { if (ok && !doc.badges.includes(id)) doc.badges.push(id); };
-  add('week1', workouts.length >= 1);
+  add('week-1-finished', workouts.length >= 1);
   add('three-in-a-row', workoutsWeek >= 3);
+  add('full-sequence-week', workoutsWeek >= 2 && workoutsWeek >= (doc.trainingDays || 3));
   add('two-to-three-strength', workoutsWeek >= 2 && workoutsWeek <= 3);
   add('150-club', cardioWeek >= 150);
   add('first-pr', prs.length >= 1);
@@ -414,7 +415,6 @@ export function awardBadges(doc: ProfileDoc): string[] {
   add('phase-2-finisher', phaseForDoc(doc) >= 3);
   add('phase-3-finisher', retests.some((r) => (r as { week?: number }).week === 12));
   add('three-day-checkin', checkins.length >= 3);
-  add('week-1-finished', workouts.length >= 2);
   return doc.badges;
 }
 

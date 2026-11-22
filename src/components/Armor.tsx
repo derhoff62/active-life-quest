@@ -90,7 +90,7 @@ export default function Armor({ ctx }: { ctx: Ctx }) {
   const earned = new Set(doc.armorEarned);
   const rarityEarned = new Set(doc.rarityEarned);
   const total = ARMOR.length;
-  const earnedCount = ARMOR.filter((a) => earned.has(a.id) || rarityEarned.has(a.id)).length + (doc.armorEarned.length ? 0 : 1);
+  const earnedCount = ARMOR.filter((a) => earned.has(a.id) || rarityEarned.has(a.id)).length;
   const next = ARMOR.find((a) => !earned.has(a.id) && !rarityEarned.has(a.id));
   const nextHidden = next && (next.tier === 'Legendary' || next.tier === 'Mythical');
   const [showClassPicker, setShowClassPicker] = useState(false);

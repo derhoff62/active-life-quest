@@ -1832,8 +1832,25 @@ export const GOAL_TYPES: GoalTypeInfo[] = [
   { id: 'endurance', label: 'Build endurance', measures: 'How long you can walk, hike, or ride without stopping.', nextMilestone: 'Walk 30 minutes without a break.' },
   { id: 'consistency', label: 'Stay consistent', measures: 'Workouts finished per week and check-in streaks.', nextMilestone: 'Finish 3 workouts in one week.' },
   { id: 'sleep', label: 'Sleep and recover better', measures: 'Sleep hours and morning energy on check-ins.', nextMilestone: 'Sleep 7 hours, 5 nights in a row.' },
+  { id: 'eat-better', label: 'Eat better', measures: 'Protein at most meals, whole foods most of the time, and eating until satisfied.', nextMilestone: 'Eat protein at most meals for a full week.' },
   { id: 'own-words', label: 'Something else, in my own words', measures: 'Whatever you write down, tracked your way.', nextMilestone: 'Write your goal and pick your first small step.' },
 ];
+
+// Goal finisher: a small optional add-on at the end of a workout, tied to
+// the client's main goal. Only on a workout day, only after the last move,
+// +5 XP, once per workout. It never moves the phase, the corrective order,
+// or the rest between strength days. Own-words goals have no finisher.
+export const GOAL_FINISHERS: Record<string, { name: string; text: string }> = {
+  'weight-loss': { name: 'Walk it off', text: '5-minute easy walk after the workout.' },
+  stronger: { name: 'Slow finish', text: 'One slow set of 5 bodyweight squats, easy pace.' },
+  'move-better': { name: 'Long stretch', text: '2 minutes stretching the tightest area from your warm-up.' },
+  balance: { name: 'Steady finish', text: '1-minute single-leg hold each side. Hold a chair if you need it.' },
+  cardio: { name: 'Easy walk', text: '5-minute easy walk after the workout.' },
+  endurance: { name: 'Easy walk', text: '5-minute easy walk after the workout.' },
+  consistency: { name: 'Plan tomorrow', text: 'Write down tomorrow’s workout time before you leave.' },
+  sleep: { name: 'Slow breathing', text: '2 minutes of slow breathing, in through the nose, out slow.' },
+  'eat-better': { name: 'Plan protein', text: 'Drink a glass of water and plan tomorrow’s protein.' },
+};
 
 // ------------------------------------------------------------------- PRICING
 

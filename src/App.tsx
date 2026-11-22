@@ -1,6 +1,6 @@
 import { useEffect, useState, Component, type ReactNode } from 'react';
 import type { ProfileDoc } from './lib/store';
-import { defaultProfile, loadLocal, saveLocal, clearLocal, loadLocalAuth, saveLocalAuth, hasFullAccess, levelForXp, titleForLevel , normalizeCheckinFrequency, normalizeProfile } from './lib/store';
+import { defaultProfile, loadLocal, saveLocal, clearLocal, loadLocalAuth, saveLocalAuth, hasFullAccess, levelForXp, titleForLevel , normalizeCheckinFrequency, normalizeProfile, refillMana, earnedArmorIds } from './lib/store';
 import * as api from './lib/api';
 import Auth from './components/Auth';
 import Onboarding from './components/Onboarding';
@@ -115,6 +115,14 @@ export default function App() {
     fixed.checkinFrequency = normalizeCheckinFrequency(fixed.checkinMode, fixed.checkinFrequency);
     fixed.lastActive = new Date().toISOString();
     fixed.level = levelForXp(fixed.xp);
+    // Mana refills to full once a day, and armor is always worked out from
+    // what the client has actually done, so earned gear shows as earned.
+    // Both used to never run, so mana never refilled and the vault always
+    // showed 1 of 30 earned.
+    refillMana(fixed);
+    const earned = earnedArmorIds(fixed);
+    fixed.armorEarned = earned;
+    fixed.rarityEarned = earned;
     setDoc(fixed);
     saveLocal(fixed);
     if (serverMode && auth) {

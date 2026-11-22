@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Ctx } from '../App';
-import { WORKOUTS, CORE_BALANCE_WORKOUT, REFERENCE_TRACKS, PHASES, PHASE_WEEKLY_SETS, daysForTime, splitForDays, CES_TEMPLATES, EQUIPMENT_NOTES, effectiveEquipment, resolveExercise, findExerciseByName, CLASS_WORKOUT_FOCUS, applyClassFocus } from '../lib/data';
+import { WORKOUTS, CORE_BALANCE_WORKOUT, REFERENCE_TRACKS, PHASES, PHASE_WEEKLY_SETS, daysForTime, splitForDays, CES_TEMPLATES, EQUIPMENT_NOTES, effectiveEquipment, resolveExercise, findExerciseByName, CLASS_WORKOUT_FOCUS, applyClassFocus, GOAL_FINISHERS } from '../lib/data';
 import { phaseForDoc, hasFullAccess, metCompanionIds, lastTimeFor, awardBadges } from '../lib/store';
 import type { Workout } from '../lib/types';
 
@@ -34,6 +34,7 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
   const [editId, setEditId] = useState<string | null>(null);
   const [editMinutes, setEditMinutes] = useState('');
   const [regressionPick, setRegressionPick] = useState<Record<string, string>>({});
+  const [finisherDone, setFinisherDone] = useState(false);
   const timerRef = useRef<number | null>(null);
 
   const phase = phaseForDoc(doc);
@@ -161,6 +162,7 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
     }
     setNotice('');
     setActiveId(w.id);
+    setFinisherDone(false);
     setStep(doc.sessions?.workoutId === w.id ? doc.sessions.step : 0);
     startedAt.current = Date.now();
     update((d) => {
@@ -181,7 +183,8 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
     if (met.has('ash') && workoutsThisWeek >= 1) { bonus += 5; bonusNames.push('Ash'); }
     if (met.has('rowan') && minutes >= active.minutes * 0.8) { bonus += 5; bonusNames.push('Rowan'); }
     // Personal records: heavier weight or more reps than the last time on
-    // the same move. Each new PR is +10 XP and shows on Progress.
+    // the same move. Each new PR is +10 XP and shows on Progress. A PR
+    // counts every time you beat your last logged weight, not just once.
     let prCount = 0;
     const prNames: string[] = [];
     for (const ex of active.exercises) {
@@ -190,8 +193,7 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
       const prev = lastTimeFor(doc, ex.id);
       const w = Number(entry.w);
       const prevW = prev ? Number(prev.w) : 0;
-      const already = doc.prs.some((pr) => pr.exercise === ex.name);
-      if (w > prevW && !already) {
+      if (w > prevW) {
         prCount += 1;
         prNames.push(ex.name);
       }
@@ -350,6 +352,30 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
               <input id={`r-${ex.id}`} inputMode="numeric" value={log[ex.id]?.r || ''} onChange={(e) => setLog((p) => ({ ...p, [ex.id]: { ...(p[ex.id] || { w: '', s: '', r: '' }), r: e.target.value } }))} placeholder={ex.reps} />
             </div>
           </div>
+          {isLast && (() => {
+            const finisher = GOAL_FINISHERS[doc.goals[0]?.type || ''];
+            if (!finisher) return null;
+            return (
+              <div className="card gold-frame" style={{ marginTop: 12 }}>
+                <h3 style={{ margin: '0 0 4px' }}>Goal finisher: {finisher.name} (+5 XP)</h3>
+                <p className="small">{finisher.text}</p>
+                <p className="small muted">For your goal ({doc.goals[0]?.label}). Only after the last move, only on a workout day. It never changes your phase, warm-up, or rest days.</p>
+                {finisherDone ? (
+                  <p className="small ok">Finisher done. +5 XP earned.</p>
+                ) : (
+                  <button
+                    className="primary"
+                    onClick={() => {
+                      update((d) => { d.xp += 5; });
+                      setFinisherDone(true);
+                    }}
+                  >
+                    I did the finisher (+5 XP)
+                  </button>
+                )}
+              </div>
+            );
+          })()}
           <div className="card" style={{ marginTop: 12 }}>
             <h3 style={{ textAlign: 'center' }}>Rest timer</h3>
             <div className="timer">{Math.floor(restLeft / 60)}:{String(restLeft % 60).padStart(2, '0')}</div>
