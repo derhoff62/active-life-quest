@@ -174,6 +174,9 @@ export default function Assessment({ ctx }: { ctx: Ctx }) {
 
   if (result && (done || doc.assessmentDone) && !retaking) {
     const templates = CES_TEMPLATES.filter((t) => result.findings.includes(t.id));
+    // Week 13 only pops up after the Week 12 retest, same as Today.
+    // A plan picked earlier still shows its saved line, but no pick buttons.
+    const week12Done = doc.retests.some((r) => (r as { week?: number }).week === 12);
     return (
       <div>
         <div className="card gold-frame">
@@ -258,9 +261,11 @@ export default function Assessment({ ctx }: { ctx: Ctx }) {
           </button>
           <p className="small muted">Targets: 10 seconds per side at Week 4, 20 at Week 8, 30 at Week 12.</p>
         </div>
+        {(week12Done || doc.week13Goal) && (
         <div className="card">
           <h3>Week 13: keep going</h3>
           <p className="small muted">After Week 12, pick where to go next. Nothing resets. Your guardian, gear, and XP stay.</p>
+          {week12Done && (
           <div className="row">
             {[1, 2, 3].map((ph) => (
               <button
@@ -277,8 +282,10 @@ export default function Assessment({ ctx }: { ctx: Ctx }) {
             ))}
             <button type="button" onClick={() => { update((d) => { d.week13Goal = 'Keep going in Phase 4 or 5'; }); setRetestMsg('Week 13 plan saved. Keep going in Phase 4 or 5.'); toast('Week 13 plan saved. Keep going in Phase 4 or 5.'); }}>Stay in Phase 4 or 5</button>
           </div>
+          )}
           {doc.week13Goal && <p className="small">Your Week 13 plan: {doc.week13Goal}</p>}
         </div>
+        )}
         {(doc.assessmentVideos || []).length > 0 && (
           <div className="card">
             <h3>Assessment videos you uploaded</h3>
