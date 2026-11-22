@@ -109,7 +109,8 @@ export default function App() {
   const save = (next: ProfileDoc) => {
     const fixed = normalizeProfile(next);
     // Migrate old check-in picks: recorded video was never a check-in type,
-    // and live video calls are 1 to 4 times a month, never weekly.
+    // and live video calls are 30 minutes, at most once a week, 1 to 4 times
+    // a month, never more often than weekly.
     if ((fixed.checkinMode as string) === 'recorded-video') fixed.checkinMode = 'text';
     fixed.checkinFrequency = normalizeCheckinFrequency(fixed.checkinMode, fixed.checkinFrequency);
     fixed.lastActive = new Date().toISOString();

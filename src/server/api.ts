@@ -1143,7 +1143,7 @@ app.post("/api/coach/pin", async (c) => {
 });
 
 // Coach-only: change a client's check-in mode and frequency. Live video
-// calls are 1 to 4 times a month, never weekly.
+// calls are 30 minutes each, at most once a week, 1 to 4 times a month.
 app.post("/api/coach/checkin-preference", async (c) => {
   const db = getDb(c);
   if (!db) {

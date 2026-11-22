@@ -119,9 +119,9 @@ export default function Onboarding({ ctx }: { ctx: Ctx }) {
           </button>
         ))}
       </div>
-      <p className="small muted">Live video call: you request times in the app, Derek confirms the time and sends the call link, or you schedule it outside the app. You can change this later on Today.</p>
+      <p className="small muted">Daily check-in is in the app: you complete your tasks in the app, no call. Live video call with Derek, 30 minutes, up to once a week. Pick 1, 2, 3, or 4 a month. You request times in the app, Derek confirms the time and sends the call link, or you schedule it outside the app. You can change this later on Today.</p>
       <label>How often do you want to check in with Derek?</label>
-      {checkinMode === 'live-call' && <p className="small muted">Live video calls are 1 to 4 times a month. Text or recorded video can be more often.</p>}
+      {checkinMode === 'live-call' && <p className="small muted">Video check-ins are 30 minutes each, at most once a week. Pick 1, 2, 3, or 4 a month.</p>}
       <div className="row">
         {checkinFrequenciesForMode(checkinMode).map(({ value: v, label }) => (
           <button key={v} type="button" onClick={() => setCheckinFrequency(v)} style={checkinFrequency === v ? { background: '#124571', color: '#fff' } : {}}>

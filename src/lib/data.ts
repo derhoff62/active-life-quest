@@ -1812,6 +1812,10 @@ export const FAQS: Faq[] = [
     a: 'No. Filming is optional, and there is always a Skip button that never blocks you from finishing. Videos help Derek see your form, but the assessment works fine without them.',
   },
   {
+    q: 'How do check-ins work?',
+    a: 'Your daily check-in is in the app. You complete your tasks in the app, then log how it went. You can also pick live video calls with Derek: 30 minutes each, at most once a week, 1, 2, 3, or 4 a month. You request times in the app, Derek confirms the time and sends the call link. The app itself does not do the video call.',
+  },
+  {
     q: 'How fast does Derek reply to check-ins?',
     a: 'Within one business day. If you check in on a weekend, expect a reply by the next business day.',
   },

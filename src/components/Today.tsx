@@ -187,6 +187,7 @@ export default function Today({ ctx }: { ctx: Ctx }) {
           <button onClick={() => setShowCheckin((v) => !v)}>{showCheckin ? 'Close' : 'Open'}</button>
         </div>
         <p className="muted small">Recovery score today: {rec}/100. Sleep 40, aches 25, energy 25, rest rhythm 10.</p>
+        <p className="small">Your daily check-in is in the app. Complete your tasks for the day, then log how it went here.</p>
         <p className="small"><strong>{checkinPreferenceText(doc)}</strong></p>
         <label>How do you want to check in with Derek?</label>
         <div className="row">
@@ -196,9 +197,9 @@ export default function Today({ ctx }: { ctx: Ctx }) {
             </button>
           ))}
         </div>
-        <p className="small muted">Live video call: you request times in the app, Derek confirms the time and sends the call link, or you schedule it outside the app. The app itself does not do the video call. Recorded video is not a check-in type. It is only for form-check clips, in the assessment and attached to a message about form.</p>
+        <p className="small muted">Daily check-in is in the app: you complete your tasks in the app, no call. Live video call with Derek, 30 minutes, up to once a week. Pick 1, 2, 3, or 4 a month. You request times in the app, Derek confirms the time and sends the call link, or you schedule it outside the app. The app itself does not do the video call. Recorded video is not a check-in type. It is only for form-check clips, in the assessment and attached to a message about form.</p>
         <label>How often do you want to check in with Derek?</label>
-        {doc.checkinMode === 'live-call' && <p className="small muted">Live video calls are 1 to 4 times a month. Text or recorded video can be more often.</p>}
+        {doc.checkinMode === 'live-call' && <p className="small muted">Video check-ins are 30 minutes each, at most once a week. Pick 1, 2, 3, or 4 a month.</p>}
         <div className="row">
           {checkinFrequenciesForMode(doc.checkinMode).map(({ value: v, label }) => (
             <button key={v} type="button" onClick={() => update((d) => { d.checkinFrequency = v; })} style={doc.checkinFrequency === v ? { background: '#124571', color: '#fff' } : {}}>
@@ -363,7 +364,7 @@ export default function Today({ ctx }: { ctx: Ctx }) {
 
       <div className="card">
         <h3>Book a video call check-in with Derek</h3>
-        <p className="small muted">A live video call, not a recording. The free assessment is 30 to 45 minutes. A check-in call is shorter. Derek replies within one business day to set a time and send the call link. The app itself does not do the video call.</p>
+        <p className="small muted">A live video call, not a recording. Each video check-in is 30 minutes, at most once a week. Derek replies within one business day to set a time and send the call link. The app itself does not do the video call.</p>
         <label htmlFor="call-when">Times that work for you</label>
         <input id="call-when" value={callWhen} onChange={(e) => setCallWhen(e.target.value)} placeholder="e.g. Tue or Thu morning, or any weekday after 5" />
         <label htmlFor="call-topic">What do you want to talk about?</label>

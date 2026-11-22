@@ -260,7 +260,7 @@ export function normalizeCheckinMode(mode: string | undefined): 'text' | 'live-c
 }
 
 export function checkinModeLabel(mode: string | undefined): string {
-  if (mode === 'live-call') return 'live video call';
+  if (mode === 'live-call') return 'live video call, 30 minutes';
   return 'text check-in in the app';
 }
 
@@ -275,10 +275,12 @@ export function checkinFrequencyLabel(freq: string | undefined): string {
   return 'daily';
 }
 
-/** Live video calls are 1 to 4 times a month. Text check-ins can be
- * daily, 3 times a week, or once a week. Recorded video is NOT a check-in
- * type: it stays only for form-check clips (assessment, and attached to a
- * message to Derek about form). */
+/** Daily check-in is in the app: the client completes their tasks in the
+ * app, then logs how it went. Text check-ins can be daily, 3 times a week,
+ * or once a week. Live video calls with Derek are 30 minutes each, at most
+ * once a week, and the client picks 1, 2, 3, or 4 a month. Recorded video
+ * is NOT a check-in type: it stays only for form-check clips (assessment,
+ * and attached to a message to Derek about form). */
 export type CheckinFrequency = 'daily' | '3x-week' | 'weekly' | 'biweekly' | '1x-month' | '2x-month' | '3x-month' | '4x-month';
 export function checkinFrequenciesForMode(mode: string | undefined): { value: CheckinFrequency; label: string }[] {
   if (mode === 'live-call') {

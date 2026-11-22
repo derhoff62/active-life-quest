@@ -137,7 +137,7 @@ export default function Coach({ ctx }: { ctx: Ctx }) {
           <p className="small"><strong>Check-in preference: {checkinPreferenceText(selected.data).replace('Your check-ins: ', '')}</strong></p>
           <div className="card">
             <h4 style={{ margin: '0 0 4px' }}>Change this client's check-ins</h4>
-            <p className="small muted">Live video calls are 1 to 4 times a month. Text or recorded video can be more often.</p>
+            <p className="small muted">Daily check-in is in the app, where the client completes their tasks. Live video calls are 30 minutes each, at most once a week. Pick 1, 2, 3, or 4 a month.</p>
             <label>Check-in type</label>
             <div className="row">
               {([['text', 'Text check-in in the app'], ['live-call', 'Live video call']] as const).map(([v, label]) => (
