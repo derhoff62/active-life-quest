@@ -982,6 +982,14 @@ export const CONTRAINDICATIONS: Contraindication[] = [
   },
 ];
 
+// Boss rounds: one practice fight per land, with real health that drops
+// when a spell lands. HP stays beaten once it hits 0.
+export const BOSS_ROUNDS: { id: string; week: number; name: string; land: string; maxHp: number; unlockPhase: number }[] = [
+  { id: 'boss-week-4', week: 4, name: 'Week 4 boss round', land: 'Sapphire Forest', maxHp: 100, unlockPhase: 1 },
+  { id: 'boss-week-8', week: 8, name: 'Week 8 boss round', land: 'Crystal Shores', maxHp: 150, unlockPhase: 2 },
+  { id: 'boss-week-12', week: 12, name: 'Week 12 boss round', land: 'Navy Peaks', maxHp: 200, unlockPhase: 3 },
+];
+
 // ---------------------------------------------------------------- MONSTERS
 
 export const MONSTERS: Monster[] = [
@@ -1042,6 +1050,7 @@ export const CREATURES: Creature[] = [
     place: 'Armor vault',
     line: 'Bram forges your armor, one piece at a time, and never lets you leave the forge with gear you have not earned.',
     meetWeek: 1,
+    effect: '+5 XP on your first workout each week.',
   },
   {
     id: 'sylva',
@@ -1050,6 +1059,7 @@ export const CREATURES: Creature[] = [
     place: 'Cardio and balance',
     line: 'Sylva knows every forest trail and every balance beam in the kingdom, and she walks them with you.',
     meetWeek: 1,
+    effect: '+5 XP when you log cardio.',
   },
   {
     id: 'kaelith',
@@ -1058,6 +1068,7 @@ export const CREATURES: Creature[] = [
     place: 'Week 12 final-round gate',
     line: 'Kaelith is a dragon you befriend at the Week 12 gate. She is not a boss. She opens the gate once your retest is done.',
     meetWeek: 12,
+    effect: 'Opens the Week 12 gate once your retest is done. No XP.',
   },
   {
     id: 'tilda',
@@ -1066,6 +1077,7 @@ export const CREATURES: Creature[] = [
     place: 'Nutrition',
     line: 'Tilda runs the inn kitchen, serves real food in honest portions, and always saves you a seat.',
     meetWeek: 5,
+    effect: '+5 XP when you log a rest day.',
   },
   {
     id: 'pip',
@@ -1074,6 +1086,7 @@ export const CREATURES: Creature[] = [
     place: 'Journey',
     line: 'Pip keeps your map, marks every step you take, and never lets you get lost on the road.',
     meetWeek: 5,
+    effect: 'Shows your next step clearly on Journey. No XP, just guidance.',
   },
   {
     id: 'hoot',
@@ -1082,6 +1095,7 @@ export const CREATURES: Creature[] = [
     place: 'Progress',
     line: 'Hoot watches from the rafters, counts your wins, and hoots softly every time you show up.',
     meetWeek: 9,
+    effect: '+5 XP when you check in.',
   },
   {
     id: 'ash',
@@ -1090,6 +1104,7 @@ export const CREATURES: Creature[] = [
     place: 'Journey',
     line: 'Ash is a dire wolf you befriend by showing up steady, week after week. He walks beside you and guards the road while you train.',
     meetWeek: 2,
+    effect: '+5 XP when you train two or more times in a week.',
   },
   {
     id: 'ember',
@@ -1098,6 +1113,7 @@ export const CREATURES: Creature[] = [
     place: 'Journey',
     line: 'Ember is a small friendly dragon you befriend after your first boss round. She is not a boss. She keeps your fire lit and cheers your wins.',
     meetWeek: 4,
+    effect: '+5 XP when you cast a spell in a boss round.',
   },
   {
     id: 'rowan',
@@ -1106,6 +1122,7 @@ export const CREATURES: Creature[] = [
     place: 'Journey',
     line: 'Rowan is a retired knight you befriend on the road. He walks beside you and shows you how to pace yourself, never rushing a set.',
     meetWeek: 6,
+    effect: '+5 XP when you finish a workout at a steady pace, not rushed.',
   },
   {
     id: 'mara',
@@ -1114,6 +1131,7 @@ export const CREATURES: Creature[] = [
     place: 'Recovery',
     line: 'Mara is a healer you befriend after a hard week. She helps you rest and recover, and reminds you that sleep counts as training.',
     meetWeek: 8,
+    effect: '+5 XP when you log sleep.',
   },
   {
     id: 'quill',
@@ -1122,6 +1140,7 @@ export const CREATURES: Creature[] = [
     place: 'Journey',
     line: 'Quill is a raven you befriend with a few crumbs and a kind word. He carries your messages to Derek and brings back the replies.',
     meetWeek: 7,
+    effect: '+5 XP when you message Derek.',
   },
   {
     id: 'miso',
@@ -1130,6 +1149,7 @@ export const CREATURES: Creature[] = [
     place: 'Rest days',
     line: 'Miso is a cat you befriend at the inn. She keeps you company on rest days and naps beside you while you stretch.',
     meetWeek: 3,
+    effect: '+5 XP when you log a rest day.',
   },
 ];
 

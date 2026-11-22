@@ -2,6 +2,7 @@
 // It is saved to the server (Neon profiles.data) when the API is available,
 // and always to localStorage so the app works offline and before deploy.
 import type { AssessmentResult, FindingId, GoalType } from './types';
+import { CREATURES } from './data';
 
 export interface GuardianState {
   name: string;
@@ -58,6 +59,7 @@ export interface ProfileDoc {
   photos: { id: string; date: string; note: string }[];
   quests: LogEntry[];
   retests: LogEntry[];
+  bossHp: Record<string, number>;
   balanceBaseline: { left: number; right: number } | null;
   messages: ClientMessage[];
   nudges: { id: string; text: string; date: string; read: boolean }[];
@@ -109,6 +111,7 @@ export function defaultProfile(email = '', displayName = ''): ProfileDoc {
     photos: [],
     quests: [],
     retests: [],
+    bossHp: {},
     balanceBaseline: null,
     messages: [],
     nudges: [],
@@ -168,6 +171,21 @@ export function fiberTarget(sex: string): string {
 
 export function phaseForDoc(doc: ProfileDoc): number {
   return doc.assessment?.startingPhase ?? 1;
+}
+
+// Current journey week, from retests done, or from the phase if no retest yet.
+// Companions are met gradually by this week, and companion effects only
+// apply once the companion is met. One place, so every tab agrees.
+export function currentWeekForDoc(doc: ProfileDoc): number {
+  const weeks = doc.retests.map((r) => (r as { week?: number }).week || 0);
+  const max = Math.max(0, ...weeks);
+  const phase = phaseForDoc(doc);
+  return max > 0 ? Math.min(12, max + 1) : phase >= 4 ? 12 : phase === 3 ? 9 : phase === 2 ? 5 : 1;
+}
+
+export function metCompanionIds(doc: ProfileDoc): Set<string> {
+  const week = currentWeekForDoc(doc);
+  return new Set(CREATURES.filter((c) => week >= c.meetWeek).map((c) => c.id));
 }
 
 export function hasFullAccess(doc: ProfileDoc): boolean {

@@ -1,12 +1,14 @@
 import { useState } from 'react';
 import type { Ctx } from '../App';
-import { PHASES, MONSTERS, CREATURES, STORY, SPELLS, CLASSES } from '../lib/data';
-import { phaseForDoc, levelForXp } from '../lib/store';
+import { PHASES, MONSTERS, CREATURES, STORY, SPELLS, CLASSES, BOSS_ROUNDS } from '../lib/data';
+import { phaseForDoc, levelForXp, metCompanionIds } from '../lib/store';
 import GuardianAvatar from './GuardianAvatar';
+import CompanionAvatar, { BossAvatar } from './CompanionAvatar';
 
-const AVATAR: Record<string, string> = {
-  Bram: '🧔', Sylva: '🧝', Kaelith: '🐉', Tilda: '🧑‍🍳', Pip: '🧙', Hoot: '🦉', Ash: '🐺', Ember: '🐲', Rowan: '🛡️', Mara: '💚', Quill: '🐦‍⬛', Miso: '🐱',
-  'The Slump': '😴', 'Stiff Hips Goblin': '👺', 'Achy Knees Troll': '🧌', 'Tired Back Beast': '🐻', 'Wobbly Balance Sprite': '🧚',
+const BOSS_AVATAR: Record<string, string> = {
+  'boss-week-4': 'the-slump',
+  'boss-week-8': 'achy-knees-troll',
+  'boss-week-12': 'wobbly-balance-sprite',
 };
 
 export default function Journey({ ctx }: { ctx: Ctx }) {
@@ -15,12 +17,17 @@ export default function Journey({ ctx }: { ctx: Ctx }) {
   const [bossHit, setBossHit] = useState('');
   const phase = phaseForDoc(doc);
   const mySpells = SPELLS.filter((s) => s.classId === 'any' || s.classId === doc.guardian?.classId);
-  // Companions are met gradually as the journey goes on, not all at once.
-  // Current week comes from retests done, or from the phase if no retest yet.
-  const retestWeeks = doc.retests.map((r) => (r as { week?: number }).week || 0);
-  const maxRetest = Math.max(0, ...retestWeeks);
-  const currentWeek = maxRetest > 0 ? Math.min(12, maxRetest + 1) : phase >= 4 ? 12 : phase === 3 ? 9 : phase === 2 ? 5 : 1;
-  const metCount = CREATURES.filter((c) => currentWeek >= c.meetWeek).length;
+  const met = metCompanionIds(doc);
+  const metCount = met.size;
+  // Boss health, stored on the profile so a beaten boss stays beaten.
+  const bossHpMap = doc.bossHp || {};
+  const hpOf = (r: (typeof BOSS_ROUNDS)[number]) => bossHpMap[r.id] ?? r.maxHp;
+  const firstOpen = BOSS_ROUNDS.find((r) => phase >= r.unlockPhase && hpOf(r) > 0) || BOSS_ROUNDS[0];
+  const [selectedBoss, setSelectedBoss] = useState(firstOpen.id);
+  const boss = BOSS_ROUNDS.find((r) => r.id === selectedBoss) || BOSS_ROUNDS[0];
+  const bossHp = hpOf(boss);
+  const bossBeaten = bossHp <= 0;
+  const bossUnlocked = phase >= boss.unlockPhase;
 
   return (
     <div>
@@ -66,19 +73,22 @@ export default function Journey({ ctx }: { ctx: Ctx }) {
         <h3>Your companions ({metCount} of {CREATURES.length} met)</h3>
         <p className="small muted">People and animals you befriend along the road, one at a time as you get further. Bosses are not companions. They are challenges you beat.</p>
         {CREATURES.map((c) => {
-          const met = currentWeek >= c.meetWeek;
-          if (!met) {
+          const isMet = met.has(c.id);
+          if (!isMet) {
             return (
               <div className="creature" key={c.id} style={{ margin: '10px 0', opacity: 0.7 }}>
-                <div className="avatar" aria-hidden>?</div>
+                <div className="avatar" aria-hidden><CompanionAvatar id="unknown" /></div>
                 <p><strong>???</strong> <span className="small muted">Someone you have not met yet. You meet them around Week {c.meetWeek}.</span></p>
               </div>
             );
           }
           return (
             <div className="creature" key={c.id} style={{ margin: '10px 0' }}>
-              <div className="avatar" aria-hidden>{AVATAR[c.name] || '✨'}</div>
-              <p><strong>{c.name}</strong> ({c.kind}, {c.place}): {c.line}</p>
+              <div className="avatar" aria-hidden><CompanionAvatar id={c.id} /></div>
+              <div>
+                <p><strong>{c.name}</strong> ({c.kind}, {c.place}): {c.line}</p>
+                <p className="small" style={{ margin: 0 }}><strong>Helps you:</strong> {c.effect}</p>
+              </div>
             </div>
           );
         })}
@@ -89,7 +99,7 @@ export default function Journey({ ctx }: { ctx: Ctx }) {
         <p className="small muted">Defeat a monster in a boss round and it is beaten. You move on to the next land. Consistency powers your attacks. Sleep and recovery raise your defense.</p>
         {MONSTERS.map((m) => (
           <div className="creature" key={m.id} style={{ margin: '10px 0' }}>
-            <div className="avatar" aria-hidden>{AVATAR[m.name] || '👾'}</div>
+            <div className="avatar" aria-hidden><BossAvatar id={m.id} /></div>
             <div>
               <p><strong>{m.name}</strong>: guards the {m.castle} in {m.land}, {m.weeks}. Boss round: {m.bossRound}.</p>
               <p className="small muted">{m.blurb}</p>
@@ -97,18 +107,55 @@ export default function Journey({ ctx }: { ctx: Ctx }) {
           </div>
         ))}
         <h3 style={{ marginTop: 16 }}>Boss fight (practice)</h3>
-        <p>Mana: {doc.mana}/10. Mana refills daily, and good sleep and check-ins add more. Spells never block a workout, quest, check-in, or retest.</p>
+        <p>Mana: {doc.mana}/10. Mana refills daily, and good sleep and check-ins add more. Spells never block a workout, quest, check-in, or retest. Pick a boss, then use a spell. The bar drops with every hit.</p>
+        {BOSS_ROUNDS.map((r) => {
+          const hp = hpOf(r);
+          const locked = phase < r.unlockPhase;
+          return (
+            <div className="creature" key={r.id} style={{ margin: '12px 0' }}>
+              <div className="avatar" aria-hidden><BossAvatar id={BOSS_AVATAR[r.id]} /></div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <button
+                  onClick={() => setSelectedBoss(r.id)}
+                  disabled={locked}
+                  style={selectedBoss === r.id ? { background: '#124571', color: '#fff' } : {}}
+                >
+                  {r.name} · {r.land}
+                </button>
+                <div className="progress-bar boss-bar" style={{ marginTop: 8 }}>
+                  <div style={{ width: `${(hp / r.maxHp) * 100}%` }} />
+                </div>
+                <p className="small" style={{ margin: '4px 0 0' }}>
+                  {locked
+                    ? `Locked until your Week ${r.week - 4} retest.`
+                    : hp <= 0
+                      ? 'Beaten. You move on to the next land.'
+                      : `${hp} of ${r.maxHp} HP`}
+                </p>
+              </div>
+            </div>
+          );
+        })}
+        <p className="small"><strong>Attacking:</strong> {boss.name}. {bossBeaten ? 'Already beaten.' : bossUnlocked ? `${bossHp} of ${boss.maxHp} HP left.` : 'Locked.'}</p>
         <div className="row">
           {mySpells.map((s) => (
             <button
               key={s.id}
-              disabled={doc.mana < s.cost}
+              disabled={doc.mana < s.cost || bossBeaten || !bossUnlocked}
               onClick={() => {
+                if (!bossUnlocked || bossBeaten) return;
+                const emberBonus = met.has('ember');
+                const newHp = Math.max(0, bossHp - s.damage);
                 update((d) => {
                   d.mana = Math.max(0, d.mana - s.cost);
-                  d.xp += 5;
+                  d.xp += emberBonus ? 10 : 5;
+                  d.bossHp = { ...(d.bossHp || {}), [boss.id]: newHp };
                 });
-                setBossHit(`${s.name} dealt ${s.damage} damage. Nice hit.`);
+                setBossHit(
+                  newHp === 0
+                    ? `${boss.name} beaten. You move on to the next land.`
+                    : `${s.name} dealt ${s.damage} damage. Boss took ${s.damage} damage, ${newHp} of ${boss.maxHp} HP left.${emberBonus ? ' Ember cheers you on (+5 XP).' : ''}`,
+                );
               }}
             >
               {s.name} ({s.cost} mana)

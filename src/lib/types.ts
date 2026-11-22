@@ -97,6 +97,7 @@ export interface Creature {
   place: string;
   line: string;
   meetWeek: number;
+  effect: string;
 }
 
 export interface Badge {

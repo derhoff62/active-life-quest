@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { Ctx } from '../App';
 import { GOAL_TYPES, BADGES } from '../lib/data';
-import { levelForXp, titleForLevel } from '../lib/store';
+import { levelForXp, titleForLevel, metCompanionIds } from '../lib/store';
 
 export default function Progress({ ctx }: { ctx: Ctx }) {
   const { doc, update } = ctx;
@@ -162,12 +162,12 @@ export default function Progress({ ctx }: { ctx: Ctx }) {
               if (!cardioMin) return;
               update((d) => {
                 d.cardio.push({ id: `k${Date.now()}`, date: new Date().toISOString(), minutes: Number(cardioMin), zone: 'Zone 2' });
-                d.xp += 10;
+                d.xp += metCompanionIds(doc).has('sylva') ? 15 : 10;
               });
               setCardioMin('');
             }}
           >
-            Log cardio (+10 XP)
+            Log cardio (+10 XP{metCompanionIds(doc).has('sylva') ? ', +5 from Sylva' : ''})
           </button>
         </div>
         <p className="small muted">Zone 2, easy enough to talk. High intensity counts double: log the doubled minutes.</p>

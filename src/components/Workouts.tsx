@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Ctx } from '../App';
 import { WORKOUTS, PHASES, CES_TEMPLATES, effectiveEquipment, resolveExercise } from '../lib/data';
-import { phaseForDoc, hasFullAccess } from '../lib/store';
+import { phaseForDoc, hasFullAccess, metCompanionIds } from '../lib/store';
 import type { Workout } from '../lib/types';
 
 export default function Workouts({ ctx }: { ctx: Ctx }) {
@@ -107,6 +107,15 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
   function completeWorkout(minutesOverride?: number) {
     if (!active) return;
     const minutes = minutesOverride ?? Math.max(1, Math.round((Date.now() - startedAt.current) / 60000));
+    // Companion bonuses, only if that companion is met. Small, +5 XP each.
+    const met = metCompanionIds(doc);
+    const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+    const workoutsThisWeek = doc.workouts.filter((w) => new Date(String(w.date)).getTime() >= weekAgo).length;
+    const bonusNames: string[] = [];
+    let bonus = 0;
+    if (met.has('bram') && workoutsThisWeek === 0) { bonus += 5; bonusNames.push('Bram'); }
+    if (met.has('ash') && workoutsThisWeek >= 1) { bonus += 5; bonusNames.push('Ash'); }
+    if (met.has('rowan') && minutes >= active.minutes * 0.8) { bonus += 5; bonusNames.push('Rowan'); }
     update((d) => {
       d.workouts.push({
         id: `w${Date.now()}`,
@@ -119,12 +128,12 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
       });
       d.sessions = null;
       d.lastWorkoutDate = new Date().toISOString().split('T')[0];
-      d.xp += 50;
+      d.xp += 50 + bonus;
       if (!d.badges.includes('week1') && d.workouts.length >= 1) d.badges.push('week1');
     });
     setActiveId(null);
     setLog({});
-    setNotice(`Workout saved. ${minutes} minutes, +50 XP.`);
+    setNotice(`Workout saved. ${minutes} minutes, +${50 + bonus} XP.${bonusNames.length ? ` Includes +5 XP from ${bonusNames.join(' and ')}.` : ''}`);
   }
 
   if (active) {
@@ -282,6 +291,23 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
           <div>
             <p><strong>Today is an active rest day.</strong> You trained yesterday. Take 1 to 2 rest days between strength days.</p>
             <p className="small muted">Rest well today: a gentle walk, your 2-minute balance hold, and your stretches. No strength workout today. The gym gives the stimulus, recovery builds on it.</p>
+            <button
+              onClick={() => {
+                const m = metCompanionIds(doc);
+                let xp = 5;
+                const names: string[] = [];
+                if (m.has('tilda')) { xp += 5; names.push('Tilda'); }
+                if (m.has('miso')) { xp += 5; names.push('Miso'); }
+                update((d) => {
+                  d.quests.push({ id: `q${Date.now()}`, date: new Date().toISOString(), kind: 'rest-day' });
+                  d.xp += xp;
+                });
+                setNotice(`Rest day logged. +${xp} XP.${names.length ? ` Includes +5 XP from ${names.join(' and ')}.` : ''}`);
+              }}
+            >
+              Log my rest day (+5 XP)
+            </button>
+            {notice && <p className="notice" style={{ marginTop: 8 }}>{notice}</p>}
           </div>
         )}
         {doc.assessmentDone && !trainedYesterday && best && (

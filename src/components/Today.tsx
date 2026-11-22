@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { Ctx } from '../App';
 import { PHASES, WORKOUTS, WEEK13, CLASS_GOOD_FOR } from '../lib/data';
-import { phaseForDoc, hasFullAccess, recoveryScore, levelForXp, titleForLevel } from '../lib/store';
+import { phaseForDoc, hasFullAccess, recoveryScore, levelForXp, titleForLevel, metCompanionIds } from '../lib/store';
 import GuardianAvatar from './GuardianAvatar';
 
 export default function Today({ ctx }: { ctx: Ctx }) {
@@ -18,7 +18,7 @@ export default function Today({ ctx }: { ctx: Ctx }) {
   const phase = phaseForDoc(doc);
   const phaseInfo = PHASES.find((p) => p.phase === phase);
   const full = hasFullAccess(doc);
-  const nextWorkout = WORKOUTS.find((w) => w.id === 'w1_first') || WORKOUTS.find((w) => w.phase === phase);
+  const nextWorkout = WORKOUTS.find((w) => w.id === 'day1-first') || WORKOUTS.find((w) => w.phase === phase);
   const unfinished = doc.sessions;
   const week12Done = doc.retests.some((r) => (r as { week?: number }).week === 12);
   const lastSleep = doc.sleep[doc.sleep.length - 1] as { hours?: number } | undefined;
@@ -33,8 +33,11 @@ export default function Today({ ctx }: { ctx: Ctx }) {
   needForNext = 100 + (level - 1) * 25;
   const xpPct = Math.min(100, Math.max(0, (xpIntoLevel / needForNext) * 100));
 
+  const met = metCompanionIds(doc);
+
   function sendMessage() {
     if (!msgBody.trim()) return;
+    const quillBonus = met.has('quill');
     update((d) => {
       d.messages.unshift({
         id: `m${Date.now()}`,
@@ -42,7 +45,7 @@ export default function Today({ ctx }: { ctx: Ctx }) {
         body: msgBody.trim(),
         date: new Date().toISOString(),
       });
-      d.xp += 5;
+      d.xp += quillBonus ? 10 : 5;
     });
     setMsgBody('');
   }
@@ -130,13 +133,13 @@ export default function Today({ ctx }: { ctx: Ctx }) {
               onClick={() => {
                 update((d) => {
                   d.checkins.push({ id: `c${Date.now()}`, date: new Date().toISOString(), energy, sleepHours: sleepH, soreness, note: checkinNote });
-                  d.xp += 10;
+                  d.xp += met.has('hoot') ? 15 : 10;
                 });
                 setCheckinNote('');
                 setShowCheckin(false);
               }}
             >
-              Log check-in (+10 XP)
+              Log check-in (+10 XP{met.has('hoot') ? ', +5 from Hoot' : ''})
             </button>
           </div>
         )}
@@ -158,12 +161,12 @@ export default function Today({ ctx }: { ctx: Ctx }) {
               onClick={() => {
                 update((d) => {
                   d.sleep.push({ id: `s${Date.now()}`, date: new Date().toISOString(), hours: sleepH });
-                  d.xp += 5;
+                  d.xp += met.has('mara') ? 10 : 5;
                 });
                 setShowSleep(false);
               }}
             >
-              Log sleep (+5 XP)
+              Log sleep (+5 XP{met.has('mara') ? ', +5 from Mara' : ''})
             </button>
           </div>
         )}
@@ -181,6 +184,7 @@ export default function Today({ ctx }: { ctx: Ctx }) {
         <button className="primary" style={{ marginTop: 10 }} onClick={sendMessage}>
           {msgMode === 'question' ? 'Send question' : 'Send message'}
         </button>
+        {met.has('quill') && <p className="small muted">Quill carries your message to Derek (+5 XP).</p>}
         {doc.messages.slice(0, 5).map((m) => (
           <div key={m.id} style={{ borderTop: '1px solid #d7e3ee', padding: '8px 0' }}>
             <p><strong>{m.kind === 'question' ? 'Question' : 'Message'}:</strong> {m.body}</p>
