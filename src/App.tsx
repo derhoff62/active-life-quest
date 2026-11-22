@@ -43,6 +43,10 @@ export default function App() {
   const [tab, setTab] = useState<Tab>('today');
   const [serverMode, setServerMode] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [showBeta, setShowBeta] = useState(false);
+  const [betaCode, setBetaCode] = useState('');
+  const [betaMsg, setBetaMsg] = useState('');
+  const [betaBusy, setBetaBusy] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -174,23 +178,50 @@ export default function App() {
               </button>
               <button
                 onClick={() => {
-                  const code = window.prompt('Enter your beta code from Derek:');
-                  if (!code) return;
-                  api.redeemBeta(code).then((r) => {
-                    if (r.ok) {
-                      update((d) => {
-                        d.betaRedeemed = true;
-                      });
-                      window.alert('Beta access unlocked. Welcome to the quest.');
-                    } else {
-                      window.alert(r.error || 'That code did not work.');
-                    }
-                  });
+                  setShowBeta((v) => !v);
+                  setBetaMsg('');
                 }}
               >
                 Have a code from Derek? Enter it here
               </button>
             </div>
+            {showBeta && (
+              <form
+                className="row"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  const code = betaCode.trim();
+                  if (!code) {
+                    setBetaMsg('Enter your beta code first.');
+                    return;
+                  }
+                  setBetaBusy(true);
+                  setBetaMsg('');
+                  api.redeemBeta(code).then((r) => {
+                    setBetaBusy(false);
+                    if (r.ok) {
+                      update((d) => {
+                        d.betaRedeemed = true;
+                      });
+                      setBetaMsg('Beta access unlocked. Welcome to the quest.');
+                      setShowBeta(false);
+                      setBetaCode('');
+                    } else {
+                      setBetaMsg(r.error || 'That code did not work.');
+                    }
+                  });
+                }}
+              >
+                <label>
+                  Beta code
+                  <input value={betaCode} onChange={(e) => setBetaCode(e.target.value)} placeholder="ACTIVEBETA" autoCapitalize="characters" />
+                </label>
+                <button className="primary" type="submit" disabled={betaBusy}>
+                  {betaBusy ? 'Checking...' : 'Unlock beta access'}
+                </button>
+              </form>
+            )}
+            {betaMsg && <p>{betaMsg}</p>}
           </div>
         )}
 
