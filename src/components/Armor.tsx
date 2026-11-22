@@ -3,7 +3,36 @@ import type { Ctx } from '../App';
 import { ARMOR, CLASSES, CLASS_GOOD_FOR, CLASS_WORKOUT_FOCUS, SPELLS } from '../lib/data';
 import type { ArmorPiece } from '../lib/types';
 import { levelForXp } from '../lib/store';
+import type { GuardianState } from '../lib/store';
+import type { ClassId } from '../lib/types';
 import GuardianAvatar from './GuardianAvatar';
+
+// Same color and gem options as onboarding, so a client can change after
+// signup what they picked (or skipped) at signup.
+const COLORS = ['Navy', 'Forest', 'Crimson', 'Gold', 'Teal'];
+const COLOR_HEX: Record<string, string> = {
+  Navy: '#124571',
+  Forest: '#1e7a46',
+  Crimson: '#a83232',
+  Gold: '#c9a227',
+  Teal: '#0e7a7a',
+};
+const GEMS = ['Sapphire', 'Ruby', 'Emerald', 'Topaz'];
+const GEM_HEX: Record<string, string> = {
+  Sapphire: '#2f6fd0',
+  Ruby: '#c22747',
+  Emerald: '#1e9e5a',
+  Topaz: '#e8a91c',
+};
+
+const DEFAULT_DRAFT: GuardianState = {
+  name: 'Brave Beginner',
+  classId: 'Guardian',
+  color: 'Navy',
+  gem: 'Sapphire',
+  cape: true,
+  look: 'Female',
+};
 
 // Small SVG emblem per piece, picked by name. No external images.
 function GearIcon({ piece }: { piece: ArmorPiece }) {
@@ -95,6 +124,24 @@ export default function Armor({ ctx }: { ctx: Ctx }) {
   const nextHidden = next && (next.tier === 'Legendary' || next.tier === 'Mythical');
   const [showClassPicker, setShowClassPicker] = useState(false);
   const [confirmClass, setConfirmClass] = useState<string | null>(null);
+  const [showCustomize, setShowCustomize] = useState(false);
+  const [draft, setDraft] = useState<GuardianState>(DEFAULT_DRAFT);
+  const [customizeMsg, setCustomizeMsg] = useState('');
+
+  const openCustomize = () => {
+    const g = doc.guardian;
+    setDraft({
+      name: g?.name || 'Brave Beginner',
+      classId: (g?.classId || 'Guardian') as ClassId,
+      color: g?.color || 'Navy',
+      gem: g?.gem || 'Sapphire',
+      cape: g?.cape ?? true,
+      look: g?.look || 'Female',
+    });
+    setCustomizeMsg('');
+    setShowCustomize(true);
+    setShowClassPicker(false);
+  };
 
   const byTier = (tier: string) => ARMOR.filter((a) => a.tier === tier && !a.set);
   const bySet = (set: string) => ARMOR.filter((a) => a.set === set);
@@ -120,6 +167,10 @@ export default function Armor({ ctx }: { ctx: Ctx }) {
                 {showClassPicker ? 'Close class picker' : 'Change class'}
               </button>
             )}
+            <button onClick={openCustomize}>
+              {showCustomize ? 'Close customize' : 'Customize guardian'}
+            </button>
+            {customizeMsg && <p className="small" style={{ color: '#1e7a46' }}>{customizeMsg}</p>}
             {showClassPicker && doc.guardian && CLASSES.map((c) => (
               <div key={c.id} style={{ borderTop: '1px solid #d7e3ee', padding: '10px 0', textAlign: 'left' }}>
                 <p>
@@ -166,6 +217,92 @@ export default function Armor({ ctx }: { ctx: Ctx }) {
           </div>
         </div>
       </div>
+
+      {showCustomize && (
+        <div className="card">
+          <h3>Customize guardian</h3>
+          <p className="small muted">Change how your guardian looks, any time. Your XP, level, armor, workouts, and progress stay the same. Changing class also changes spells, weapon, and workout focus, as above.</p>
+          <GuardianAvatar guardian={draft} level={levelForXp(doc.xp)} size="medium" label={`${draft.name.trim() || 'Your guardian'} the ${draft.classId} · Level ${levelForXp(doc.xp)}`} />
+          <label htmlFor="g-custom-name">Guardian name</label>
+          <input
+            id="g-custom-name"
+            value={draft.name}
+            onChange={(e) => setDraft((d) => ({ ...d, name: e.target.value }))}
+            placeholder="e.g. Brave Beginner"
+          />
+          <label htmlFor="g-custom-class">Class</label>
+          <select
+            id="g-custom-class"
+            value={draft.classId}
+            onChange={(e) => setDraft((d) => ({ ...d, classId: e.target.value as ClassId }))}
+          >
+            {CLASSES.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+          </select>
+          <p className="small">{CLASS_GOOD_FOR[draft.classId] || ''}</p>
+          <label>Guardian look</label>
+          <div className="row">
+            {(['Female', 'Male'] as const).map((l) => (
+              <button key={l} type="button" onClick={() => setDraft((d) => ({ ...d, look: l }))} style={draft.look === l ? { background: '#124571', color: '#fff' } : {}}>
+                {l}
+              </button>
+            ))}
+          </div>
+          <label>Color</label>
+          <div className="row">
+            {COLORS.map((c) => (
+              <button
+                key={c}
+                type="button"
+                onClick={() => setDraft((d) => ({ ...d, color: c }))}
+                style={draft.color === c ? { background: '#124571', color: '#fff', borderColor: '#c9a227', borderWidth: 2 } : {}}
+                aria-pressed={draft.color === c}
+              >
+                <span aria-hidden style={{ display: 'inline-block', width: 14, height: 14, borderRadius: '50%', background: COLOR_HEX[c], marginRight: 6, verticalAlign: 'middle', border: '1px solid #5b6b7a' }} />
+                {c}
+              </button>
+            ))}
+          </div>
+          <label>Gem</label>
+          <div className="row">
+            {GEMS.map((g) => (
+              <button
+                key={g}
+                type="button"
+                onClick={() => setDraft((d) => ({ ...d, gem: g }))}
+                style={draft.gem === g ? { background: '#124571', color: '#fff', borderColor: '#c9a227', borderWidth: 2 } : {}}
+                aria-pressed={draft.gem === g}
+              >
+                <span aria-hidden style={{ display: 'inline-block', width: 14, height: 14, borderRadius: '50%', background: GEM_HEX[g], marginRight: 6, verticalAlign: 'middle', border: '1px solid #5b6b7a' }} />
+                {g}
+              </button>
+            ))}
+          </div>
+          <label style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+            <input type="checkbox" checked={draft.cape} onChange={(e) => setDraft((d) => ({ ...d, cape: e.target.checked }))} style={{ width: 'auto', minHeight: 0 }} /> Cape
+          </label>
+          {doc.guardian && draft.classId !== doc.guardian.classId && (
+            <p className="small">Switching to {draft.classId} changes your spells, class weapon, and workout focus. Your XP, level, and armor stay.</p>
+          )}
+          <div className="row" style={{ marginTop: 12 }}>
+            <button
+              className="primary"
+              disabled={!draft.name.trim()}
+              onClick={() => {
+                const name = draft.name.trim();
+                update((d) => {
+                  d.guardian = { ...draft, name };
+                  d.guardianPicked = true;
+                });
+                setShowCustomize(false);
+                setCustomizeMsg(`Guardian updated. ${name} is ready.`);
+              }}
+            >
+              Save guardian
+            </button>
+            <button onClick={() => { setShowCustomize(false); setCustomizeMsg(''); }}>Cancel</button>
+          </div>
+        </div>
+      )}
 
       <div className="card">
         <h3>Spells and abilities</h3>
