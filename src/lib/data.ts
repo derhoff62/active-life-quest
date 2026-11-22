@@ -699,7 +699,7 @@ export function resolveExercise(ex: Exercise, equipment: string[] | undefined | 
 }
 
 // ---------------------------------------------------------- CES TEMPLATES
-// NASM corrective structure for each impairment: Inhibit (SMR, hold 30-60
+// Corrective structure for each impairment: Inhibit (SMR, hold 30-60
 // seconds), Lengthen (static stretch, 30 seconds), Activation (1-2 sets of
 // 10-15 reps, tempo 4/2/1, 30 seconds rest), Integration.
 

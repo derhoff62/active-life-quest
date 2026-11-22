@@ -80,7 +80,7 @@ export default function Assessment({ ctx }: { ctx: Ctx }) {
           <p className="muted small">Total time: 30 to 45 minutes, goals and history plus the movement screen. You earned 60 XP.</p>
           {result.findings.length === 0 && <p>Your screen was clean. No corrective templates were flagged.</p>}
           {result.findings.length > 0 && <p>Movement patterns to work on: {result.findings.map((f) => FINDING_LABELS.find((x) => x.id === f)?.label).join(', ')}.</p>}
-          <p>Balance baseline: {result.balanceLeftSec}s left, {result.balanceRightSec}s right. This is a general balance check, not a NASM test.</p>
+          <p>Balance baseline: {result.balanceLeftSec}s left, {result.balanceRightSec}s right. This is a general balance check, not a formal test.</p>
           <p>Your equipment: Workouts swap out moves you cannot do with this gear.</p>
           <div className="equip-list">
             {(doc.equipment && doc.equipment.length > 0 ? doc.equipment : DEFAULT_EQUIPMENT).map((e) => (
@@ -254,7 +254,7 @@ export default function Assessment({ ctx }: { ctx: Ctx }) {
               </select>
             </div>
           </div>
-          <h3 style={{ marginTop: 16 }}>Balance baseline (general check, not a NASM test)</h3>
+          <h3 style={{ marginTop: 16 }}>Balance baseline (general check)</h3>
           <p className="small muted">Stand near something stable. Hold one leg up as long as you can. Stop if you feel unsteady.</p>
           <div className="grid2">
             <div>

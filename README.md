@@ -2,7 +2,7 @@
 
 ## What this is
 
-Active Life Quest is a gamified corrective weight loss app for beginners, built by Derek Hoffman of Active Life Personal Training in Chehalis, WA. It is assessment first, then a plan built around you. The app is NASM and Mind Pump aligned, for beginners age 40 to 59.
+Active Life Quest is a gamified corrective weight loss app for beginners, built by Derek Hoffman of Active Life Personal Training in Chehalis, WA. It is assessment first, then a plan built around you, for beginners age 40 to 59.
 
 This folder is the server and deploy config for the rebuild. The React UI lives in `src/` and is built by the parent agent. The backend is a Cloudflare Pages Function API backed by Neon Postgres. The whole client profile (guardian, assessment, findings, phase, XP, level, badges, armor, logs, goals, messages, check-ins, sleep, cardio, measurements, settings) is stored as one JSON document in the `profiles` table.
 

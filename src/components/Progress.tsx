@@ -103,14 +103,14 @@ export default function Progress({ ctx }: { ctx: Ctx }) {
                 <p>Your numbers: {doc.workouts.length} workouts finished, {doc.checkins.length} check-ins.</p>
               )}
               {g.type === 'endurance' && <p>Cardio this week: {cardioTotal} min of the 150 to 300 target. Milestones at 150, then 200, then 300.</p>}
-              {g.type === 'weight-loss' && <p>Weight loss, the Mind Pump way: measurements, photos, strength, and how clothes fit first. The scale is last, once a week, same day and time, and only the trend over weeks matters.</p>}
+              {g.type === 'weight-loss' && <p>Weight loss, the steady way: measurements, photos, strength, and how clothes fit first. The scale is last, once a week, same day and time, and only the trend over weeks matters.</p>}
             </details>
           );
         })}
       </div>
 
       <div className="card">
-        <h3>Weight loss, the Mind Pump way</h3>
+        <h3>Weight loss, the steady way</h3>
         <p>Do not live on the scale. Weight swings a few pounds day to day with water, food, and sleep, and muscle gain can hide fat loss. Track measurements, photos, how clothes fit, and strength first.</p>
         <label htmlFor="p-waist">Waist (inches)</label>
         <input id="p-waist" inputMode="decimal" value={waist} onChange={(e) => setWaist(e.target.value)} placeholder="e.g. 38.5" />
