@@ -8,28 +8,17 @@
 // punishing. Warm and beginner-friendly throughout.
 import { useId } from 'react';
 import type { GuardianState } from '../lib/store';
+import {
+  COLOR_HEX,
+  GEM_HEX,
+  GEM_LIGHT_HEX,
+  buildWidth,
+  hairForLook,
+} from '../lib/guardianOptions';
 
-const COLOR_MAP: Record<string, string> = {
-  Navy: '#124571',
-  Forest: '#1e7a46',
-  Crimson: '#a83232',
-  Gold: '#c9a227',
-  Teal: '#0e7a7a',
-};
-
-const GEM_MAP: Record<string, string> = {
-  Sapphire: '#2f6fd0',
-  Ruby: '#c22747',
-  Emerald: '#1e9e5a',
-  Topaz: '#e8a91c',
-};
-
-const GEM_LIGHT: Record<string, string> = {
-  Sapphire: '#8db4f2',
-  Ruby: '#f08a9d',
-  Emerald: '#7ed3a4',
-  Topaz: '#f7cf6b',
-};
+const COLOR_MAP: Record<string, string> = COLOR_HEX;
+const GEM_MAP: Record<string, string> = GEM_HEX;
+const GEM_LIGHT: Record<string, string> = GEM_LIGHT_HEX;
 
 const SIZES = { large: 180, medium: 120, small: 72 } as const;
 
@@ -85,7 +74,7 @@ export default function GuardianAvatar({
   background?: GuardianScene;
 }) {
   const g = guardian ?? DEFAULT_GUARDIAN;
-  const main = COLOR_MAP[g.color] ?? COLOR_MAP.Navy;
+  const main = COLOR_MAP[g.bodyColor ?? g.color] ?? COLOR_MAP.Navy;
   const light = shade(main, 55);
   const dark = shade(main, -45);
   const gem = GEM_MAP[g.gem] ?? GEM_MAP.Sapphire;
@@ -104,6 +93,32 @@ export default function GuardianAvatar({
   // hair that falls past the shoulders, lashes and lips. Both strong,
   // heroic, friendly, and fully clothed. Never sexualized.
   const isFemale = g.look === 'Female';
+  // Hair style, per look, with a safe default for old profiles that never
+  // picked one. Build changes torso width only, a little either way.
+  const hair = hairForLook(g.look, g.hair);
+  const hasBeard = !isFemale && (hair === 'ShortBeard' || hair === 'Bald');
+  const bw = buildWidth(g.build);
+  // Per-part colors: each part defaults to the overall color, so old
+  // profiles and a single overall pick still look the same, and each part
+  // can then be changed on its own in Customize guardian / Onboarding.
+  const partName = (v: string | undefined) => (v && COLOR_HEX[v] ? v : g.color);
+  const armName = partName(g.armColor);
+  const legName = partName(g.legColor);
+  const capeName = partName(g.capeColor);
+  const armMain = COLOR_HEX[armName];
+  const armLight = shade(armMain, 55);
+  const armDark = shade(armMain, -45);
+  const legMain = COLOR_HEX[legName];
+  const legDark = shade(legMain, -45);
+  const capeMain = COLOR_HEX[capeName];
+  const capeDark = shade(capeMain, -45);
+  const f = (n: number) => Math.round(n * 100) / 100;
+  const torsoD = isFemale
+    ? `M100 58 L${f(100 + 14 * bw)} 62 L${f(100 + 16 * bw)} 96 L${f(100 + 10 * bw)} 122 L${f(100 - 10 * bw)} 122 L${f(100 - 16 * bw)} 96 L${f(100 - 14 * bw)} 62 Z`
+    : `M100 58 L${f(100 + 22 * bw)} 62 L${f(100 + 24 * bw)} 98 L${f(100 + 18 * bw)} 122 L${f(100 - 18 * bw)} 122 L${f(100 - 24 * bw)} 98 L${f(100 - 22 * bw)} 62 Z`;
+  const beltW = (isFemale ? 28 : 36) * bw;
+  const pauldronRx = (isFemale ? 9 : 13) * bw;
+  const pauldronDx = (isFemale ? 14 : 22) * bw;
 
   // Background scene shapes, drawn behind the figure.
   const sceneArt = (
@@ -234,8 +249,17 @@ export default function GuardianAvatar({
             <stop offset="100%" stopColor={dark} />
           </linearGradient>
           <linearGradient id={id('cape')} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor={main} />
-            <stop offset="100%" stopColor={dark} />
+            <stop offset="0%" stopColor={capeMain} />
+            <stop offset="100%" stopColor={capeDark} />
+          </linearGradient>
+          <linearGradient id={id('arms')} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor={armLight} />
+            <stop offset="45%" stopColor={armMain} />
+            <stop offset="100%" stopColor={armDark} />
+          </linearGradient>
+          <linearGradient id={id('legs')} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor={legMain} />
+            <stop offset="100%" stopColor={legDark} />
           </linearGradient>
           <linearGradient id={id('skin')} x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor="#f7d9ae" />
@@ -314,13 +338,13 @@ export default function GuardianAvatar({
           {/* Arms: male arms are thicker and more muscular; female arms slimmer. */}
           {isFemale ? (
             <>
-              <path d="M84 70 Q77 88 79 106 L84 105 Q83 88 88 74 Z" fill={`url(#${id('tunic')})`} stroke={dark} strokeWidth="2" />
-              <path d="M116 70 Q123 88 121 106 L116 105 Q117 88 112 74 Z" fill={`url(#${id('tunic')})`} stroke={dark} strokeWidth="2" />
+              <path d="M84 70 Q77 88 79 106 L84 105 Q83 88 88 74 Z" fill={`url(#${id('arms')})`} stroke={armDark} strokeWidth="2" />
+              <path d="M116 70 Q123 88 121 106 L116 105 Q117 88 112 74 Z" fill={`url(#${id('arms')})`} stroke={armDark} strokeWidth="2" />
             </>
           ) : (
             <>
-              <path d="M80 68 Q70 88 73 108 L82 107 Q81 88 88 73 Z" fill={`url(#${id('tunic')})`} stroke={dark} strokeWidth="2" />
-              <path d="M120 68 Q130 88 127 108 L118 107 Q119 88 112 73 Z" fill={`url(#${id('tunic')})`} stroke={dark} strokeWidth="2" />
+              <path d="M80 68 Q70 88 73 108 L82 107 Q81 88 88 73 Z" fill={`url(#${id('arms')})`} stroke={armDark} strokeWidth="2" />
+              <path d="M120 68 Q130 88 127 108 L118 107 Q119 88 112 73 Z" fill={`url(#${id('arms')})`} stroke={armDark} strokeWidth="2" />
               {/* Muscular forearms: thicker upper arm shading */}
               <path d="M74 88 Q72 98 74 106" fill="none" stroke={dark} strokeWidth="3" opacity="0.35" strokeLinecap="round" />
               <path d="M126 88 Q128 98 126 106" fill="none" stroke={dark} strokeWidth="3" opacity="0.35" strokeLinecap="round" />
@@ -330,14 +354,14 @@ export default function GuardianAvatar({
               female has narrower shoulders, a slimmer waist, and a fitted
               tunic. Top edge (y58) overlaps the bottom of the head (y59). */}
           {isFemale ? (
-            <path d="M100 58 L114 62 L116 96 L110 122 L90 122 L84 96 L86 62 Z" fill={`url(#${id('tunic')})`} stroke={dark} strokeWidth="2.5" />
+            <path d={torsoD} fill={`url(#${id('tunic')})`} stroke={dark} strokeWidth="2.5" />
           ) : (
-            <path d="M100 58 L122 62 L124 98 L118 122 L82 122 L76 98 L78 62 Z" fill={`url(#${id('tunic')})`} stroke={dark} strokeWidth="2.5" />
+            <path d={torsoD} fill={`url(#${id('tunic')})`} stroke={dark} strokeWidth="2.5" />
           )}
           <path d="M86 72 Q84 96 86 118 Q92 120 94 118 Q90 96 92 74 Z" fill="#fff" opacity="0.22" />
           <path d="M114 72 Q116 96 114 118 Q108 120 106 118 Q110 96 108 74 Z" fill="#000" opacity="0.14" />
           {/* Belt */}
-          <rect x={isFemale ? 86 : 82} y="110" width={isFemale ? 28 : 36} height="9" rx="4.5" fill={`url(#${id('gold')})`} stroke="#8a6d00" strokeWidth="1.5" />
+          <rect x={100 - beltW / 2} y="110" width={beltW} height="9" rx="4.5" fill={`url(#${id('gold')})`} stroke="#8a6d00" strokeWidth="1.5" />
           <rect x="94" y="111" width="12" height="7" rx="2" fill="#fffdf4" stroke="#8a6d00" strokeWidth="1.5" />
           {/* Glowing gem on chest */}
           <g className="guardian-gem" filter={`url(#${id('glow')})`}>
@@ -350,8 +374,8 @@ export default function GuardianAvatar({
           {/* LOTR style shoulder armor and a cloak clasp at the neck, so the
               shoulders, neck, and head read as one connected figure.
               Male pauldrons are bigger and broader; female are smaller. */}
-          <ellipse cx={isFemale ? 86 : 78} cy="68" rx={isFemale ? 9 : 13} ry={isFemale ? 6 : 8} fill={`url(#${id('steel')})`} stroke={dark} strokeWidth="2" />
-          <ellipse cx={isFemale ? 114 : 122} cy="68" rx={isFemale ? 9 : 13} ry={isFemale ? 6 : 8} fill={`url(#${id('steel')})`} stroke={dark} strokeWidth="2" />
+          <ellipse cx={100 - pauldronDx} cy="68" rx={pauldronRx} ry={isFemale ? 6 : 8} fill={`url(#${id('steel')})`} stroke={dark} strokeWidth="2" />
+          <ellipse cx={100 + pauldronDx} cy="68" rx={pauldronRx} ry={isFemale ? 6 : 8} fill={`url(#${id('steel')})`} stroke={dark} strokeWidth="2" />
           <circle cx="100" cy="64" r="5" fill={`url(#${id('gold')})`} stroke="#8a6d00" strokeWidth="1.5" />
           <circle cx="100" cy="64" r="2.5" fill={gem} stroke="#fff" strokeWidth="1" />
           {/* Head: male has a squarer, stronger jaw; female a softer, rounder face.
@@ -365,44 +389,80 @@ export default function GuardianAvatar({
           )}
           <ellipse cx="89" cy="50" rx="3.5" ry="2.2" fill="#e88a7a" opacity={isFemale ? 0.5 : 0.2} />
           <ellipse cx="111" cy="50" rx="3.5" ry="2.2" fill="#e88a7a" opacity={isFemale ? 0.5 : 0.2} />
-          {/* Hair: Ranger hood first, then sex-specific hair.
-              Female: long hair with a centre part, falling past the shoulders
-              in two shaped locks (not a short blob). Male: short neat hair. */}
+          {/* Hair: Ranger hood first, then the picked hair style.
+              Female: Long (locks past the shoulders), Ponytail (one lock
+              tied to the side), Bun (hair up in a bun). Male: Short
+              (neat cap), Short + beard (same cap, beard below), Bald
+              (no top hair). The beard is drawn separately, only when the
+              picked hair style has one. */}
           {g.classId === 'Ranger' ? (
             <g>
               <path d="M78 44 Q76 24 100 24 Q124 24 122 44 L115 38 Q111 28 100 28 Q89 28 85 38 Z" fill={`url(#${id('cape')})`} stroke={dark} strokeWidth="2.5" />
               <path d="M88 30 Q94 25 100 25" fill="none" stroke={light} strokeWidth="2" opacity="0.6" />
               <path d="M83 42 Q87 46 92 48" fill="none" stroke={dark} strokeWidth="1.5" opacity="0.4" />
-              {isFemale && (
+              {isFemale && hair === 'Long' && (
                 <g fill="#5b3a1e">
                   <path d="M84 44 Q80 72 83 104 Q88 108 90 100 Q90 70 89 46 Z" />
                   <path d="M116 44 Q120 72 117 104 Q112 108 110 100 Q110 70 111 46 Z" />
                 </g>
               )}
+              {isFemale && hair === 'Ponytail' && (
+                <g fill="#5b3a1e">
+                  <path d="M116 44 Q122 74 118 110 Q112 114 110 104 Q112 72 111 46 Z" />
+                  <circle cx="115" cy="58" r="4" fill={gem} stroke="#fff" strokeWidth="1" />
+                </g>
+              )}
+              {isFemale && hair === 'Bun' && (
+                <g fill="#5b3a1e">
+                  <circle cx="100" cy="16" r="9" />
+                  <path d="M84 44 Q82 66 84 88 Q88 92 90 86 Q89 64 89 46 Z" />
+                  <path d="M116 44 Q118 66 116 88 Q112 92 110 86 Q111 64 111 46 Z" />
+                </g>
+              )}
             </g>
           ) : isFemale ? (
             <g>
-              {/* Long hair behind the shoulders, drawn as shaped locks */}
-              <path d="M82 40 Q76 66 80 102 Q84 110 89 104 Q88 74 87 44 Z" fill="#5b3a1e" />
-              <path d="M118 40 Q124 66 120 102 Q116 110 111 104 Q112 74 113 44 Z" fill="#5b3a1e" />
               <path d="M83 44 Q81 24 100 24 Q119 24 117 44 Q112 30 100 30 Q88 30 83 44 Z" fill="#5b3a1e" />
               <path d="M100 25 Q94 26 90 30" fill="none" stroke="#8a6238" strokeWidth="2.5" opacity="0.9" strokeLinecap="round" />
               <path d="M100 25 Q106 26 110 30" fill="none" stroke="#8a6238" strokeWidth="2.5" opacity="0.9" strokeLinecap="round" />
-              <path d="M84 52 Q82 72 84 92 M116 52 Q118 72 116 92" fill="none" stroke="#8a6238" strokeWidth="2" opacity="0.7" strokeLinecap="round" />
+              {hair === 'Long' && (
+                <g>
+                  <path d="M82 40 Q76 66 80 102 Q84 110 89 104 Q88 74 87 44 Z" fill="#5b3a1e" />
+                  <path d="M118 40 Q124 66 120 102 Q116 110 111 104 Q112 74 113 44 Z" fill="#5b3a1e" />
+                  <path d="M84 52 Q82 72 84 92 M116 52 Q118 72 116 92" fill="none" stroke="#8a6238" strokeWidth="2" opacity="0.7" strokeLinecap="round" />
+                </g>
+              )}
+              {hair === 'Ponytail' && (
+                <g>
+                  <path d="M116 40 Q124 72 119 112 Q113 116 111 106 Q114 72 112 44 Z" fill="#5b3a1e" />
+                  <circle cx="116" cy="56" r="4.5" fill={gem} stroke="#fff" strokeWidth="1" />
+                  <path d="M84 46 Q82 64 84 84 Q88 88 90 82 Q89 62 89 46 Z" fill="#5b3a1e" />
+                </g>
+              )}
+              {hair === 'Bun' && (
+                <g>
+                  <circle cx="100" cy="18" r="10" fill="#5b3a1e" />
+                  <path d="M92 12 Q100 8 108 12" fill="none" stroke="#8a6238" strokeWidth="2" opacity="0.8" strokeLinecap="round" />
+                  <path d="M84 46 Q82 64 84 84 Q88 88 90 82 Q89 62 89 46 Z" fill="#5b3a1e" />
+                  <path d="M116 46 Q118 64 116 84 Q112 88 110 82 Q111 62 111 46 Z" fill="#5b3a1e" />
+                </g>
+              )}
+            </g>
+          ) : hair === 'Bald' ? (
+            <g>
+              <ellipse cx="100" cy="30" rx="10" ry="3" fill="#fff" opacity="0.18" />
             </g>
           ) : (
             <g>
               <path d="M83 44 Q81 24 100 24 Q119 24 117 44 Q112 30 100 30 Q88 30 83 44 Z" fill="#5b3a1e" />
               <path d="M88 30 Q94 25 100 25 Q106 25 112 30" fill="none" stroke="#8a6238" strokeWidth="2.5" opacity="0.8" />
-              {/* Short sideburns */}
               <path d="M83 42 L84 50 L86 50 L86 42 Z" fill="#5b3a1e" />
               <path d="M117 42 L116 50 L114 50 L114 42 Z" fill="#5b3a1e" />
             </g>
           )}
-          {/* Male beard: neat short beard framing the jaw and chin, with a
-              mustache above the mouth. Mouth is drawn over the beard so the
-              smile still shows. Female has no beard. */}
-          {!isFemale && (
+          {/* Beard: only when the picked hair style has one (Short + beard
+              or Bald for Male). Short is clean-shaven. Female has no beard. */}
+          {hasBeard && (
             <g fill="#5b3a1e">
               <path d="M85 46 Q84 60 100 62 Q116 60 115 46 L111 50 Q109 57 100 58 Q91 57 89 50 Z" />
               <path d="M92 51 Q96 49 100 51 Q104 49 108 51 Q104 54 100 54 Q96 54 92 51 Z" />
@@ -488,8 +548,8 @@ export default function GuardianAvatar({
             </g>
           )}
           {/* Legs: male legs thicker, female slimmer, both with boots */}
-          <path d={isFemale ? "M89 122 L88 178 L95 178 L95 122 Z" : "M87 122 L86 178 L97 178 L97 122 Z"} fill={dark} />
-          <path d={isFemale ? "M105 122 L105 178 L112 178 L111 122 Z" : "M103 122 L103 178 L114 178 L113 122 Z"} fill={dark} />
+          <path d={isFemale ? "M89 122 L88 178 L95 178 L95 122 Z" : "M87 122 L86 178 L97 178 L97 122 Z"} fill={`url(#${id('legs')})`} />
+          <path d={isFemale ? "M105 122 L105 178 L112 178 L111 122 Z" : "M103 122 L103 178 L114 178 L113 122 Z"} fill={`url(#${id('legs')})`} />
           <ellipse cx="91" cy="182" rx="9" ry="4.5" fill="#3a2410" />
           <ellipse cx="109" cy="182" rx="9" ry="4.5" fill="#3a2410" />
           <ellipse cx="88" cy="180" rx="4" ry="1.6" fill="#a8763e" opacity="0.6" />

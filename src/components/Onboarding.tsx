@@ -3,9 +3,18 @@ import type { Ctx } from '../App';
 import { CLASSES, CLASS_GOOD_FOR, CLASS_SUGGESTED_GOALS, DEFAULT_EQUIPMENT, EQUIPMENT_NOTES, EQUIPMENT_OPTIONS, GOAL_TYPES } from '../lib/data';
 import { checkinFrequenciesForMode, normalizeCheckinFrequency } from '../lib/store';
 import type { ClassId } from '../lib/types';
+import GuardianAvatar from './GuardianAvatar';
+import {
+  BUILD_OPTIONS,
+  DEFAULT_HAIR,
+  GUARDIAN_COLORS,
+  GUARDIAN_GEMS,
+  HAIR_LABELS,
+  HAIR_OPTIONS,
+} from '../lib/guardianOptions';
 
-const COLORS = ['Navy', 'Forest', 'Crimson', 'Gold', 'Teal'];
-const GEMS = ['Sapphire', 'Ruby', 'Emerald', 'Topaz'];
+const COLORS = [...GUARDIAN_COLORS];
+const GEMS = [...GUARDIAN_GEMS];
 
 export default function Onboarding({ ctx }: { ctx: Ctx }) {
   const { doc, update, go } = ctx;
@@ -16,6 +25,19 @@ export default function Onboarding({ ctx }: { ctx: Ctx }) {
   const [gem, setGem] = useState('Sapphire');
   const [cape, setCape] = useState(true);
   const [look, setLook] = useState<'Female' | 'Male'>('Female');
+  const [hair, setHair] = useState('Long');
+  const [build, setBuild] = useState<'Slim' | 'Athletic' | 'Strong'>('Athletic');
+  const [bodyColor, setBodyColor] = useState('Navy');
+  const [armColor, setArmColor] = useState('Navy');
+  const [legColor, setLegColor] = useState('Navy');
+  const [capeColor, setCapeColor] = useState('Navy');
+  const setOverallColor = (c: string) => {
+    setColor(c);
+    setBodyColor(c);
+    setArmColor(c);
+    setLegColor(c);
+    setCapeColor(c);
+  };
   const [goal, setGoal] = useState('weight-loss');
   const [why, setWhy] = useState('');
   const [equipment, setEquipment] = useState<string[]>([...DEFAULT_EQUIPMENT]);
@@ -32,7 +54,7 @@ export default function Onboarding({ ctx }: { ctx: Ctx }) {
         <p className="small muted">Nothing here is a test you can fail. The assessment finds where to start, so the plan fits you.</p>
         <button className="primary" onClick={() => setStep(1)} style={{ width: '100%' }}>Pick my guardian</button>
         <p style={{ marginTop: 10 }}>
-          <button onClick={() => update((d) => { d.tutorialDone = true; d.guardianPicked = true; d.guardian = { name: 'Brave Beginner', classId: 'Guardian', color: 'Navy', gem: 'Sapphire', cape: true, look: 'Female' }; })}>Skip for now</button>
+          <button onClick={() => update((d) => { d.tutorialDone = true; d.guardianPicked = true; d.guardian = { name: 'Brave Beginner', classId: 'Guardian', color: 'Navy', gem: 'Sapphire', cape: true, look: 'Female', hair: 'Long', build: 'Athletic', bodyColor: 'Navy', armColor: 'Navy', legColor: 'Navy', capeColor: 'Navy' }; })}>Skip for now</button>
         </p>
       </div>
     );
@@ -55,11 +77,28 @@ export default function Onboarding({ ctx }: { ctx: Ctx }) {
             </label>
           </div>
         ))}
+        <GuardianAvatar guardian={{ name: name.trim() || 'Your guardian', classId, color, gem, cape, look, hair, build, bodyColor, armColor, legColor, capeColor }} level={1} size="medium" label={`${name.trim() || 'Your guardian'} the ${classId} · Level 1`} />
         <label>Guardian look</label>
         <div className="row">
           {(['Female', 'Male'] as const).map((l) => (
-            <button key={l} type="button" onClick={() => setLook(l)} style={look === l ? { background: '#124571', color: '#fff' } : {}}>
+            <button key={l} type="button" onClick={() => { setLook(l); setHair(DEFAULT_HAIR[l]); }} style={look === l ? { background: '#124571', color: '#fff' } : {}}>
               {l}
+            </button>
+          ))}
+        </div>
+        <label>Hair style</label>
+        <div className="row">
+          {HAIR_OPTIONS[look].map((h) => (
+            <button key={h} type="button" onClick={() => setHair(h)} style={hair === h ? { background: '#124571', color: '#fff' } : {}}>
+              {HAIR_LABELS[h] || h}
+            </button>
+          ))}
+        </div>
+        <label>Build</label>
+        <div className="row">
+          {BUILD_OPTIONS.map((b) => (
+            <button key={b} type="button" onClick={() => setBuild(b)} style={build === b ? { background: '#124571', color: '#fff' } : {}}>
+              {b}
             </button>
           ))}
         </div>
@@ -67,8 +106,8 @@ export default function Onboarding({ ctx }: { ctx: Ctx }) {
         <input id="g-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Brave Beginner" />
         <div className="grid2">
           <div>
-            <label htmlFor="g-color">Color</label>
-            <select id="g-color" value={color} onChange={(e) => setColor(e.target.value)}>
+            <label htmlFor="g-color">Overall color</label>
+            <select id="g-color" value={color} onChange={(e) => setOverallColor(e.target.value)}>
               {COLORS.map((c) => <option key={c}>{c}</option>)}
             </select>
           </div>
@@ -78,6 +117,26 @@ export default function Onboarding({ ctx }: { ctx: Ctx }) {
               {GEMS.map((g) => <option key={g}>{g}</option>)}
             </select>
           </div>
+        </div>
+        <h4 style={{ margin: '14px 0 4px' }}>Colors, by part</h4>
+        <p className="small muted">Each part starts as your overall color. Change any part on its own, or tap Match all to set them back.</p>
+        {([
+          ['Body', bodyColor, setBodyColor],
+          ['Arms', armColor, setArmColor],
+          ['Legs', legColor, setLegColor],
+          ['Cape', capeColor, setCapeColor],
+        ] as const).map(([label, value, set]) => (
+          <div key={label}>
+            <label htmlFor={`g-${label.toLowerCase()}-color`}>{label} color</label>
+            <select id={`g-${label.toLowerCase()}-color`} value={value} onChange={(e) => set(e.target.value)}>
+              {COLORS.map((c) => <option key={c}>{c}</option>)}
+            </select>
+          </div>
+        ))}
+        <div className="row" style={{ marginTop: 8 }}>
+          <button type="button" onClick={() => { setArmColor(bodyColor); setLegColor(bodyColor); setCapeColor(bodyColor); setColor(bodyColor); }}>
+            Match all to Body color
+          </button>
         </div>
         <label style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
           <input type="checkbox" checked={cape} onChange={(e) => setCape(e.target.checked)} style={{ width: 'auto', minHeight: 0 }} /> Cape
@@ -157,7 +216,7 @@ export default function Onboarding({ ctx }: { ctx: Ctx }) {
           className="primary"
           onClick={() => {
             update((d) => {
-              d.guardian = { name: name.trim(), classId, color, gem, cape, look };
+              d.guardian = { name: name.trim(), classId, color, gem, cape, look, hair, build, bodyColor, armColor, legColor, capeColor };
               d.guardianPicked = true;
               d.tutorialDone = true;
               d.equipment = equipment;

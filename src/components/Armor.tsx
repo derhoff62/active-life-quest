@@ -7,23 +7,20 @@ import type { GuardianState } from '../lib/store';
 import type { ClassId } from '../lib/types';
 import GuardianAvatar from './GuardianAvatar';
 
-// Same color and gem options as onboarding, so a client can change after
-// signup what they picked (or skipped) at signup.
-const COLORS = ['Navy', 'Forest', 'Crimson', 'Gold', 'Teal'];
-const COLOR_HEX: Record<string, string> = {
-  Navy: '#124571',
-  Forest: '#1e7a46',
-  Crimson: '#a83232',
-  Gold: '#c9a227',
-  Teal: '#0e7a7a',
-};
-const GEMS = ['Sapphire', 'Ruby', 'Emerald', 'Topaz'];
-const GEM_HEX: Record<string, string> = {
-  Sapphire: '#2f6fd0',
-  Ruby: '#c22747',
-  Emerald: '#1e9e5a',
-  Topaz: '#e8a91c',
-};
+// Same color, gem, hair, and build options as onboarding, so a client can
+// change after signup what they picked (or skipped) at signup.
+import {
+  BUILD_OPTIONS,
+  COLOR_HEX,
+  DEFAULT_HAIR,
+  GEM_HEX,
+  GUARDIAN_COLORS,
+  GUARDIAN_GEMS,
+  HAIR_LABELS,
+  HAIR_OPTIONS,
+} from '../lib/guardianOptions';
+const COLORS = [...GUARDIAN_COLORS];
+const GEMS = [...GUARDIAN_GEMS];
 
 const DEFAULT_DRAFT: GuardianState = {
   name: 'Brave Beginner',
@@ -32,6 +29,12 @@ const DEFAULT_DRAFT: GuardianState = {
   gem: 'Sapphire',
   cape: true,
   look: 'Female',
+  hair: 'Long',
+  build: 'Athletic',
+  bodyColor: 'Navy',
+  armColor: 'Navy',
+  legColor: 'Navy',
+  capeColor: 'Navy',
 };
 
 // Small SVG emblem per piece, picked by name. No external images.
@@ -128,13 +131,21 @@ export default function Armor({ ctx }: { ctx: Ctx }) {
 
   const openCustomize = () => {
     const g = doc.guardian;
+    const color = g?.color || 'Navy';
+    const look = g?.look || 'Female';
     setDraft({
       name: g?.name || 'Brave Beginner',
       classId: (g?.classId || 'Guardian') as ClassId,
-      color: g?.color || 'Navy',
+      color,
       gem: g?.gem || 'Sapphire',
       cape: g?.cape ?? true,
-      look: g?.look || 'Female',
+      look,
+      hair: g?.hair || DEFAULT_HAIR[look],
+      build: g?.build || 'Athletic',
+      bodyColor: g?.bodyColor || color,
+      armColor: g?.armColor || color,
+      legColor: g?.legColor || color,
+      capeColor: g?.capeColor || color,
     });
     setCustomizeMsg('');
     setShowCustomize(true);
@@ -194,18 +205,34 @@ export default function Armor({ ctx }: { ctx: Ctx }) {
           <label>Guardian look</label>
           <div className="row">
             {(['Female', 'Male'] as const).map((l) => (
-              <button key={l} type="button" onClick={() => setDraft((d) => ({ ...d, look: l }))} style={draft.look === l ? { background: '#124571', color: '#fff' } : {}}>
+              <button key={l} type="button" onClick={() => setDraft((d) => ({ ...d, look: l, hair: DEFAULT_HAIR[l] }))} style={draft.look === l ? { background: '#124571', color: '#fff' } : {}}>
                 {l}
               </button>
             ))}
           </div>
-          <label>Color</label>
+          <label>Hair style</label>
+          <div className="row">
+            {HAIR_OPTIONS[draft.look || 'Female'].map((h) => (
+              <button key={h} type="button" onClick={() => setDraft((d) => ({ ...d, hair: h }))} style={draft.hair === h ? { background: '#124571', color: '#fff' } : {}}>
+                {HAIR_LABELS[h] || h}
+              </button>
+            ))}
+          </div>
+          <label>Build</label>
+          <div className="row">
+            {BUILD_OPTIONS.map((b) => (
+              <button key={b} type="button" onClick={() => setDraft((d) => ({ ...d, build: b }))} style={draft.build === b ? { background: '#124571', color: '#fff' } : {}}>
+                {b}
+              </button>
+            ))}
+          </div>
+          <label>Overall color</label>
           <div className="row">
             {COLORS.map((c) => (
               <button
                 key={c}
                 type="button"
-                onClick={() => setDraft((d) => ({ ...d, color: c }))}
+                onClick={() => setDraft((d) => ({ ...d, color: c, bodyColor: c, armColor: c, legColor: c, capeColor: c }))}
                 style={draft.color === c ? { background: '#124571', color: '#fff', borderColor: '#c9a227', borderWidth: 2 } : {}}
                 aria-pressed={draft.color === c}
               >
@@ -213,6 +240,40 @@ export default function Armor({ ctx }: { ctx: Ctx }) {
                 {c}
               </button>
             ))}
+          </div>
+          <p className="small muted">Pick one color for everything, or change each part below.</p>
+          <h4 style={{ margin: '14px 0 4px' }}>Colors, by part</h4>
+          {([
+            ['Body', 'bodyColor'],
+            ['Arms', 'armColor'],
+            ['Legs', 'legColor'],
+            ['Cape', 'capeColor'],
+          ] as const).map(([label, field]) => (
+            <div key={field}>
+              <label>{label}</label>
+              <div className="row">
+                {COLORS.map((c) => (
+                  <button
+                    key={c}
+                    type="button"
+                    onClick={() => setDraft((d) => ({ ...d, [field]: c }))}
+                    style={draft[field] === c ? { background: '#124571', color: '#fff', borderColor: '#c9a227', borderWidth: 2 } : {}}
+                    aria-pressed={draft[field] === c}
+                  >
+                    <span aria-hidden style={{ display: 'inline-block', width: 14, height: 14, borderRadius: '50%', background: COLOR_HEX[c], marginRight: 6, verticalAlign: 'middle', border: '1px solid #5b6b7a' }} />
+                    {c}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ))}
+          <div className="row" style={{ marginTop: 8 }}>
+            <button
+              type="button"
+              onClick={() => setDraft((d) => { const c = d.bodyColor || d.color; return { ...d, armColor: c, legColor: c, capeColor: c, color: c }; })}
+            >
+              Match all to Body color
+            </button>
           </div>
           <label>Gem</label>
           <div className="row">

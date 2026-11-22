@@ -11,6 +11,12 @@ export interface GuardianState {
   gem: string;
   cape: boolean;
   look?: 'Female' | 'Male';
+  hair?: string;
+  build?: 'Slim' | 'Athletic' | 'Strong';
+  bodyColor?: string;
+  armColor?: string;
+  legColor?: string;
+  capeColor?: string;
 }
 
 export interface ProgressPhoto {
@@ -208,6 +214,30 @@ export function normalizeProfile(raw: unknown): ProfileDoc {
   if (!out.focus || typeof out.focus !== 'object') out.focus = {};
   if (!out.cesStep || typeof out.cesStep !== 'object') out.cesStep = {};
   if (!out.guardian) out.guardian = null;
+  // Hair and build are optional on old profiles: fill in safe defaults so
+  // the avatar never crashes and always has a look.
+  if (out.guardian) {
+    const look = out.guardian.look === 'Male' ? 'Male' : 'Female';
+    out.guardian.look = look;
+    const validHair =
+      look === 'Male' ? ['Short', 'ShortBeard', 'Bald'] : ['Long', 'Ponytail', 'Bun'];
+    if (!out.guardian.hair || !validHair.includes(out.guardian.hair)) {
+      out.guardian.hair = look === 'Male' ? 'ShortBeard' : 'Long';
+    }
+    if (!['Slim', 'Athletic', 'Strong'].includes(out.guardian.build || '')) {
+      out.guardian.build = 'Athletic';
+    }
+    // Per-part colors default to the overall color, so old profiles and a
+    // single overall pick still look the same.
+    const validColors = [
+      'Navy', 'Forest', 'Crimson', 'Gold', 'Teal', 'Purple', 'Silver',
+      'Orange', 'Pink', 'Brown', 'Black',
+    ];
+    for (const f of ['bodyColor', 'armColor', 'legColor', 'capeColor'] as const) {
+      const v = out.guardian[f];
+      if (!v || !validColors.includes(v)) out.guardian[f] = out.guardian.color;
+    }
+  }
   // A check-in pick saved by an older version can pair a live video call
   // with a text frequency, or a text check-in with a weekly frequency.
   // Text check-in is daily only, and video calls are 30 minutes, at most
