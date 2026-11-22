@@ -992,7 +992,7 @@ export const MONSTERS: Monster[] = [
     castle: 'Forest Castle',
     weeks: 'Weeks 1-4',
     bossRound: 'Week 4',
-    blurb: 'A heavy, sleepy fog that makes every chair feel like a trap. Beat it by showing up, and it becomes your first companion, cheering you on from the sidelines.',
+    blurb: 'A heavy, sleepy fog that makes every chair feel like a trap. Beat it by showing up, day after day, and it clears. You move on without it.',
   },
   {
     id: 'stiff-hips-goblin',
@@ -1001,7 +1001,7 @@ export const MONSTERS: Monster[] = [
     castle: 'Forest Castle',
     weeks: 'Weeks 1-4',
     bossRound: 'Week 4',
-    blurb: 'A grumpy little goblin who guards the forest paths and hates hip openers. Win him over with steady mobility work and he will carry your water bottle forever.',
+    blurb: 'A grumpy little goblin who guards the forest paths and hates hip openers. Beat him with steady mobility work and he is gone. The path is yours.',
   },
   {
     id: 'achy-knees-troll',
@@ -1010,7 +1010,7 @@ export const MONSTERS: Monster[] = [
     castle: 'Lake Castle',
     weeks: 'Weeks 5-8',
     bossRound: 'Week 8',
-    blurb: 'A big troll who blocks the lake bridge and complains about every step. Teach your knees to track straight and he steps aside, then asks to join the walk.',
+    blurb: 'A big troll who blocks the lake bridge and complains about every step. Teach your knees to track straight and you push past him. He stays behind you.',
   },
   {
     id: 'tired-back-beast',
@@ -1019,7 +1019,7 @@ export const MONSTERS: Monster[] = [
     castle: 'Lake Castle',
     weeks: 'Weeks 5-8',
     bossRound: 'Week 8',
-    blurb: 'A tired old beast who carries too much and never rests. Show it how recovery works and it becomes the strongest, calmest friend on the road.',
+    blurb: 'A tired old beast who carries too much and never rests. Beat it by recovering well, and it is done. You walk on, stronger than it was.',
   },
   {
     id: 'wobbly-balance-sprite',
@@ -1028,7 +1028,7 @@ export const MONSTERS: Monster[] = [
     castle: 'Navy Castle',
     weeks: 'Weeks 9-12',
     bossRound: 'Week 12',
-    blurb: 'A quick, giggling sprite who loves to tip you over. Practice your balance holds and it stops teasing and starts spotting you instead.',
+    blurb: 'A quick, giggling sprite who loves to tip you over. Practice your balance holds and you beat it. It is gone, and you stay standing.',
   },
 ];
 
@@ -1054,7 +1054,7 @@ export const CREATURES: Creature[] = [
     name: 'Kaelith',
     kind: 'Dragon',
     place: 'Week 12 final-round gate',
-    line: 'Kaelith guards the gate to the final round, not as a boss to beat, but as a friend who opens it once your retest is done.',
+    line: 'Kaelith guards the gate to the final round, not as a boss to beat, but as a guide who opens it once your retest is done.',
   },
   {
     id: 'tilda',
@@ -1087,7 +1087,7 @@ export const STORY: { firstLine: string; expanded: string[] } = {
     'The guardian had spent years sitting, rushing, and putting everyone else first. One morning, the armor did not fit the way it used to, the stairs felt longer, and the forest outside felt very far away. So the guardian made a simple choice: start small, and keep going.',
     'The road runs through three lands. Sapphire Forest comes first, green and quiet, where the Forest Castle stands. Then Crystal Shores, where the Lake Castle shines. Then Navy Peaks, where the Navy Castle waits at the top of the climb. Each land has its own monsters, and each monster guards a lesson.',
     'In Weeks 1 to 4, the guardian meets The Slump and the Stiff Hips Goblin. In Weeks 5 to 8, the Achy Knees Troll and the Tired Back Beast block the road. In Weeks 9 to 12, the Wobbly Balance Sprite dances on the mountain path. At the end of each stretch, in Week 4, Week 8, and Week 12, a boss round tests everything the guardian has learned.',
-    'Here is the twist nobody expects: the monsters are not enemies. When you beat a monster with steady work, it becomes your companion. The Slump cheers you on. The goblin carries your water bottle. The troll walks beside you. The beast rests when you rest. The sprite spots your balance. The kingdom gets friendlier every time you show up.',
+    'The monsters are challenges, not friends. When you beat a monster with steady work, it is done and you move on. The Slump clears. The goblin is gone. The troll stays behind you. The beast is beaten. The sprite is gone, and you stay standing. Every win is yours, and the road ahead is open.',
     'Mana is the fuel for your spells. You earn mana by finishing workouts, checking in, and beating boss rounds. Spend it on spells that fit your class, or save it for the big rounds. A guardian who rests well earns more than a guardian who grinds without sleep.',
     'The journey follows five phases, from slow and steady control to real strength and then power. Each phase unlocks new gear, new moves, and new ground. After Week 12, the retest shows how far you have come, and Week 13 starts a new loop. Nothing resets. The phases cycle back to 1, 2, or 3 based on your retest and your new goal, and the story keeps going with you in it.',
   ],

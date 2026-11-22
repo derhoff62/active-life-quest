@@ -148,6 +148,56 @@ details summary { cursor: pointer; font-weight: 600; color: var(--navy); padding
   100% { background-position: 200% 0; }
 }
 .guardian-caption { font-weight: 700; color: var(--navy); margin: 4px 0 0; }
+/* Rarity gear cards: Common plain, Rare soft blue glow, Legendary strong
+   gold glow + shimmer, Mythical strongest animated gold-purple glow. */
+.gear-item {
+  position: relative; display: flex; gap: 12px; align-items: flex-start;
+  padding: 12px; margin: 10px 0; border-radius: 14px;
+  border: 1px solid var(--line); background: #fff;
+}
+.gear-item:not(.earned) { opacity: 0.75; }
+.gear-item.rarity-common { border-color: var(--line); }
+.gear-item.rarity-rare {
+  border: 2px solid #2f6fd0; background: #f0f6fe;
+  box-shadow: 0 0 12px rgba(47, 111, 208, 0.35);
+}
+.gear-item.rarity-legendary {
+  border: 2px solid var(--gold);
+  background: linear-gradient(120deg, #fffdf4, #f6ecd0, #fffdf4);
+  background-size: 200% 100%;
+  box-shadow: 0 0 18px rgba(201, 162, 39, 0.55);
+  animation: rarity-shimmer 3s linear infinite;
+}
+@keyframes rarity-shimmer {
+  0% { background-position: 0% 0; }
+  100% { background-position: 200% 0; }
+}
+.gear-item.rarity-mythical {
+  border: 2px solid #7b2fbe;
+  background: linear-gradient(120deg, #f6ecff, #fff3d6, #f6ecff);
+  background-size: 200% 100%;
+  animation: mythical-glow 2.4s ease-in-out infinite;
+}
+@keyframes mythical-glow {
+  0%, 100% { box-shadow: 0 0 16px rgba(123, 47, 190, 0.55), 0 0 26px rgba(201, 162, 39, 0.35); background-position: 0% 0; }
+  50% { box-shadow: 0 0 28px rgba(123, 47, 190, 0.85), 0 0 40px rgba(201, 162, 39, 0.6); background-position: 200% 0; }
+}
+.gear-sparkle {
+  position: absolute; top: 4px; right: 10px; color: #7b2fbe; font-size: 1.1rem;
+  animation: sparkle-twinkle 2.2s ease-in-out infinite;
+}
+.tier-pill {
+  display: inline-block; border-radius: 999px; padding: 1px 9px;
+  font-size: 0.78rem; font-weight: 700;
+}
+.tier-common { background: #eef1f4; color: #5b6b7a; }
+.tier-rare { background: #dbeafe; color: #1d4fa1; }
+.tier-legendary { background: var(--gold-soft); color: #5c4a00; }
+.tier-mythical { background: linear-gradient(90deg, #7b2fbe, #c9a227); color: #fff; }
+.tier-earned { background: #e6f4ec; color: #14532d; }
+@media (prefers-reduced-motion: reduce) {
+  .gear-item.rarity-legendary, .gear-item.rarity-mythical, .gear-sparkle { animation: none; }
+}
 .progress-bar > div { transition: width 0.6s ease; }
 .avatar {
   width: 56px; height: 56px; border-radius: 50%; flex-shrink: 0;

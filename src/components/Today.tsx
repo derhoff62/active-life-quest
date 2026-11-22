@@ -190,7 +190,7 @@ export default function Today({ ctx }: { ctx: Ctx }) {
       </div>
 
       <div className="card">
-        <h3>Your companions</h3>
+        <h3>Your helpers</h3>
         {CREATURES.slice(0, 3).map((c) => (
           <div className="creature" key={c.id} style={{ margin: '8px 0' }}>
             <div className="avatar" aria-hidden>{c.kind === 'dragon' ? '🐉' : c.kind === 'elf' ? '🧝' : '🧙'}</div>

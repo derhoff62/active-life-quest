@@ -30,7 +30,7 @@ export default function Journey({ ctx }: { ctx: Ctx }) {
 
       <div className="card gold-frame">
         <h3>Your guardian</h3>
-        <GuardianAvatar guardian={doc.guardian} level={levelForXp(doc.xp)} size="medium" />
+        <GuardianAvatar guardian={doc.guardian} level={levelForXp(doc.xp)} size="medium" background={phase >= 3 ? 'peaks' : phase >= 2 ? 'shores' : 'forest'} />
         <p className="small muted" style={{ textAlign: 'center' }}>
           {doc.guardian
             ? `${doc.guardian.name} the ${doc.guardian.classId} walks this map with you. ${CLASSES.find((c) => c.id === doc.guardian?.classId)?.description || ''}`
@@ -68,7 +68,7 @@ export default function Journey({ ctx }: { ctx: Ctx }) {
 
       <div className="card">
         <h3>Monsters and bosses</h3>
-        <p className="small muted">Defeat a monster in a boss round and it joins you as a companion. Consistency powers your attacks. Sleep and recovery raise your defense.</p>
+        <p className="small muted">Defeat a monster in a boss round and it is beaten. You move on to the next land. Consistency powers your attacks. Sleep and recovery raise your defense.</p>
         {MONSTERS.map((m) => (
           <div className="creature" key={m.id} style={{ margin: '10px 0' }}>
             <div className="avatar" aria-hidden>{AVATAR[m.name] || '👾'}</div>
