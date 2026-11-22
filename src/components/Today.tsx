@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { Ctx } from '../App';
-import { PHASES, WORKOUTS, WEEK13, CREATURES } from '../lib/data';
+import { PHASES, WORKOUTS, WEEK13, CLASS_GOOD_FOR } from '../lib/data';
 import { phaseForDoc, hasFullAccess, recoveryScore, levelForXp, titleForLevel } from '../lib/store';
 import GuardianAvatar from './GuardianAvatar';
 
@@ -61,6 +61,7 @@ export default function Today({ ctx }: { ctx: Ctx }) {
         <div className="creature">
           <div>
             <h2>{doc.guardian ? `${doc.guardian.name} is ready` : 'Your next step'}</h2>
+            {doc.guardian && <p className="small">{CLASS_GOOD_FOR[doc.guardian.classId] || ''} All classes do the same strength workouts.</p>}
             {!doc.assessmentDone && <p>Do the assessment first. It takes 30 to 45 minutes and sets your starting phase.</p>}
             {doc.assessmentDone && !doc.workouts.length && <p>Your next step: do Day 1. It takes about 10 to 15 minutes.</p>}
             {doc.assessmentDone && doc.workouts.length > 0 && <p>Your next step: your Phase {phase} workout. {phaseInfo?.name}. Take 1 to 2 rest days between strength days.</p>}
@@ -191,30 +192,8 @@ export default function Today({ ctx }: { ctx: Ctx }) {
 
       <div className="card">
         <h3>Your companions</h3>
-        <p className="small muted">People and animals you befriend along the road. Bosses are not companions.</p>
-        {CREATURES.map((c) => {
-          const avatar =
-            c.id === 'ash' ? '🐺'
-            : c.id === 'ember' ? '🐲'
-            : c.id === 'kaelith' ? '🐉'
-            : c.id === 'rowan' ? '🛡️'
-            : c.id === 'mara' ? '💚'
-            : c.id === 'quill' ? '🐦‍⬛'
-            : c.id === 'miso' ? '🐱'
-            : c.id === 'sylva' ? '🧝'
-            : c.id === 'bram' ? '🧔'
-            : c.id === 'tilda' ? '🧑‍🍳'
-            : c.id === 'pip' ? '🧙'
-            : c.id === 'hoot' ? '🦉'
-            : '✨';
-          return (
-            <div className="creature" key={c.id} style={{ margin: '8px 0' }}>
-              <div className="avatar" aria-hidden>{avatar}</div>
-              <p><strong>{c.name}</strong> ({c.kind}): {c.line}</p>
-            </div>
-          );
-        })}
-        <button onClick={() => go('journey')}>Meet them all on Journey</button>
+        <p className="small muted">You meet companions one at a time as you travel. They live on Journey, not here.</p>
+        <button onClick={() => go('journey')}>Meet them on Journey</button>
       </div>
 
       {!full && (

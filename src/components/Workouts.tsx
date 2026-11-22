@@ -14,12 +14,48 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
   const [showHow, setShowHow] = useState<string | null>(null);
   const [finishMinutes, setFinishMinutes] = useState('');
   const [notice, setNotice] = useState('');
+  const [timeMin, setTimeMin] = useState<15 | 30 | 45>(30);
   const [editId, setEditId] = useState<string | null>(null);
   const [editMinutes, setEditMinutes] = useState('');
   const timerRef = useRef<number | null>(null);
 
   const phase = phaseForDoc(doc);
   const full = hasFullAccess(doc);
+  // Best workout for you today: picked from your main goal, your gear, and
+  // the time you have. Every class gets a real strength workout, Spellweaver
+  // included. Only a rest day overrides it, and only if you trained yesterday.
+  const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+  const trainedYesterday = doc.lastWorkoutDate === yesterday;
+  const mainGoal = doc.goals[0];
+  const goalLabel = mainGoal?.label || doc.mainGoal || 'your goal';
+  const goalNote =
+    mainGoal?.type === 'stronger' ? 'Compound lifts first, then the rest.'
+    : mainGoal?.type === 'weight-loss' ? 'Strength first, then log cardio after.'
+    : mainGoal?.type === 'move-better' || mainGoal?.type === 'balance' ? 'Starts with your fix-it warm-up.'
+    : mainGoal?.type === 'cardio' || mainGoal?.type === 'endurance' ? 'Then log your cardio minutes after.'
+    : mainGoal?.type === 'sleep' || mainGoal?.type === 'consistency' ? 'Short and steady, easy to finish.'
+    : '';
+  const unlocked = (w: Workout) =>
+    w.phase <= phase &&
+    !(w.phase === 4 && !doc.retests.some((r) => (r as { week?: number }).week === 12)) &&
+    !(w.phase === 5 && !doc.retests.some((r) => (r as { clean?: boolean }).clean === true)) &&
+    (full || w.id === 'day1-first') &&
+    w.exercises.every((e) => !resolveExercise(e, doc.equipment).unavailable);
+  const best: Workout | null = useMemo(() => {
+    if (!doc.assessmentDone || trainedYesterday) return null;
+    const candidates = WORKOUTS.filter(unlocked);
+    if (!candidates.length) return null;
+    if (doc.workouts.length === 0) {
+      return candidates.find((w) => w.id === 'day1-first') || candidates[0];
+    }
+    if (timeMin === 15) {
+      return candidates.find((w) => w.id === 'track-block-1') || [...candidates].sort((a, b) => a.minutes - b.minutes)[0];
+    }
+    const fits = candidates.filter((w) => w.minutes <= timeMin);
+    const pool = fits.length ? fits : candidates;
+    return [...pool].sort((a, b) => (b.phase - a.phase) || (b.minutes - a.minutes))[0];
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [doc.assessmentDone, trainedYesterday, timeMin, phase, full, doc.workouts.length, doc.equipment]);
   const myTemplates = CES_TEMPLATES.filter((t) => doc.assessment?.findings.includes(t.id));
   const startedAt = useRef(Date.now());
 
@@ -55,7 +91,7 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
         return;
       }
     }
-    if (!full && w.id !== 'w1_first') {
+    if (!full && w.id !== 'day1-first') {
       setNotice('Week 2 and later workouts need the trial or beta access. Start the trial or enter your beta code on Today.');
       return;
     }
@@ -225,6 +261,40 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
         <h3>Your equipment</h3>
         <p>{effectiveEquipment(doc.equipment).join(', ')}. Moves you cannot do with this gear are swapped for one you can, and the swap is shown in the workout.</p>
         <button onClick={() => ctx.go('assessment')}>Change my equipment in the assessment</button>
+      </div>
+
+      <div className="card gold-frame">
+        <h3>Best for you today</h3>
+        <p className="small">How much time do you have today?</p>
+        <div className="row">
+          {([15, 30, 45] as const).map((t) => (
+            <button
+              key={t}
+              onClick={() => setTimeMin(t)}
+              style={timeMin === t ? { background: '#124571', color: '#fff' } : {}}
+            >
+              {t === 45 ? '45+ min' : `${t} min`}
+            </button>
+          ))}
+        </div>
+        {!doc.assessmentDone && <p>Do the assessment first. It sets your starting phase, and then your best workout shows here.</p>}
+        {doc.assessmentDone && trainedYesterday && (
+          <div>
+            <p><strong>Today is an active rest day.</strong> You trained yesterday. Take 1 to 2 rest days between strength days.</p>
+            <p className="small muted">Rest well today: a gentle walk, your 2-minute balance hold, and your stretches. No strength workout today. The gym gives the stimulus, recovery builds on it.</p>
+          </div>
+        )}
+        {doc.assessmentDone && !trainedYesterday && best && (
+          <div>
+            <p><strong>{best.title}</strong> · Phase {best.phase} · about {best.minutes} minutes</p>
+            <p className="small">Picked for your goal ({goalLabel}), your gear ({effectiveEquipment(doc.equipment).join(', ')}), and {timeMin === 45 ? '45 or more' : timeMin} minutes. {goalNote}</p>
+            <p className="small muted">{best.exercises.map((e) => resolveExercise(e, doc.equipment).exercise.name).join(' · ')}</p>
+            <button className="primary" onClick={() => startWorkout(best)}>Start this workout</button>
+          </div>
+        )}
+        {doc.assessmentDone && !trainedYesterday && !best && (
+          <p>No workout fits right now. Pick one from the list below.</p>
+        )}
       </div>
 
       {doc.sessions && (

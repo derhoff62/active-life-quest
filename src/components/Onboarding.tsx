@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { Ctx } from '../App';
-import { CLASSES, DEFAULT_EQUIPMENT, EQUIPMENT_OPTIONS, GOAL_TYPES } from '../lib/data';
+import { CLASSES, CLASS_GOOD_FOR, CLASS_SUGGESTED_GOALS, DEFAULT_EQUIPMENT, EQUIPMENT_OPTIONS, GOAL_TYPES } from '../lib/data';
 import type { ClassId } from '../lib/types';
 
 const COLORS = ['Navy', 'Forest', 'Crimson', 'Gold', 'Teal'];
@@ -45,6 +45,7 @@ export default function Onboarding({ ctx }: { ctx: Ctx }) {
               <input type="radio" name="class" checked={classId === c.id} onChange={() => setClassId(c.id)} style={{ width: 'auto', minHeight: 0 }} />
               <span>
                 <strong>{c.name}</strong>: {c.description}
+                <br /><span className="small">{CLASS_GOOD_FOR[c.id] || ''}</span>
                 <br /><span className="small muted">Spells: {c.spells.join(', ')}</span>
               </span>
             </label>
@@ -70,19 +71,31 @@ export default function Onboarding({ ctx }: { ctx: Ctx }) {
           <input type="checkbox" checked={cape} onChange={(e) => setCape(e.target.checked)} style={{ width: 'auto', minHeight: 0 }} /> Cape
         </label>
         <div className="row" style={{ marginTop: 12 }}>
-          <button className="primary" disabled={!name.trim()} onClick={() => setStep(2)}>Next: my goal</button>
+          <button className="primary" disabled={!name.trim()} onClick={() => { setGoal(CLASS_SUGGESTED_GOALS[classId]?.[0] || 'weight-loss'); setStep(2); }}>Next: my goal</button>
           <button onClick={() => setStep(0)}>Back</button>
         </div>
       </div>
     );
   }
 
+  const suggested = CLASS_SUGGESTED_GOALS[classId] || [];
+  const suggestedGoals = [...GOAL_TYPES.filter((g) => suggested.includes(g.id)), ...GOAL_TYPES.filter((g) => !suggested.includes(g.id))];
+
   return (
     <div className="card">
       <h2>Your goal and your gear</h2>
+      <p className="small">Good for your {classId}: {suggested.map((id) => GOAL_TYPES.find((g) => g.id === id)?.label).filter(Boolean).join(', ')}. These are suggested first. You can still pick any goal.</p>
       <label htmlFor="g-goal">What is your main goal?</label>
-      <select id="g-goal" value={goal} onChange={(e) => setGoal(e.target.value)}>
-        {GOAL_TYPES.map((g) => <option key={g.id} value={g.id}>{g.label}</option>)}
+      <select
+        id="g-goal"
+        value={goal}
+        onChange={(e) => setGoal(e.target.value)}
+      >
+        {suggestedGoals.map((g) => (
+          <option key={g.id} value={g.id}>
+            {suggested.includes(g.id) ? `★ ${g.label}` : g.label}
+          </option>
+        ))}
       </select>
       <label htmlFor="g-why">Why does it matter to you? (optional)</label>
       <input id="g-why" value={why} onChange={(e) => setWhy(e.target.value)} placeholder="In your own words" />

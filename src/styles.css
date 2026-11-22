@@ -103,12 +103,17 @@ details summary { cursor: pointer; font-weight: 600; color: var(--navy); padding
 .guardian-wrap { text-align: center; margin: 4px 0 8px; }
 .guardian-wrap svg { max-width: 100%; height: auto; display: block; margin: 0 auto; }
 /* Clearly visible, calm motion: bob, glow pulse, gem shimmer, shadow. */
-.guardian-bob { animation: guardian-bob 2.4s ease-in-out infinite; transform-box: fill-box; }
+.guardian-bob { animation: guardian-bob 2s ease-in-out infinite; transform-box: fill-box; }
 @keyframes guardian-bob {
   0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-12px); }
+  50% { transform: translateY(-16px); }
 }
 .guardian-aura { animation: guardian-glow 3s ease-in-out infinite; transform-origin: center; }
+.guardian-halo { animation: halo-pulse 3s ease-in-out infinite; transform-origin: center; transform-box: fill-box; }
+@keyframes halo-pulse {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 0.8; }
+}
 @keyframes guardian-glow {
   0%, 100% { opacity: 0.55; }
   50% { opacity: 1; }
@@ -129,7 +134,7 @@ details summary { cursor: pointer; font-weight: 600; color: var(--navy); padding
   50% { opacity: 1; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .guardian-bob, .guardian-aura, .guardian-gem, .guardian-shadow, .guardian-sparkle, .xp-glow > div { animation: none; }
+  .guardian-bob, .guardian-aura, .guardian-halo, .guardian-gem, .guardian-shadow, .guardian-sparkle, .xp-glow > div { animation: none; }
 }
 /* Modern hero card on Today: soft gradient, glowing gold border. */
 .guardian-hero {
@@ -153,7 +158,19 @@ details summary { cursor: pointer; font-weight: 600; color: var(--navy); padding
 .gear-item {
   position: relative; display: flex; gap: 12px; align-items: flex-start;
   padding: 12px; margin: 10px 0; border-radius: 14px;
-  border: 1px solid var(--line); background: #fff;
+  border: 1px solid var(--line); background: #fff; overflow: hidden;
+}
+/* A bright band that sweeps across Legendary and Mythical cards, so the
+   rarity effect is clearly moving, not just a static color. */
+.gear-shine {
+  position: absolute; top: 0; bottom: 0; left: 0; width: 70px; pointer-events: none;
+  background: linear-gradient(100deg, transparent, rgba(255, 255, 255, 0.65), transparent);
+  transform: translateX(-90px) skewX(-12deg);
+  animation: gear-shine-sweep 2.8s ease-in-out infinite;
+}
+@keyframes gear-shine-sweep {
+  0% { transform: translateX(-90px) skewX(-12deg); }
+  55%, 100% { transform: translateX(760px) skewX(-12deg); }
 }
 .gear-item:not(.earned) { opacity: 0.75; }
 .gear-item.rarity-common { border-color: var(--line); }
@@ -184,7 +201,12 @@ details summary { cursor: pointer; font-weight: 600; color: var(--navy); padding
 }
 .gear-sparkle {
   position: absolute; top: 4px; right: 10px; color: #7b2fbe; font-size: 1.1rem;
-  animation: sparkle-twinkle 2.2s ease-in-out infinite;
+  animation: gear-sparkle-pop 2.2s ease-in-out infinite; transform-box: fill-box; transform-origin: center;
+}
+.gear-sparkle.second { right: 34px; animation-delay: 0.8s; color: var(--gold); }
+@keyframes gear-sparkle-pop {
+  0%, 100% { opacity: 0.3; transform: scale(0.7); }
+  50% { opacity: 1; transform: scale(1.35); }
 }
 .tier-pill {
   display: inline-block; border-radius: 999px; padding: 1px 9px;
@@ -196,7 +218,7 @@ details summary { cursor: pointer; font-weight: 600; color: var(--navy); padding
 .tier-mythical { background: linear-gradient(90deg, #7b2fbe, #c9a227); color: #fff; }
 .tier-earned { background: #e6f4ec; color: #14532d; }
 @media (prefers-reduced-motion: reduce) {
-  .gear-item.rarity-legendary, .gear-item.rarity-mythical, .gear-sparkle { animation: none; }
+  .gear-item.rarity-legendary, .gear-item.rarity-mythical, .gear-sparkle, .gear-shine { animation: none; }
 }
 .progress-bar > div { transition: width 0.6s ease; }
 .avatar {

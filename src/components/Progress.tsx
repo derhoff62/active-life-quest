@@ -18,6 +18,9 @@ export default function Progress({ ctx }: { ctx: Ctx }) {
     return Date.now() - d.getTime() < 7 * 24 * 60 * 60 * 1000;
   }).length;
   const last = doc.workouts[doc.workouts.length - 1] as { title?: string; date?: string } | undefined;
+  const lastSleep = doc.sleep[doc.sleep.length - 1] as { hours?: number } | undefined;
+  const latestPr = doc.prs[doc.prs.length - 1];
+  const latestMeasure = [...doc.measurements].reverse()[0] as { waist?: string; weight?: number } | undefined;
 
   // Simple month calendar: trained days this month
   const now = new Date();
@@ -73,6 +76,32 @@ export default function Progress({ ctx }: { ctx: Ctx }) {
               <p>Started: {new Date(g.started).toLocaleDateString()}. Why: {g.why || 'not written yet'}.</p>
               <p><strong>What counts:</strong> {info?.measures || 'Workouts, cardio, check-ins, and sleep.'}</p>
               <p><strong>Next small milestone:</strong> {info?.nextMilestone || 'One more workout this week.'}</p>
+              {/* Live numbers for this goal. Progress is driven by the goal,
+                  never by the class, so any class can make progress on any goal. */}
+              {g.type === 'stronger' && (
+                <p>Your numbers: {doc.prs.length} personal {doc.prs.length === 1 ? 'record' : 'records'}. {latestPr ? `Latest: ${latestPr.exercise}, ${latestPr.weight} lb x ${latestPr.reps}.` : 'Log a heavier weight or more reps than last time and it shows here.'}</p>
+              )}
+              {g.type === 'move-better' && (
+                <p>Your numbers: {doc.retests.length} {doc.retests.length === 1 ? 'retest' : 'retests'} done. Balance baseline: {doc.balanceBaseline ? `${doc.balanceBaseline.left}s left, ${doc.balanceBaseline.right}s right.` : 'not set yet.'} Workouts finished: {doc.workouts.length}.</p>
+              )}
+              {g.type === 'balance' && (
+                <p>Your numbers: balance baseline {doc.balanceBaseline ? `${doc.balanceBaseline.left}s left, ${doc.balanceBaseline.right}s right.` : 'not set yet. Do the assessment to set it.'} Next milestone: hold 30 seconds on each leg.</p>
+              )}
+              {g.type === 'cardio' && (
+                <p>Your numbers: {cardioTotal} minutes of cardio logged. Target 150 to 300 minutes a week, Zone 2.</p>
+              )}
+              {g.type === 'consistency' && (
+                <p>Your numbers: {workoutsThisWeek} {workoutsThisWeek === 1 ? 'workout' : 'workouts'} this week, {doc.checkins.length} check-ins, streak {doc.streakDays} {doc.streakDays === 1 ? 'day' : 'days'}.</p>
+              )}
+              {g.type === 'sleep' && (
+                <p>Your numbers: last night {lastSleep?.hours ?? 'not logged yet'} hours of sleep. Sleep logs: {doc.sleep.length}. Recovery is part of training for every class.</p>
+              )}
+              {g.type === 'weight-loss' && (
+                <p>Your numbers: {doc.measurements.length} measurements logged. {latestMeasure ? `Latest: ${latestMeasure.waist ? `waist ${latestMeasure.waist} in` : ''}${latestMeasure.waist && latestMeasure.weight ? ', ' : ''}${latestMeasure.weight ? `weight ${latestMeasure.weight} lb` : ''}.` : 'Log a waist measurement or weigh-in below to start the trend.'}</p>
+              )}
+              {g.type === 'own-words' && (
+                <p>Your numbers: {doc.workouts.length} workouts finished, {doc.checkins.length} check-ins.</p>
+              )}
               {g.type === 'endurance' && <p>Cardio this week: {cardioTotal} min of the 150 to 300 target. Milestones at 150, then 200, then 300.</p>}
               {g.type === 'weight-loss' && <p>Weight loss, the Mind Pump way: measurements, photos, strength, and how clothes fit first. The scale is last, once a week, same day and time, and only the trend over weeks matters.</p>}
             </details>

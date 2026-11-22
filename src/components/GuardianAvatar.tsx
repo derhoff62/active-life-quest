@@ -210,8 +210,8 @@ export default function GuardianAvatar({
             )}
           </linearGradient>
           <radialGradient id={id('aura')} cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stopColor={gem} stopOpacity="0.45" />
-            <stop offset="55%" stopColor={gem} stopOpacity="0.16" />
+            <stop offset="0%" stopColor={gem} stopOpacity="0.65" />
+            <stop offset="55%" stopColor={gem} stopOpacity="0.28" />
             <stop offset="100%" stopColor={gem} stopOpacity="0" />
           </radialGradient>
           <linearGradient id={id('tunic')} x1="0" y1="0" x2="0" y2="1">
@@ -255,8 +255,10 @@ export default function GuardianAvatar({
           <rect x="0" y="0" width="200" height="200" fill={`url(#${id('bg')})`} />
           {sceneArt}
         </g>
-        {/* Glowing aura behind the figure */}
-        <circle className="guardian-aura" cx="100" cy="102" r="88" fill={`url(#${id('aura')})`} />
+        {/* Glowing aura behind the figure, plus a visible halo ring in the gem color */}
+        <circle className="guardian-aura" cx="100" cy="105" r="92" fill={`url(#${id('aura')})`} />
+        <circle className="guardian-halo" cx="100" cy="105" r="80" fill="none" stroke={gem} strokeWidth="3.5" />
+        <circle className="guardian-halo" cx="100" cy="105" r="70" fill="none" stroke={gemLight} strokeWidth="1.5" opacity="0.7" style={{ animationDelay: '1.2s' }} />
         {/* Ground shadow, shrinks as the figure bobs up */}
         <ellipse className="guardian-shadow" cx="100" cy="188" rx="44" ry="6" fill="#124571" opacity="0.18" />
 
@@ -264,132 +266,132 @@ export default function GuardianAvatar({
           {/* Cape with folds */}
           {g.cape && (
             <g>
-              <path d="M100 60 L142 78 L136 170 Q100 182 64 170 L58 78 Z" fill={`url(#${id('cape')})`} opacity="0.96" />
-              <path d="M82 74 Q79 120 81 168" fill="none" stroke={dark} strokeWidth="2" opacity="0.5" />
-              <path d="M100 76 Q100 122 100 176" fill="none" stroke={dark} strokeWidth="2" opacity="0.4" />
-              <path d="M118 74 Q121 120 119 168" fill="none" stroke={dark} strokeWidth="2" opacity="0.5" />
-              <path d="M64 170 Q100 182 136 170" fill="none" stroke="#fff" strokeWidth="1.5" opacity="0.25" />
+              <path d="M100 62 L128 72 L124 148 Q100 156 76 148 L72 72 Z" fill={`url(#${id('cape')})`} opacity="0.96" />
+              <path d="M86 76 Q84 110 86 144" fill="none" stroke={dark} strokeWidth="2" opacity="0.5" />
+              <path d="M100 78 Q100 112 100 150" fill="none" stroke={dark} strokeWidth="2" opacity="0.4" />
+              <path d="M114 76 Q116 110 114 144" fill="none" stroke={dark} strokeWidth="2" opacity="0.5" />
+              <path d="M76 148 Q100 156 124 148" fill="none" stroke="#fff" strokeWidth="1.5" opacity="0.25" />
             </g>
           )}
           {/* Wings, Level 8+ : layered feathers */}
           {showWings && (
             <g>
               <g fill="#ffffff" stroke={main} strokeWidth="2.5" opacity="0.95">
-                <ellipse cx="56" cy="96" rx="20" ry="40" transform="rotate(-28 56 96)" />
-                <ellipse cx="144" cy="96" rx="20" ry="40" transform="rotate(28 144 96)" />
+                <ellipse cx="66" cy="92" rx="13" ry="30" transform="rotate(-25 66 92)" />
+                <ellipse cx="134" cy="92" rx="13" ry="30" transform="rotate(25 134 92)" />
               </g>
               <g fill={gem} opacity="0.35">
-                <ellipse cx="56" cy="104" rx="10" ry="24" transform="rotate(-28 56 104)" />
-                <ellipse cx="144" cy="104" rx="10" ry="24" transform="rotate(28 144 104)" />
+                <ellipse cx="66" cy="98" rx="7" ry="18" transform="rotate(-25 66 98)" />
+                <ellipse cx="134" cy="98" rx="7" ry="18" transform="rotate(25 134 98)" />
               </g>
-              <path d="M50 84 Q56 104 52 126 M150 84 Q144 104 148 126" fill="none" stroke={main} strokeWidth="1.5" opacity="0.5" />
+              <path d="M60 82 Q66 98 62 118 M140 82 Q134 98 138 118" fill="none" stroke={main} strokeWidth="1.5" opacity="0.5" />
             </g>
           )}
-          {/* Arms, slim */}
-          <path d="M76 94 Q66 116 70 136 L80 134 Q78 116 82 100 Z" fill={`url(#${id('tunic')})`} stroke={dark} strokeWidth="2" />
-          <path d="M124 94 Q134 116 130 136 L120 134 Q122 116 118 100 Z" fill={`url(#${id('tunic')})`} stroke={dark} strokeWidth="2" />
-          {/* Body: slim tunic with shading and highlight, longer legs */}
-          <path d="M100 80 L122 90 L128 164 Q100 174 72 164 L78 90 Z" fill={`url(#${id('tunic')})`} stroke={dark} strokeWidth="2.5" />
-          <path d="M82 96 Q79 128 81 160 Q89 163 92 161 Q87 128 90 98 Z" fill="#fff" opacity="0.22" />
-          <path d="M118 96 Q121 128 119 160 Q111 163 108 161 Q113 128 110 98 Z" fill="#000" opacity="0.14" />
+          {/* Arms, slim, at the sides */}
+          <path d="M82 70 Q74 88 76 106 L83 105 Q82 88 87 74 Z" fill={`url(#${id('tunic')})`} stroke={dark} strokeWidth="2" />
+          <path d="M118 70 Q126 88 124 106 L117 105 Q118 88 113 74 Z" fill={`url(#${id('tunic')})`} stroke={dark} strokeWidth="2" />
+          {/* Body: fitted tunic, narrow shoulders, waist, ends at the hips so the legs show */}
+          <path d="M100 62 L118 66 L120 98 L116 122 L84 122 L80 98 L82 66 Z" fill={`url(#${id('tunic')})`} stroke={dark} strokeWidth="2.5" />
+          <path d="M86 72 Q84 96 86 118 Q92 120 94 118 Q90 96 92 74 Z" fill="#fff" opacity="0.22" />
+          <path d="M114 72 Q116 96 114 118 Q108 120 106 118 Q110 96 108 74 Z" fill="#000" opacity="0.14" />
           {/* Belt */}
-          <rect x="74" y="130" width="52" height="10" rx="5" fill={`url(#${id('gold')})`} stroke="#8a6d00" strokeWidth="1.5" />
-          <rect x="94" y="131" width="12" height="8" rx="2" fill="#fffdf4" stroke="#8a6d00" strokeWidth="1.5" />
+          <rect x="82" y="110" width="36" height="9" rx="4.5" fill={`url(#${id('gold')})`} stroke="#8a6d00" strokeWidth="1.5" />
+          <rect x="94" y="111" width="12" height="7" rx="2" fill="#fffdf4" stroke="#8a6d00" strokeWidth="1.5" />
           {/* Glowing gem on chest */}
           <g className="guardian-gem" filter={`url(#${id('glow')})`}>
-            <polygon points="100,102 111,113 100,126 89,113" fill={`url(#${id('gem')})`} stroke="#fff" strokeWidth="2" />
-            <polygon points="100,107 105,113 100,119 95,113" fill="#fff" opacity="0.55" />
+            <polygon points="100,80 109,89 100,100 91,89" fill={`url(#${id('gem')})`} stroke="#fff" strokeWidth="2" />
+            <polygon points="100,85 104,89 100,94 96,89" fill="#fff" opacity="0.55" />
           </g>
           {/* Hands */}
-          <circle cx="71" cy="138" r="6" fill={`url(#${id('skin')})`} stroke={dark} strokeWidth="1.5" />
-          <circle cx="129" cy="138" r="6" fill={`url(#${id('skin')})`} stroke={dark} strokeWidth="1.5" />
-          {/* Head, smaller for slimmer proportions */}
-          <circle cx="100" cy="54" r="24" fill={`url(#${id('skin')})`} stroke={dark} strokeWidth="2.5" />
-          <ellipse cx="89" cy="63" rx="4.5" ry="2.8" fill="#e88a7a" opacity="0.35" />
-          <ellipse cx="111" cy="63" rx="4.5" ry="2.8" fill="#e88a7a" opacity="0.35" />
+          <circle cx="76" cy="108" r="5" fill={`url(#${id('skin')})`} stroke={dark} strokeWidth="1.5" />
+          <circle cx="124" cy="108" r="5" fill={`url(#${id('skin')})`} stroke={dark} strokeWidth="1.5" />
+          {/* Head, smaller for real human proportions */}
+          <circle cx="100" cy="42" r="17" fill={`url(#${id('skin')})`} stroke={dark} strokeWidth="2.5" />
+          <ellipse cx="89" cy="50" rx="3.5" ry="2.2" fill="#e88a7a" opacity="0.35" />
+          <ellipse cx="111" cy="50" rx="3.5" ry="2.2" fill="#e88a7a" opacity="0.35" />
           {/* Hair with strands, or hood for Ranger */}
           {g.classId === 'Ranger' ? (
             <g>
-              <path d="M75 56 Q73 28 100 28 Q127 28 125 56 L117 50 Q112 34 100 34 Q88 34 83 50 Z" fill={`url(#${id('cape')})`} stroke={dark} strokeWidth="2.5" />
-              <path d="M85 40 Q92 33 100 33" fill="none" stroke={light} strokeWidth="2" opacity="0.6" />
-              <path d="M80 54 Q85 60 92 62" fill="none" stroke={dark} strokeWidth="1.5" opacity="0.4" />
+              <path d="M78 44 Q76 24 100 24 Q124 24 122 44 L115 38 Q111 28 100 28 Q89 28 85 38 Z" fill={`url(#${id('cape')})`} stroke={dark} strokeWidth="2.5" />
+              <path d="M88 30 Q94 25 100 25" fill="none" stroke={light} strokeWidth="2" opacity="0.6" />
+              <path d="M83 42 Q87 46 92 48" fill="none" stroke={dark} strokeWidth="1.5" opacity="0.4" />
             </g>
           ) : (
             <g>
-              <path d="M76 56 Q73 30 100 30 Q127 30 124 56 Q118 38 100 38 Q82 38 76 56 Z" fill="#5b3a1e" />
-              <path d="M82 38 Q90 32 100 32 Q110 32 118 38" fill="none" stroke="#8a6238" strokeWidth="2.5" opacity="0.8" />
-              <path d="M76 52 Q74 44 78 40 M124 52 Q126 44 122 40" fill="none" stroke="#5b3a1e" strokeWidth="2" />
+              <path d="M83 44 Q81 24 100 24 Q119 24 117 44 Q112 30 100 30 Q88 30 83 44 Z" fill="#5b3a1e" />
+              <path d="M88 30 Q94 25 100 25 Q106 25 112 30" fill="none" stroke="#8a6238" strokeWidth="2.5" opacity="0.8" />
+              <path d="M83 42 Q81 36 84 32 M117 42 Q119 36 116 32" fill="none" stroke="#5b3a1e" strokeWidth="2" />
             </g>
           )}
           {/* Crown, Level 10+ */}
           {showCrown && (
             <g>
-              <polygon points="80,32 87,15 95,28 100,13 105,28 113,15 120,32 120,40 80,40" fill={`url(#${id('gold')})`} stroke="#8a6d00" strokeWidth="2" />
-              <circle cx="100" cy="32" r="3.2" fill={gem} stroke="#fff" strokeWidth="1.5" />
-              <circle cx="88" cy="32" r="2.3" fill={gem} stroke="#fff" strokeWidth="1" />
-              <circle cx="112" cy="32" r="2.3" fill={gem} stroke="#fff" strokeWidth="1" />
+              <polygon points="84,26 90,12 96,22 100,10 104,22 110,12 116,26 116,32 84,32" fill={`url(#${id('gold')})`} stroke="#8a6d00" strokeWidth="2" />
+              <circle cx="100" cy="26" r="2.6" fill={gem} stroke="#fff" strokeWidth="1.5" />
+              <circle cx="90" cy="26" r="2" fill={gem} stroke="#fff" strokeWidth="1" />
+              <circle cx="110" cy="26" r="2" fill={gem} stroke="#fff" strokeWidth="1" />
             </g>
           )}
           {/* Face: brows, eyes with highlights, smile */}
-          <path d="M85 48 Q90 45 95 48 M105 48 Q110 45 115 48" fill="none" stroke="#5b3a1e" strokeWidth="2" strokeLinecap="round" />
-          <circle cx="90" cy="55" r="3" fill="#1c2b3a" />
-          <circle cx="110" cy="55" r="3" fill="#1c2b3a" />
-          <circle cx="91" cy="53.8" r="1" fill="#fff" />
-          <circle cx="111" cy="53.8" r="1" fill="#fff" />
-          <path d="M97 58 Q100 62 103 58" fill="none" stroke="#c98a5a" strokeWidth="1.5" strokeLinecap="round" />
-          <path d="M92 66 Q100 72 108 66" fill="none" stroke="#1c2b3a" strokeWidth="2.5" strokeLinecap="round" />
+          <path d="M87 38 Q91 36 95 38 M105 38 Q109 36 113 38" fill="none" stroke="#5b3a1e" strokeWidth="2" strokeLinecap="round" />
+          <circle cx="91" cy="44" r="2.6" fill="#1c2b3a" />
+          <circle cx="109" cy="44" r="2.6" fill="#1c2b3a" />
+          <circle cx="92" cy="43" r="0.9" fill="#fff" />
+          <circle cx="110" cy="43" r="0.9" fill="#fff" />
+          <path d="M98 47 Q100 50 102 47" fill="none" stroke="#c98a5a" strokeWidth="1.5" strokeLinecap="round" />
+          <path d="M93 54 Q100 59 107 54" fill="none" stroke="#1c2b3a" strokeWidth="2.5" strokeLinecap="round" />
           {/* Class weapon */}
           {g.classId === 'Guardian' && (
             <g>
-              <path d="M34 94 L64 94 L64 122 Q49 136 34 122 Z" fill={`url(#${id('steel')})`} stroke={`url(#${id('gold')})`} strokeWidth="3.5" />
-              <path d="M40 100 L58 100 L58 118 Q49 128 40 118 Z" fill={main} opacity="0.85" />
+              <path d="M36 84 L60 84 L60 106 Q48 118 36 106 Z" fill={`url(#${id('steel')})`} stroke={`url(#${id('gold')})`} strokeWidth="3" />
+              <path d="M41 89 L55 89 L55 104 Q48 112 41 104 Z" fill={main} opacity="0.85" />
               <g className="guardian-gem" filter={`url(#${id('glow')})`}>
-                <circle cx="49" cy="109" r="6.5" fill={`url(#${id('gem')})`} stroke="#fff" strokeWidth="2" />
+                <circle cx="48" cy="97" r="5.5" fill={`url(#${id('gem')})`} stroke="#fff" strokeWidth="1.5" />
               </g>
-              <g transform="rotate(18 156 92)">
-                <rect x="153" y="62" width="7" height="54" rx="3" fill={`url(#${id('steel')})`} stroke="#5b6b7a" strokeWidth="1.5" />
-                <rect x="155" y="64" width="2" height="48" fill="#fff" opacity="0.7" />
-                <rect x="145" y="114" width="22" height="7" rx="3.5" fill={`url(#${id('gold')})`} stroke="#8a6d00" strokeWidth="1.5" />
-                <rect x="152" y="121" width="9" height="12" rx="3" fill="#5b3a1e" />
+              <g transform="rotate(18 150 84)">
+                <rect x="147" y="52" width="6" height="48" rx="3" fill={`url(#${id('steel')})`} stroke="#5b6b7a" strokeWidth="1.5" />
+                <rect x="149" y="54" width="1.8" height="42" fill="#fff" opacity="0.7" />
+                <rect x="140" y="98" width="20" height="6" rx="3" fill={`url(#${id('gold')})`} stroke="#8a6d00" strokeWidth="1.5" />
+                <rect x="146" y="104" width="8" height="11" rx="3" fill="#5b3a1e" />
               </g>
             </g>
           )}
           {g.classId === 'Ranger' && (
             <g>
-              <path d="M150 68 Q180 100 150 134" fill="none" stroke="#7a4a21" strokeWidth="5" strokeLinecap="round" />
-              <path d="M150 68 Q176 100 150 134" fill="none" stroke="#a8763e" strokeWidth="2" strokeLinecap="round" />
-              <line x1="150" y1="68" x2="150" y2="134" stroke="#e8e2d4" strokeWidth="1.5" />
-              <line x1="150" y1="100" x2="126" y2="100" stroke={gem} strokeWidth="3" strokeLinecap="round" />
-              <polygon points="126,100 134,96 134,104" fill="#5b6b7a" />
-              <rect x="38" y="90" width="17" height="42" rx="8.5" fill="#5b3a1e" stroke="#3a2410" strokeWidth="1.5" />
-              <line x1="44" y1="88" x2="44" y2="78" stroke="#e8e2d4" strokeWidth="2" />
-              <line x1="50" y1="88" x2="50" y2="76" stroke="#e8e2d4" strokeWidth="2" />
+              <path d="M146 62 Q172 88 146 116" fill="none" stroke="#7a4a21" strokeWidth="4.5" strokeLinecap="round" />
+              <path d="M146 62 Q168 88 146 116" fill="none" stroke="#a8763e" strokeWidth="2" strokeLinecap="round" />
+              <line x1="146" y1="62" x2="146" y2="116" stroke="#e8e2d4" strokeWidth="1.5" />
+              <line x1="146" y1="88" x2="126" y2="88" stroke={gem} strokeWidth="2.5" strokeLinecap="round" />
+              <polygon points="126,88 133,85 133,91" fill="#5b6b7a" />
+              <rect x="40" y="84" width="15" height="36" rx="7.5" fill="#5b3a1e" stroke="#3a2410" strokeWidth="1.5" />
+              <line x1="45" y1="82" x2="45" y2="74" stroke="#e8e2d4" strokeWidth="2" />
+              <line x1="50" y1="82" x2="50" y2="72" stroke="#e8e2d4" strokeWidth="2" />
             </g>
           )}
           {g.classId === 'Spellweaver' && (
             <g>
-              <rect x="151" y="50" width="7" height="116" rx="3.5" fill="#5b3a1e" stroke="#3a2410" strokeWidth="1.5" />
-              <rect x="153" y="52" width="2" height="110" fill="#a8763e" opacity="0.7" />
+              <rect x="148" y="44" width="6" height="118" rx="3" fill="#5b3a1e" stroke="#3a2410" strokeWidth="1.5" />
+              <rect x="150" y="46" width="2" height="112" fill="#a8763e" opacity="0.7" />
               <g className="guardian-gem" filter={`url(#${id('glow')})`}>
                 <polygon
-                  points="154,24 159,38 173,38 162,47 166,61 154,53 142,61 146,47 135,38 149,38"
+                  points="151,20 155,32 167,32 158,40 162,52 151,45 140,52 144,40 135,32 147,32"
                   fill={`url(#${id('gem')})`}
                   stroke="#fff"
                   strokeWidth="2"
                 />
               </g>
-              <circle className="guardian-sparkle" cx="134" cy="64" r="3.5" fill={gemLight} />
-              <circle className="guardian-sparkle" style={{ animationDelay: '0.7s' }} cx="126" cy="84" r="2.5" fill={gem} />
-              <circle className="guardian-sparkle" style={{ animationDelay: '1.3s' }} cx="138" cy="98" r="2" fill={gemLight} />
+              <circle className="guardian-sparkle" cx="132" cy="58" r="3" fill={gemLight} />
+              <circle className="guardian-sparkle" style={{ animationDelay: '0.7s' }} cx="126" cy="76" r="2.2" fill={gem} />
+              <circle className="guardian-sparkle" style={{ animationDelay: '1.3s' }} cx="136" cy="90" r="1.8" fill={gemLight} />
             </g>
           )}
-          {/* Legs, slim and longer, and boots */}
-          <path d="M84 164 L83 182 L94 182 L94 164 Z" fill={dark} />
-          <path d="M106 164 L106 182 L117 182 L116 164 Z" fill={dark} />
-          <ellipse cx="89" cy="184" rx="11" ry="5" fill="#3a2410" />
-          <ellipse cx="111" cy="184" rx="11" ry="5" fill="#3a2410" />
-          <ellipse cx="86" cy="182" rx="5" ry="2" fill="#a8763e" opacity="0.6" />
-          <ellipse cx="108" cy="182" rx="5" ry="2" fill="#a8763e" opacity="0.6" />
+          {/* Legs, slim and long, with boots */}
+          <path d="M88 122 L87 178 L96 178 L96 122 Z" fill={dark} />
+          <path d="M104 122 L104 178 L113 178 L112 122 Z" fill={dark} />
+          <ellipse cx="91" cy="182" rx="9" ry="4.5" fill="#3a2410" />
+          <ellipse cx="109" cy="182" rx="9" ry="4.5" fill="#3a2410" />
+          <ellipse cx="88" cy="180" rx="4" ry="1.6" fill="#a8763e" opacity="0.6" />
+          <ellipse cx="106" cy="180" rx="4" ry="1.6" fill="#a8763e" opacity="0.6" />
         </g>
       </svg>
       <p className="guardian-caption">

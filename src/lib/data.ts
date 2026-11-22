@@ -1041,6 +1041,7 @@ export const CREATURES: Creature[] = [
     kind: 'Dwarf blacksmith',
     place: 'Armor vault',
     line: 'Bram forges your armor, one piece at a time, and never lets you leave the forge with gear you have not earned.',
+    meetWeek: 1,
   },
   {
     id: 'sylva',
@@ -1048,6 +1049,7 @@ export const CREATURES: Creature[] = [
     kind: 'Elf guide',
     place: 'Cardio and balance',
     line: 'Sylva knows every forest trail and every balance beam in the kingdom, and she walks them with you.',
+    meetWeek: 1,
   },
   {
     id: 'kaelith',
@@ -1055,6 +1057,7 @@ export const CREATURES: Creature[] = [
     kind: 'Dragon',
     place: 'Week 12 final-round gate',
     line: 'Kaelith is a dragon you befriend at the Week 12 gate. She is not a boss. She opens the gate once your retest is done.',
+    meetWeek: 12,
   },
   {
     id: 'tilda',
@@ -1062,6 +1065,7 @@ export const CREATURES: Creature[] = [
     kind: 'Halfling innkeeper',
     place: 'Nutrition',
     line: 'Tilda runs the inn kitchen, serves real food in honest portions, and always saves you a seat.',
+    meetWeek: 5,
   },
   {
     id: 'pip',
@@ -1069,6 +1073,7 @@ export const CREATURES: Creature[] = [
     kind: 'Gnome map keeper',
     place: 'Journey',
     line: 'Pip keeps your map, marks every step you take, and never lets you get lost on the road.',
+    meetWeek: 5,
   },
   {
     id: 'hoot',
@@ -1076,6 +1081,7 @@ export const CREATURES: Creature[] = [
     kind: 'Owl',
     place: 'Progress',
     line: 'Hoot watches from the rafters, counts your wins, and hoots softly every time you show up.',
+    meetWeek: 9,
   },
   {
     id: 'ash',
@@ -1083,6 +1089,7 @@ export const CREATURES: Creature[] = [
     kind: 'Dire wolf',
     place: 'Journey',
     line: 'Ash is a dire wolf you befriend by showing up steady, week after week. He walks beside you and guards the road while you train.',
+    meetWeek: 2,
   },
   {
     id: 'ember',
@@ -1090,6 +1097,7 @@ export const CREATURES: Creature[] = [
     kind: 'Small dragon',
     place: 'Journey',
     line: 'Ember is a small friendly dragon you befriend after your first boss round. She is not a boss. She keeps your fire lit and cheers your wins.',
+    meetWeek: 4,
   },
   {
     id: 'rowan',
@@ -1097,6 +1105,7 @@ export const CREATURES: Creature[] = [
     kind: 'Retired knight',
     place: 'Journey',
     line: 'Rowan is a retired knight you befriend on the road. He walks beside you and shows you how to pace yourself, never rushing a set.',
+    meetWeek: 6,
   },
   {
     id: 'mara',
@@ -1104,6 +1113,7 @@ export const CREATURES: Creature[] = [
     kind: 'Healer',
     place: 'Recovery',
     line: 'Mara is a healer you befriend after a hard week. She helps you rest and recover, and reminds you that sleep counts as training.',
+    meetWeek: 8,
   },
   {
     id: 'quill',
@@ -1111,6 +1121,7 @@ export const CREATURES: Creature[] = [
     kind: 'Raven',
     place: 'Journey',
     line: 'Quill is a raven you befriend with a few crumbs and a kind word. He carries your messages to Derek and brings back the replies.',
+    meetWeek: 7,
   },
   {
     id: 'miso',
@@ -1118,6 +1129,7 @@ export const CREATURES: Creature[] = [
     kind: 'Cat',
     place: 'Rest days',
     line: 'Miso is a cat you befriend at the inn. She keeps you company on rest days and naps beside you while you stretch.',
+    meetWeek: 3,
   },
 ];
 
@@ -1138,6 +1150,20 @@ export const STORY: { firstLine: string; expanded: string[] } = {
 
 // ----------------------------------------------------------- CLASSES, SPELLS
 
+export const CLASS_GOOD_FOR: Record<string, string> = {
+  Guardian: 'Good for: getting stronger, lifting heavy, sticking with it.',
+  Ranger: 'Good for: moving better, balance, cardio and endurance.',
+  Spellweaver: 'Good for: getting stronger, steady habits, sleep and recovery, weight loss.',
+};
+
+// Suggested goals per class, in plain words. Suggestions only: any goal type
+// works with any class, and progress is driven by the goal, not the class.
+export const CLASS_SUGGESTED_GOALS: Record<string, string[]> = {
+  Guardian: ['stronger', 'consistency', 'weight-loss'],
+  Ranger: ['move-better', 'balance', 'cardio', 'endurance', 'weight-loss'],
+  Spellweaver: ['stronger', 'consistency', 'sleep', 'weight-loss'],
+};
+
 export const CLASSES: ClassInfo[] = [
   {
     id: 'Guardian',
@@ -1154,7 +1180,7 @@ export const CLASSES: ClassInfo[] = [
   {
     id: 'Spellweaver',
     name: 'Spellweaver',
-    description: 'Clever and calm. The Spellweaver turns rest, food, and sleep into quiet power.',
+    description: 'Clever and calm. The Spellweaver trains strength like everyone else, and turns rest, food, and sleep into quiet power.',
     spells: ['deep-rest', 'clear-mind'],
   },
 ];
@@ -1198,7 +1224,7 @@ export const SPELLS: Spell[] = [
     classId: 'Spellweaver',
     cost: 10,
     damage: 15,
-    blurb: 'Rest is a spell too. Recover mana and come back stronger for the next round.',
+    blurb: 'Rest is a spell too. Recover mana and come back stronger for the next workout, not instead of it.',
   },
   {
     id: 'clear-mind',
@@ -1206,7 +1232,7 @@ export const SPELLS: Spell[] = [
     classId: 'Spellweaver',
     cost: 12,
     damage: 20,
-    blurb: 'Clear your mind and focus. Extra damage on check-in and consistency rounds.',
+    blurb: 'Clear your mind and focus on the next set. Extra damage on check-in and consistency rounds.',
   },
   {
     id: 'second-wind',

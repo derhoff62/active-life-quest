@@ -1,5 +1,6 @@
+import { useState } from 'react';
 import type { Ctx } from '../App';
-import { ARMOR, SPELLS } from '../lib/data';
+import { ARMOR, CLASSES, CLASS_GOOD_FOR, SPELLS } from '../lib/data';
 import type { ArmorPiece } from '../lib/types';
 import { levelForXp } from '../lib/store';
 import GuardianAvatar from './GuardianAvatar';
@@ -43,9 +44,33 @@ function GearIcon({ piece }: { piece: ArmorPiece }) {
 }
 
 function GearCard({ piece, earned }: { piece: ArmorPiece; earned: boolean }) {
+  // Legendary and Mythical stay hidden until earned: only the tier and the
+  // way to unlock show. No name, no effect, no emblem detail.
+  if (!earned && (piece.tier === 'Legendary' || piece.tier === 'Mythical')) {
+    return (
+      <div className={`gear-item rarity-${piece.tier.toLowerCase()} gear-hidden`}>
+        <span className="gear-shine" aria-hidden />
+        <svg width="40" height="40" viewBox="0 0 40 40" role="img" aria-label="Hidden gear" style={{ flexShrink: 0 }}>
+          <circle cx="20" cy="20" r="16" fill="none" stroke="#7b2fbe" strokeWidth="2" strokeDasharray="4 3" />
+          <text x="20" y="27" textAnchor="middle" fontSize="18" fontWeight="700" fill="#7b2fbe">?</text>
+        </svg>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div className="row" style={{ gap: 6 }}>
+            <strong>???</strong>
+            <span className={`tier-pill tier-${piece.tier.toLowerCase()}`}>{piece.tier}</span>
+            <span className="tier-pill">Hidden until earned</span>
+          </div>
+          <p className="small" style={{ margin: '2px 0' }}>To unlock: {piece.how}</p>
+        </div>
+      </div>
+    );
+  }
   return (
     <div className={`gear-item rarity-${piece.tier.toLowerCase()}${earned ? ' earned' : ''}`}>
+      {(piece.tier === 'Legendary' || piece.tier === 'Mythical') && <span className="gear-shine" aria-hidden />}
       {piece.tier === 'Mythical' && <span className="gear-sparkle" aria-hidden>✦</span>}
+      {piece.tier === 'Mythical' && <span className="gear-sparkle second" aria-hidden>✦</span>}
+      {piece.tier === 'Legendary' && <span className="gear-sparkle" aria-hidden>✦</span>}
       <GearIcon piece={piece} />
       <div style={{ flex: 1, minWidth: 0 }}>
         <div className="row" style={{ gap: 6 }}>
@@ -61,12 +86,15 @@ function GearCard({ piece, earned }: { piece: ArmorPiece; earned: boolean }) {
 }
 
 export default function Armor({ ctx }: { ctx: Ctx }) {
-  const { doc } = ctx;
+  const { doc, update } = ctx;
   const earned = new Set(doc.armorEarned);
   const rarityEarned = new Set(doc.rarityEarned);
   const total = ARMOR.length;
   const earnedCount = ARMOR.filter((a) => earned.has(a.id) || rarityEarned.has(a.id)).length + (doc.armorEarned.length ? 0 : 1);
   const next = ARMOR.find((a) => !earned.has(a.id) && !rarityEarned.has(a.id));
+  const nextHidden = next && (next.tier === 'Legendary' || next.tier === 'Mythical');
+  const [showClassPicker, setShowClassPicker] = useState(false);
+  const [confirmClass, setConfirmClass] = useState<string | null>(null);
 
   const byTier = (tier: string) => ARMOR.filter((a) => a.tier === tier && !a.set);
   const bySet = (set: string) => ARMOR.filter((a) => a.set === set);
@@ -80,9 +108,49 @@ export default function Armor({ ctx }: { ctx: Ctx }) {
             <h2>Armor vault</h2>
             <p>
               {doc.guardian ? `${doc.guardian.name}, Level ${doc.level}` : 'Your guardian'} · {Math.min(earnedCount, total)} of {total} pieces earned
-              {next ? ` · Next: ${next.name}` : ''}
+              {next ? ` · Next: ${nextHidden ? '??? (hidden until earned)' : next.name}` : ''}
             </p>
             <p className="small muted">Armor and weapons never block a workout, quest, check-in, or retest. They are earned, one at a time, from real milestones.</p>
+            {doc.guardian && <p className="small">{CLASS_GOOD_FOR[doc.guardian.classId] || ''}</p>}
+            {doc.guardian && (
+              <button onClick={() => { setShowClassPicker((v) => !v); setConfirmClass(null); }}>
+                {showClassPicker ? 'Close class picker' : 'Change class'}
+              </button>
+            )}
+            {showClassPicker && doc.guardian && CLASSES.map((c) => (
+              <div key={c.id} style={{ borderTop: '1px solid #d7e3ee', padding: '10px 0', textAlign: 'left' }}>
+                <p>
+                  <strong>{c.name}</strong>
+                  {c.id === doc.guardian?.classId ? ' (your class now)' : ''}
+                </p>
+                <p className="small">{c.description}</p>
+                <p className="small">{CLASS_GOOD_FOR[c.id] || ''}</p>
+                <p className="small muted">All classes do the same strength workouts, phases, cardio, and assessment. The class only changes spells, weapon, avatar, and background.</p>
+                {c.id !== doc.guardian?.classId && confirmClass !== c.id && (
+                  <button onClick={() => setConfirmClass(c.id)}>Switch to {c.name}</button>
+                )}
+                {confirmClass === c.id && (
+                  <div className="notice">
+                    <p>Switch to {c.name}? Your spells and class weapon will change to {c.name}&apos;s. Your XP, level, and armor stay.</p>
+                    <div className="row">
+                      <button
+                        className="primary"
+                        onClick={() => {
+                          update((d) => {
+                            if (d.guardian) d.guardian.classId = c.id as 'Guardian' | 'Ranger' | 'Spellweaver';
+                          });
+                          setConfirmClass(null);
+                          setShowClassPicker(false);
+                        }}
+                      >
+                        Yes, switch to {c.name}
+                      </button>
+                      <button onClick={() => setConfirmClass(null)}>Cancel</button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
           </div>
         </div>
       </div>

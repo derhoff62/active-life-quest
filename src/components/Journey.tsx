@@ -15,6 +15,12 @@ export default function Journey({ ctx }: { ctx: Ctx }) {
   const [bossHit, setBossHit] = useState('');
   const phase = phaseForDoc(doc);
   const mySpells = SPELLS.filter((s) => s.classId === 'any' || s.classId === doc.guardian?.classId);
+  // Companions are met gradually as the journey goes on, not all at once.
+  // Current week comes from retests done, or from the phase if no retest yet.
+  const retestWeeks = doc.retests.map((r) => (r as { week?: number }).week || 0);
+  const maxRetest = Math.max(0, ...retestWeeks);
+  const currentWeek = maxRetest > 0 ? Math.min(12, maxRetest + 1) : phase >= 4 ? 12 : phase === 3 ? 9 : phase === 2 ? 5 : 1;
+  const metCount = CREATURES.filter((c) => currentWeek >= c.meetWeek).length;
 
   return (
     <div>
@@ -57,14 +63,25 @@ export default function Journey({ ctx }: { ctx: Ctx }) {
       </div>
 
       <div className="card">
-        <h3>Your companions</h3>
-        <p className="small muted">People and animals you befriend along the road. Bosses are not companions. They are challenges you beat.</p>
-        {CREATURES.map((c) => (
-          <div className="creature" key={c.id} style={{ margin: '10px 0' }}>
-            <div className="avatar" aria-hidden>{AVATAR[c.name] || '✨'}</div>
-            <p><strong>{c.name}</strong> ({c.kind}, {c.place}): {c.line}</p>
-          </div>
-        ))}
+        <h3>Your companions ({metCount} of {CREATURES.length} met)</h3>
+        <p className="small muted">People and animals you befriend along the road, one at a time as you get further. Bosses are not companions. They are challenges you beat.</p>
+        {CREATURES.map((c) => {
+          const met = currentWeek >= c.meetWeek;
+          if (!met) {
+            return (
+              <div className="creature" key={c.id} style={{ margin: '10px 0', opacity: 0.7 }}>
+                <div className="avatar" aria-hidden>?</div>
+                <p><strong>???</strong> <span className="small muted">Someone you have not met yet. You meet them around Week {c.meetWeek}.</span></p>
+              </div>
+            );
+          }
+          return (
+            <div className="creature" key={c.id} style={{ margin: '10px 0' }}>
+              <div className="avatar" aria-hidden>{AVATAR[c.name] || '✨'}</div>
+              <p><strong>{c.name}</strong> ({c.kind}, {c.place}): {c.line}</p>
+            </div>
+          );
+        })}
       </div>
 
       <div className="card">
