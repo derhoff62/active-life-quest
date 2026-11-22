@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { Ctx } from '../App';
+import * as api from '../lib/api';
 import Switch from './Switch';
 import { GOAL_TYPES, BADGES } from '../lib/data';
 import { levelForXp, titleForLevel, metCompanionIds } from '../lib/store';
@@ -10,6 +11,13 @@ export default function Progress({ ctx }: { ctx: Ctx }) {
   const [clothes, setClothes] = useState('');
   const [weigh, setWeigh] = useState('');
   const [cardioMin, setCardioMin] = useState('');
+  const [stepsToday, setStepsToday] = useState('');
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState('');
+  const [photoNote, setPhotoNote] = useState('');
+  const [photoUploading, setPhotoUploading] = useState(false);
+  const [photoMsg, setPhotoMsg] = useState('');
+  const [photoError, setPhotoError] = useState('');
   const [showGoals, setShowGoals] = useState(true);
 
   const level = levelForXp(doc.xp);
@@ -178,6 +186,100 @@ export default function Progress({ ctx }: { ctx: Ctx }) {
           </button>
         </div>
         <p className="small muted">Zone 2, easy enough to talk. High intensity counts double: log the doubled minutes.</p>
+      </div>
+
+      <div className="card">
+        <h3>Steps (optional)</h3>
+        <p className="small muted">Steps are optional. Log today's count if you track them.</p>
+        <div className="row">
+          <input inputMode="numeric" value={stepsToday} onChange={(e) => setStepsToday(e.target.value)} placeholder="Steps today" style={{ maxWidth: 140 }} aria-label="Steps today" />
+          <button
+            className="primary"
+            onClick={() => {
+              if (!stepsToday) return;
+              update((d) => {
+                d.steps.push({ id: `s${Date.now()}`, date: new Date().toISOString(), steps: Number(stepsToday) });
+              });
+              setStepsToday('');
+            }}
+          >
+            Log steps
+          </button>
+        </div>
+        {doc.steps.length > 0 && (
+          <p className="small">Last 7 days: {doc.steps.filter((s) => Date.now() - new Date(String(s.date)).getTime() < 7 * 24 * 60 * 60 * 1000).reduce((t, s) => t + Number((s as { steps?: number }).steps || 0), 0).toLocaleString()} steps.</p>
+        )}
+      </div>
+
+      <div className="card">
+        <h3>Progress photos (optional)</h3>
+        <p className="small muted">Private photos, only you and Derek see them. Same day and time each week works best. Only with your okay first, and only if you turned social permission on in the assessment.</p>
+        <label>
+          <input
+            type="file"
+            accept="image/*"
+            style={{ display: 'none' }}
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              setPhotoMsg('');
+              setPhotoError('');
+              if (!f) return;
+              if (!f.type.startsWith('image/')) { setPhotoError('That file is not a photo. Pick an image file.'); return; }
+              if (f.size > 10 * 1024 * 1024) { setPhotoError('That photo is over 10 MB. Pick a smaller one.'); return; }
+              if (photoPreview) URL.revokeObjectURL(photoPreview);
+              setPhotoFile(f);
+              setPhotoPreview(URL.createObjectURL(f));
+            }}
+          />
+          <span className="button-like">Pick a photo</span>
+        </label>
+        {photoPreview && photoFile && (
+          <div style={{ marginTop: 10 }}>
+            <img src={photoPreview} alt="Progress photo preview" style={{ width: '100%', maxHeight: 280, objectFit: 'contain' }} />
+            <p className="small muted">{photoFile.name} · {(photoFile.size / 1024 / 1024).toFixed(1)} MB</p>
+            <label htmlFor="photo-note">Note (optional)</label>
+            <input id="photo-note" value={photoNote} onChange={(e) => setPhotoNote(e.target.value)} placeholder="e.g. Week 4, same shirt" />
+            <div className="row" style={{ marginTop: 8 }}>
+              <button
+                className="primary"
+                disabled={photoUploading}
+                onClick={async () => {
+                  if (!photoFile || photoUploading) return;
+                  setPhotoUploading(true);
+                  setPhotoMsg('');
+                  setPhotoError('');
+                  try {
+                    const r = await api.uploadProgressPhoto(photoFile, photoNote);
+                    update((d) => {
+                      d.progressPhotos = [r.photo, ...(d.progressPhotos || [])];
+                    });
+                    setPhotoMsg('Photo uploaded. Derek can see it in Coach.');
+                    if (photoPreview) URL.revokeObjectURL(photoPreview);
+                    setPhotoPreview('');
+                    setPhotoFile(null);
+                    setPhotoNote('');
+                  } catch (e) {
+                    setPhotoError(e instanceof Error ? e.message : 'The photo could not be uploaded. Try again.');
+                  } finally {
+                    setPhotoUploading(false);
+                  }
+                }}
+              >
+                {photoUploading ? 'Uploading...' : 'Upload this photo'}
+              </button>
+              <button onClick={() => { if (photoPreview) URL.revokeObjectURL(photoPreview); setPhotoPreview(''); setPhotoFile(null); }}>Remove</button>
+            </div>
+          </div>
+        )}
+        {photoMsg && <p className="ok">{photoMsg}</p>}
+        {photoError && <p className="error">{photoError}</p>}
+        {(doc.progressPhotos || []).length > 0 && (
+          <div style={{ marginTop: 10 }}>
+            {(doc.progressPhotos || []).map((ph) => (
+              <p key={ph.id} className="small">{new Date(ph.date).toLocaleDateString()}{ph.note ? ` · ${ph.note}` : ''} · {(ph.sizeBytes / 1024 / 1024).toFixed(1)} MB</p>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="card">

@@ -17,7 +17,11 @@ export default function Journey({ ctx }: { ctx: Ctx }) {
   const [showStory, setShowStory] = useState(false);
   const [bossHit, setBossHit] = useState('');
   const phase = phaseForDoc(doc);
-  const mySpells = SPELLS.filter((s) => s.classId === 'any' || s.classId === doc.guardian?.classId);
+  const level = levelForXp(doc.xp);
+  const mySpells = SPELLS.filter((s) => {
+    if (s.id === 'second-wind') return level >= 9;
+    return s.classId === 'any' || s.classId === doc.guardian?.classId;
+  });
   const met = metCompanionIds(doc);
   const metCount = met.size;
   // Boss health, stored on the profile so a beaten boss stays beaten.

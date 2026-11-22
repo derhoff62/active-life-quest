@@ -3,6 +3,7 @@ import type { Ctx } from '../App';
 import * as api from '../lib/api';
 import { CES_TEMPLATES } from '../lib/data';
 import type { ProfileDoc } from '../lib/store';
+import { checkinPreferenceText, checkinFrequenciesForMode, normalizeCheckinFrequency } from '../lib/store';
 
 interface ClientRow {
   id: string;
@@ -25,8 +26,14 @@ export default function Coach({ ctx }: { ctx: Ctx }) {
   const [nudge, setNudge] = useState('');
   const [betaInfo, setBetaInfo] = useState<{ code: string; uses: number; maxUses: number; expires: string } | null>(null);
   const [cesMarks, setCesMarks] = useState<string[]>([]);
+  const [cesNotes, setCesNotes] = useState('');
+  const [phase5Msg, setPhase5Msg] = useState('');
   const [cesSaved, setCesSaved] = useState('');
   const [videoMsg, setVideoMsg] = useState('');
+  const [nudgeMsg, setNudgeMsg] = useState('');
+  const [callTime, setCallTime] = useState('');
+  const [prefMsg, setPrefMsg] = useState('');
+  const [callFor, setCallFor] = useState('');
   const [deleteVideoKey, setDeleteVideoKey] = useState('');
 
   useEffect(() => {
@@ -115,8 +122,9 @@ export default function Coach({ ctx }: { ctx: Ctx }) {
             <p>
               <strong>{c.displayName || c.email}</strong> · {c.email} · Phase {c.data.assessment?.startingPhase || 'not assessed'} · {c.data.xp} XP · last active {new Date(c.updatedAt).toLocaleDateString()}
             </p>
+            <p className="small muted">Check-ins: {checkinPreferenceText(c.data).replace('Your check-ins: ', '')}</p>
             <div className="row">
-              <button onClick={() => setSelected(c)}>Open client</button>
+              <button onClick={() => { setSelected(c); setCesMarks(c.data.cesSheet?.marks || []); setCesNotes(c.data.cesSheet?.notes || ''); setCesSaved(''); setPhase5Msg(''); }}>Open client</button>
             </div>
           </div>
         ))}
@@ -126,6 +134,117 @@ export default function Coach({ ctx }: { ctx: Ctx }) {
         <div className="card gold-frame">
           <h3>{selected.displayName || selected.email}</h3>
           <p>Phase {selected.data.assessment?.startingPhase || 'not assessed'} · Findings: {selected.data.assessment?.findings.join(', ') || 'none'} · Workouts: {selected.data.workouts.length} · Check-ins: {selected.data.checkins.length} · Cardio: {selected.data.cardio.reduce((s, c) => s + Number(c.minutes || 0), 0)} min</p>
+          <p className="small"><strong>Check-in preference: {checkinPreferenceText(selected.data).replace('Your check-ins: ', '')}</strong></p>
+          <div className="card">
+            <h4 style={{ margin: '0 0 4px' }}>Change this client's check-ins</h4>
+            <p className="small muted">Live video calls are 1 to 4 times a month. Text or recorded video can be more often.</p>
+            <label>Check-in type</label>
+            <div className="row">
+              {([['text', 'Text check-in in the app'], ['live-call', 'Live video call']] as const).map(([v, label]) => (
+                <button
+                  key={v}
+                  type="button"
+                  onClick={async () => {
+                    const freq = normalizeCheckinFrequency(v, selected.data.checkinFrequency);
+                    try {
+                      if (api.getMode() === 'server') await api.coachSetCheckinPreference(selected.id, v, freq);
+                      const patch = (d: ProfileDoc) => ({ ...d, checkinMode: v, checkinFrequency: freq });
+                      setClients((prev) => prev.map((cl) => (cl.id === selected.id ? { ...cl, data: patch(cl.data) } : cl)));
+                      setSelected((prev) => (prev ? { ...prev, data: patch(prev.data) } : prev));
+                      setPrefMsg('Check-in preference saved.');
+                    } catch { setPrefMsg('That could not be saved. Try again.'); }
+                  }}
+                  style={selected.data.checkinMode === v ? { background: '#124571', color: '#fff' } : {}}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            <label>How often</label>
+            <div className="row">
+              {checkinFrequenciesForMode(selected.data.checkinMode).map(({ value: v, label }) => (
+                <button
+                  key={v}
+                  type="button"
+                  onClick={async () => {
+                    try {
+                      if (api.getMode() === 'server') await api.coachSetCheckinPreference(selected.id, selected.data.checkinMode || 'text', v);
+                      const patch = (d: ProfileDoc) => ({ ...d, checkinFrequency: v });
+                      setClients((prev) => prev.map((cl) => (cl.id === selected.id ? { ...cl, data: patch(cl.data) } : cl)));
+                      setSelected((prev) => (prev ? { ...prev, data: patch(prev.data) } : prev));
+                      setPrefMsg('Check-in preference saved.');
+                    } catch { setPrefMsg('That could not be saved. Try again.'); }
+                  }}
+                  style={selected.data.checkinFrequency === v ? { background: '#124571', color: '#fff' } : {}}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            {prefMsg && <p className="ok">{prefMsg}</p>}
+          </div>
+
+          <div className="card">
+            <h4 style={{ margin: '0 0 4px' }}>Stats this week</h4>
+            {(() => {
+              const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+              const w = selected.data.workouts.filter((x) => new Date(String(x.date)).getTime() >= weekAgo).length;
+              const cardio = selected.data.cardio.filter((x) => new Date(String(x.date)).getTime() >= weekAgo).reduce((t, x) => t + Number(x.minutes || 0), 0);
+              const ci = selected.data.checkins.filter((x) => new Date(String(x.date)).getTime() >= weekAgo).length;
+              const rows: [string, number, number][] = [
+                ['Workouts', w, 3],
+                ['Cardio minutes', cardio, 150],
+                ['Check-ins', ci, 3],
+              ];
+              return (
+                <div>
+                  <p className="small">XP: {selected.data.xp} · PRs: {selected.data.prs.length} · Badges: {selected.data.badges.length}</p>
+                  {rows.map(([label, val, target]) => (
+                    <div key={label} style={{ margin: '6px 0' }}>
+                      <p className="small" style={{ margin: '2px 0' }}>{label}: {val} of {target}</p>
+                      <div className="progress-bar"><div style={{ width: `${Math.min(100, (val / target) * 100)}%` }} /></div>
+                    </div>
+                  ))}
+                </div>
+              );
+            })()}
+          </div>
+
+          <div className="card">
+            <h4 style={{ margin: '0 0 4px' }}>Phase 5 approval</h4>
+            <p className="small muted">Phase 5 also needs a clean form retest. {selected.data.retests.some((r) => (r as { clean?: boolean }).clean === true) ? 'This client has a clean retest.' : 'No clean retest yet.'}</p>
+            <p className="small"><strong>{selected.data.phase5Approved ? 'Approved for Phase 5.' : 'Not approved for Phase 5.'}</strong></p>
+            <div className="row">
+              <button
+                className="primary"
+                onClick={async () => {
+                  try {
+                    if (api.getMode() === 'server') await api.coachSetPhase5(selected.id, true);
+                    const patch = (d: ProfileDoc) => ({ ...d, phase5Approved: true });
+                    setClients((prev) => prev.map((cl) => (cl.id === selected.id ? { ...cl, data: patch(cl.data) } : cl)));
+                    setSelected((prev) => (prev ? { ...prev, data: patch(prev.data) } : prev));
+                    setPhase5Msg('Phase 5 approved. The client also needs a clean retest to open it.');
+                  } catch { setPhase5Msg('That could not be saved. Try again.'); }
+                }}
+              >
+                Approve Phase 5
+              </button>
+              <button
+                onClick={async () => {
+                  try {
+                    if (api.getMode() === 'server') await api.coachSetPhase5(selected.id, false);
+                    const patch = (d: ProfileDoc) => ({ ...d, phase5Approved: false });
+                    setClients((prev) => prev.map((cl) => (cl.id === selected.id ? { ...cl, data: patch(cl.data) } : cl)));
+                    setSelected((prev) => (prev ? { ...prev, data: patch(prev.data) } : prev));
+                    setPhase5Msg('Phase 5 approval removed.');
+                  } catch { setPhase5Msg('That could not be saved. Try again.'); }
+                }}
+              >
+                Remove approval
+              </button>
+            </div>
+            {phase5Msg && <p className="ok">{phase5Msg}</p>}
+          </div>
 
           <h3>Assessment videos</h3>
           {(selected.data.assessmentVideos || []).length === 0 && (
@@ -171,11 +290,119 @@ export default function Coach({ ctx }: { ctx: Ctx }) {
           ))}
           {videoMsg && <p className="ok">{videoMsg}</p>}
 
+          <h3>Check-in videos</h3>
+          {selected.data.checkins.filter((c) => (c as { video?: { key: string } }).video).length === 0 && (
+            <p className="muted">No check-in videos from this client yet.</p>
+          )}
+          {selected.data.checkins.filter((c) => (c as { video?: { key: string } }).video).map((c) => {
+            const v = (c as unknown as { video: { id: string; key: string; label: string; date: string; sizeBytes: number } }).video;
+            return (
+              <div key={c.id} style={{ borderTop: '1px solid #d7e3ee', padding: '8px 0' }}>
+                <p><strong>{v.label}</strong> · {new Date(c.date).toLocaleDateString()} · {(v.sizeBytes / 1024 / 1024).toFixed(1)} MB</p>
+                {api.getMode() === 'server' ? (
+                  <video src={api.coachCheckinVideoUrl(selected.id, v.key)} controls style={{ width: '100%', maxHeight: 280 }} />
+                ) : (
+                  <p className="small muted">Video playback needs the live app with video storage set up.</p>
+                )}
+                <div className="row" style={{ marginTop: 8 }}>
+                  {deleteVideoKey === v.key ? (
+                    <span>
+                      Delete this video?{' '}
+                      <button className="primary" onClick={async () => {
+                        try {
+                          if (api.getMode() === 'server') await api.coachDeleteCheckinVideo(selected.id, v.key);
+                          const strip = (arr: unknown[]) => (arr as { video?: { key: string } }[]).map((x) => (x.video && x.video.key === v.key ? { ...x, video: undefined } : x)) as never;
+                          setClients((prev) => prev.map((cl) => (cl.id === selected.id ? { ...cl, data: { ...cl.data, checkins: strip(cl.data.checkins as never), messages: strip(cl.data.messages as never) } } : cl)));
+                          setSelected((prev) => (prev ? { ...prev, data: { ...prev.data, checkins: strip(prev.data.checkins as never), messages: strip(prev.data.messages as never) } } : prev));
+                          setVideoMsg('Video deleted.');
+                        } catch { setVideoMsg('That video could not be deleted. Try again.'); }
+                        setDeleteVideoKey('');
+                      }}>Yes, delete</button>{' '}
+                      <button onClick={() => setDeleteVideoKey('')}>Cancel</button>
+                    </span>
+                  ) : (
+                    <button onClick={() => setDeleteVideoKey(v.key)}>Delete video</button>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+
+          <h3>Progress photos</h3>
+          {(selected.data.progressPhotos || []).length === 0 && (
+            <p className="muted">No progress photos from this client yet.</p>
+          )}
+          {(selected.data.progressPhotos || []).map((ph) => (
+            <div key={ph.id} style={{ borderTop: '1px solid #d7e3ee', padding: '8px 0' }}>
+              <p><strong>{new Date(ph.date).toLocaleDateString()}</strong>{ph.note ? ` · ${ph.note}` : ''} · {(ph.sizeBytes / 1024 / 1024).toFixed(1)} MB</p>
+              {api.getMode() === 'server' ? (
+                <img src={api.coachPhotoUrl(selected.id, ph.key)} alt={`Progress photo ${new Date(ph.date).toLocaleDateString()}`} style={{ width: '100%', maxHeight: 320, objectFit: 'contain' }} />
+              ) : (
+                <p className="small muted">Photo viewing needs the live app with photo storage set up.</p>
+              )}
+              <div className="row" style={{ marginTop: 8 }}>
+                {deleteVideoKey === ph.key ? (
+                  <span>
+                    Delete this photo?{' '}
+                    <button className="primary" onClick={async () => {
+                      try {
+                        if (api.getMode() === 'server') await api.coachDeletePhoto(selected.id, ph.key);
+                        setClients((prev) => prev.map((cl) => (cl.id === selected.id ? { ...cl, data: { ...cl.data, progressPhotos: (cl.data.progressPhotos || []).filter((x) => x.key !== ph.key) } } : cl)));
+                        setSelected((prev) => (prev ? { ...prev, data: { ...prev.data, progressPhotos: (prev.data.progressPhotos || []).filter((x) => x.key !== ph.key) } } : prev));
+                        setVideoMsg('Photo deleted.');
+                      } catch { setVideoMsg('That photo could not be deleted. Try again.'); }
+                      setDeleteVideoKey('');
+                    }}>Yes, delete</button>{' '}
+                    <button onClick={() => setDeleteVideoKey('')}>Cancel</button>
+                  </span>
+                ) : (
+                  <button onClick={() => setDeleteVideoKey(ph.key)}>Delete photo</button>
+                )}
+              </div>
+            </div>
+          ))}
+
           <h3>Messages and questions</h3>
           {selected.data.messages.length === 0 && <p className="muted">No messages yet.</p>}
           {selected.data.messages.map((m) => (
             <div key={m.id} style={{ borderTop: '1px solid #d7e3ee', padding: '8px 0' }}>
-              <p><strong>{m.kind}:</strong> {m.body}</p>
+              <p><strong>{m.kind === 'video-call-request' ? 'Video call request' : m.kind}:</strong> {m.body}</p>
+              {m.kind === 'video-call-request' && m.callStatus === 'confirmed' && m.callTime && <p className="ok">Confirmed: {m.callTime}</p>}
+              {m.video && api.getMode() === 'server' && (
+                <video src={api.coachCheckinVideoUrl(selected.id, m.video.key)} controls style={{ width: '100%', maxHeight: 280 }} />
+              )}
+              {m.video && api.getMode() !== 'server' && <p className="small muted">Video attached ({(m.video.sizeBytes / 1024 / 1024).toFixed(1)} MB). Playback needs the live app with video storage set up.</p>}
+              {m.video && (
+                <div className="row" style={{ marginTop: 4 }}>
+                  <button onClick={async () => {
+                    try {
+                      if (api.getMode() === 'server') await api.coachDeleteCheckinVideo(selected.id, m.video!.key);
+                      setClients((prev) => prev.map((cl) => (cl.id === selected.id ? { ...cl, data: { ...cl.data, messages: cl.data.messages.map((x) => (x.id === m.id ? { ...x, video: undefined } : x)) } } : cl)));
+                      setSelected((prev) => (prev ? { ...prev, data: { ...prev.data, messages: prev.data.messages.map((x) => (x.id === m.id ? { ...x, video: undefined } : x)) } } : prev));
+                      setVideoMsg('Video deleted.');
+                    } catch { setVideoMsg('That video could not be deleted. Try again.'); }
+                  }}>Delete this video</button>
+                </div>
+              )}
+              {m.kind === 'video-call-request' && m.callStatus !== 'confirmed' && (
+                <div className="row" style={{ marginTop: 8 }}>
+                  <input value={callFor === m.id ? callTime : ''} onChange={(e) => { setCallFor(m.id); setCallTime(e.target.value); }} placeholder="e.g. Tue Nov 24 at 10:00 AM" />
+                  <button
+                    className="primary"
+                    onClick={async () => {
+                      if (!callTime.trim()) return;
+                      if (api.getMode() === 'server') await api.coachReply(selected.id, m.id, `Video call confirmed for ${callTime.trim()}. I will send the call link before then.`);
+                      const patch = (arr: typeof selected.data.messages) => arr.map((x) => (x.id === m.id ? { ...x, callStatus: 'confirmed' as const, callTime: callTime.trim(), coachReply: `Video call confirmed for ${callTime.trim()}. I will send the call link before then.` } : x));
+                      setClients((prev) => prev.map((cl) => (cl.id === selected.id ? { ...cl, data: { ...cl.data, messages: patch(cl.data.messages) } } : cl)));
+                      setSelected((prev) => (prev ? { ...prev, data: { ...prev.data, messages: patch(prev.data.messages) } } : prev));
+                      setCallTime('');
+                      setCallFor('');
+                    }}
+                  >
+                    Confirm this call
+                  </button>
+                </div>
+              )}
               {m.coachReply ? <p className="ok">You replied: {m.coachReply}</p> : (
                 <div className="row">
                   <input value={replyFor === m.id ? reply : ''} onChange={(e) => { setReplyFor(m.id); setReply(e.target.value); }} placeholder="Reply to this client" />
@@ -204,12 +431,13 @@ export default function Coach({ ctx }: { ctx: Ctx }) {
                 if (!nudge.trim()) return;
                 if (api.getMode() === 'server') await api.coachNudge(selected.id, nudge.trim());
                 setNudge('');
-                window.alert('Nudge sent. It shows on the client Today screen.');
+                setNudgeMsg('Nudge sent. It shows on the client Today screen.');
               }}
             >
               Send nudge
             </button>
           </div>
+          {nudgeMsg && <p className="ok">{nudgeMsg}</p>}
 
           <h3 style={{ marginTop: 16 }}>CES assessment check sheet</h3>
           <p className="small muted">Coach only. Mark what you see, add notes, save it to the client file. Never a required client self-assessment.</p>
@@ -225,20 +453,31 @@ export default function Coach({ ctx }: { ctx: Ctx }) {
               </button>
             ))}
           </div>
+          <label htmlFor="ces-notes">Notes (optional)</label>
+          <input id="ces-notes" value={cesNotes} onChange={(e) => setCesNotes(e.target.value)} placeholder="What you saw, in your own words" />
           <button
             className="primary"
             style={{ marginTop: 10 }}
-            onClick={() => {
+            onClick={async () => {
               if (cesMarks.length === 0) {
                 setCesSaved('Mark at least one finding first.');
                 return;
               }
-              setCesSaved(`Saved ${cesMarks.length} ${cesMarks.length === 1 ? 'finding' : 'findings'} to ${selected.displayName || selected.email}'s file.`);
+              try {
+                if (api.getMode() === 'server') await api.coachSaveCesSheet(selected.id, cesMarks, cesNotes);
+                const sheet = { marks: cesMarks, notes: cesNotes, date: new Date().toISOString() };
+                setClients((prev) => prev.map((cl) => (cl.id === selected.id ? { ...cl, data: { ...cl.data, cesSheet: sheet } } : cl)));
+                setSelected((prev) => (prev ? { ...prev, data: { ...prev.data, cesSheet: sheet } } : prev));
+                setCesSaved(`Saved ${cesMarks.length} ${cesMarks.length === 1 ? 'finding' : 'findings'} to ${selected.displayName || selected.email}'s file.`);
+              } catch {
+                setCesSaved('That could not be saved. Try again.');
+              }
             }}
           >
             Save check sheet
           </button>
           {cesSaved && <p className="ok">{cesSaved}</p>}
+          {selected.data.cesSheet && <p className="small muted">Last saved check sheet: {new Date(selected.data.cesSheet.date).toLocaleDateString()} · {selected.data.cesSheet.marks.length} findings.</p>}
         </div>
       )}
     </div>

@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import type { Ctx } from '../App';
+import * as api from '../lib/api';
 import { PHASES, WORKOUTS, WEEK13, CLASS_GOOD_FOR } from '../lib/data';
-import { phaseForDoc, hasFullAccess, recoveryScore, levelForXp, titleForLevel, metCompanionIds } from '../lib/store';
+import { phaseForDoc, hasFullAccess, recoveryScore, levelForXp, titleForLevel, metCompanionIds, currentWeekForDoc, checkinPreferenceText, checkinFrequenciesForMode, normalizeCheckinFrequency } from '../lib/store';
+import type { AssessmentVideo } from '../lib/store';
 import GuardianAvatar from './GuardianAvatar';
 
 export default function Today({ ctx }: { ctx: Ctx }) {
@@ -14,6 +16,15 @@ export default function Today({ ctx }: { ctx: Ctx }) {
   const [soreness, setSoreness] = useState(3);
   const [showCheckin, setShowCheckin] = useState(false);
   const [showSleep, setShowSleep] = useState(false);
+  const [msgVideoFile, setMsgVideoFile] = useState<File | null>(null);
+  const [msgVideoPreview, setMsgVideoPreview] = useState('');
+  const [msgVideoUploading, setMsgVideoUploading] = useState(false);
+  const [msgVideoMsg, setMsgVideoMsg] = useState('');
+  const [msgVideoError, setMsgVideoError] = useState('');
+  const [msgVideo, setMsgVideo] = useState<AssessmentVideo | null>(null);
+  const [callWhen, setCallWhen] = useState('');
+  const [callTopic, setCallTopic] = useState('');
+  const [callMsg, setCallMsg] = useState('');
 
   const phase = phaseForDoc(doc);
   const phaseInfo = PHASES.find((p) => p.phase === phase);
@@ -44,10 +55,67 @@ export default function Today({ ctx }: { ctx: Ctx }) {
         kind: msgMode,
         body: msgBody.trim(),
         date: new Date().toISOString(),
+        video: msgVideo || undefined,
       });
       d.xp += quillBonus ? 10 : 5;
     });
     setMsgBody('');
+    setMsgVideo(null);
+  }
+
+  // Recorded video clip attach: pick, preview, upload. Filming is always
+  // optional. A failed upload never blocks the check-in or the message.
+  function pickClip(file: File | undefined) {
+    setMsgVideoMsg('');
+    setMsgVideoError('');
+    if (!file) return;
+    if (!file.type.startsWith('video/')) {
+      setMsgVideoError('That file is not a video. Pick a video file.');
+      return;
+    }
+    if (file.size > 100 * 1024 * 1024) {
+      setMsgVideoError('That video is over 100 MB. Pick a shorter clip.');
+      return;
+    }
+    if (msgVideoPreview) URL.revokeObjectURL(msgVideoPreview);
+    setMsgVideoFile(file);
+    setMsgVideoPreview(URL.createObjectURL(file));
+  }
+
+  async function uploadClip() {
+    if (!msgVideoFile || msgVideoUploading) return;
+    setMsgVideoUploading(true);
+    setMsgVideoMsg('');
+    setMsgVideoError('');
+    try {
+      const r = await api.uploadCheckinVideo(msgVideoFile, 'Form-check video', currentWeekForDoc(doc));
+      setMsgVideo(r.video);
+      setMsgVideoMsg('Video uploaded. It will go with your message.');
+      if (msgVideoPreview) URL.revokeObjectURL(msgVideoPreview);
+      setMsgVideoPreview('');
+      setMsgVideoFile(null);
+    } catch (e) {
+      setMsgVideoError(e instanceof Error ? e.message : 'The video could not be uploaded. You can still send the message without it.');
+    } finally {
+      setMsgVideoUploading(false);
+    }
+  }
+
+  function sendCallRequest() {
+    if (!callWhen.trim() && !callTopic.trim()) return;
+    update((d) => {
+      d.messages.unshift({
+        id: `m${Date.now()}`,
+        kind: 'video-call-request',
+        body: `Video call request. Times that work: ${callWhen.trim() || 'any time Derek picks'}. What I want to talk about: ${callTopic.trim() || 'my check-in'}.`,
+        date: new Date().toISOString(),
+        callStatus: 'requested',
+      });
+      d.xp += 5;
+    });
+    setCallWhen('');
+    setCallTopic('');
+    setCallMsg('Request sent. Derek will reply within one business day to set a time and send the call link.');
   }
 
   return (
@@ -119,6 +187,25 @@ export default function Today({ ctx }: { ctx: Ctx }) {
           <button onClick={() => setShowCheckin((v) => !v)}>{showCheckin ? 'Close' : 'Open'}</button>
         </div>
         <p className="muted small">Recovery score today: {rec}/100. Sleep 40, aches 25, energy 25, rest rhythm 10.</p>
+        <p className="small"><strong>{checkinPreferenceText(doc)}</strong></p>
+        <label>How do you want to check in with Derek?</label>
+        <div className="row">
+          {([['text', 'Text check-in in the app'], ['live-call', 'Live video call with Derek']] as const).map(([v, label]) => (
+            <button key={v} type="button" onClick={() => update((d) => { d.checkinMode = v; d.checkinFrequency = normalizeCheckinFrequency(v, d.checkinFrequency); })} style={doc.checkinMode === v ? { background: '#124571', color: '#fff' } : {}}>
+              {label}
+            </button>
+          ))}
+        </div>
+        <p className="small muted">Live video call: you request times in the app, Derek confirms the time and sends the call link, or you schedule it outside the app. The app itself does not do the video call. Recorded video is not a check-in type. It is only for form-check clips, in the assessment and attached to a message about form.</p>
+        <label>How often do you want to check in with Derek?</label>
+        {doc.checkinMode === 'live-call' && <p className="small muted">Live video calls are 1 to 4 times a month. Text or recorded video can be more often.</p>}
+        <div className="row">
+          {checkinFrequenciesForMode(doc.checkinMode).map(({ value: v, label }) => (
+            <button key={v} type="button" onClick={() => update((d) => { d.checkinFrequency = v; })} style={doc.checkinFrequency === v ? { background: '#124571', color: '#fff' } : {}}>
+              {label}
+            </button>
+          ))}
+        </div>
         {showCheckin && (
           <div>
             <label>Energy (1 to 10): {energy}</label>
@@ -143,6 +230,60 @@ export default function Today({ ctx }: { ctx: Ctx }) {
             </button>
           </div>
         )}
+      </div>
+
+      <div className="card">
+        <h3>2-minute balance quest (+15 XP)</h3>
+        <p className="small muted">Stand on one leg for 2 minutes, switching sides. Hold a chair or wall if you need it. Once a day.</p>
+        {(() => {
+          const today = new Date().toISOString().slice(0, 10);
+          const done = doc.quests.some((q) => q.kind === 'balance-quest' && String(q.date).slice(0, 10) === today);
+          if (done) return <p className="small ok">Done today. +15 XP earned.</p>;
+          return (
+            <button
+              className="primary"
+              onClick={() => {
+                update((d) => {
+                  d.quests.push({ id: `q${Date.now()}`, date: new Date().toISOString(), kind: 'balance-quest' });
+                  d.xp += 15;
+                });
+              }}
+            >
+              I did my 2-minute balance quest
+            </button>
+          );
+        })()}
+      </div>
+
+      <div className="card">
+        <h3>Reminder times</h3>
+        <p className="small muted">Pick when you want a reminder card on Today. In-app reminders only, no push notifications yet.</p>
+        <div className="grid2">
+          <div>
+            <label htmlFor="rt-workout">Workout reminder</label>
+            <input id="rt-workout" type="time" value={doc.reminderTimes.workout} onChange={(e) => update((d) => { d.reminderTimes.workout = e.target.value; })} />
+          </div>
+          <div>
+            <label htmlFor="rt-checkin">Check-in reminder</label>
+            <input id="rt-checkin" type="time" value={doc.reminderTimes.checkin} onChange={(e) => update((d) => { d.reminderTimes.checkin = e.target.value; })} />
+          </div>
+          <div>
+            <label htmlFor="rt-streak">Streak reminder</label>
+            <input id="rt-streak" type="time" value={doc.reminderTimes.streak} onChange={(e) => update((d) => { d.reminderTimes.streak = e.target.value; })} />
+          </div>
+        </div>
+        {(() => {
+          const now = new Date();
+          const hhmm = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+          const today = now.toISOString().slice(0, 10);
+          const workedToday = doc.workouts.some((w) => String(w.date).slice(0, 10) === today);
+          const checkedToday = doc.checkins.some((c) => String(c.date).slice(0, 10) === today);
+          const cards: string[] = [];
+          if (hhmm >= doc.reminderTimes.workout && !workedToday) cards.push('Reminder: time for your workout today.');
+          if (hhmm >= doc.reminderTimes.checkin && !checkedToday) cards.push('Reminder: your daily check-in is waiting.');
+          if (hhmm >= doc.reminderTimes.streak && doc.workouts.length > 0 && !workedToday) cards.push('Reminder: keep your streak going with one small step today.');
+          return cards.map((c) => <p key={c} className="notice">{c}</p>);
+        })()}
       </div>
 
       <div className="card">
@@ -181,16 +322,60 @@ export default function Today({ ctx }: { ctx: Ctx }) {
         </div>
         <label htmlFor="msg-body">{msgMode === 'question' ? 'Your question for Derek' : 'Your message for Derek'}</label>
         <textarea id="msg-body" rows={3} value={msgBody} onChange={(e) => setMsgBody(e.target.value)} />
+        <div style={{ marginTop: 12 }}>
+          <h4 style={{ margin: '0 0 4px' }}>Attach a form-check video (optional)</h4>
+          <p className="small muted">A short clip of a move helps Derek check your form. Filming is never required.</p>
+          {!msgVideo && (
+            <label>
+              <input type="file" accept="video/*" onChange={(e) => pickClip(e.target.files?.[0])} style={{ display: 'none' }} />
+              <span className="button-like">Pick a video or record one</span>
+            </label>
+          )}
+          {msgVideoPreview && msgVideoFile && (
+            <div>
+              <video src={msgVideoPreview} controls style={{ width: '100%', maxHeight: 240 }} />
+              <p className="small muted">{msgVideoFile.name} · {(msgVideoFile.size / 1024 / 1024).toFixed(1)} MB</p>
+              <div className="row">
+                <button className="primary" disabled={msgVideoUploading} onClick={() => uploadClip()}>{msgVideoUploading ? 'Uploading...' : 'Upload this video'}</button>
+                <button onClick={() => { if (msgVideoPreview) URL.revokeObjectURL(msgVideoPreview); setMsgVideoPreview(''); setMsgVideoFile(null); }}>Remove</button>
+              </div>
+            </div>
+          )}
+          {msgVideo && <p className="small ok">Video ready: {(msgVideo.sizeBytes / 1024 / 1024).toFixed(1)} MB. It goes with your message. <button onClick={() => setMsgVideo(null)}>Remove</button></p>}
+          {msgVideoMsg && <p className="ok">{msgVideoMsg}</p>}
+          {msgVideoError && <p className="error">{msgVideoError}</p>}
+        </div>
         <button className="primary" style={{ marginTop: 10 }} onClick={sendMessage}>
           {msgMode === 'question' ? 'Send question' : 'Send message'}
         </button>
         {met.has('quill') && <p className="small muted">Quill carries your message to Derek (+5 XP).</p>}
         {doc.messages.slice(0, 5).map((m) => (
           <div key={m.id} style={{ borderTop: '1px solid #d7e3ee', padding: '8px 0' }}>
-            <p><strong>{m.kind === 'question' ? 'Question' : 'Message'}:</strong> {m.body}</p>
+            <p><strong>{m.kind === 'question' ? 'Question' : m.kind === 'video-call-request' ? 'Video call request' : 'Message'}:</strong> {m.body}</p>
+            {m.kind === 'video-call-request' && m.callStatus === 'confirmed' && m.callTime && <p className="ok">Confirmed: video call on {m.callTime}. Derek will send the call link.</p>}
+            {m.kind === 'video-call-request' && m.callStatus !== 'confirmed' && <p className="small muted">Request sent. Derek will reply within one business day to set a time.</p>}
+            {m.video && <p className="small muted">Video attached ({(m.video.sizeBytes / 1024 / 1024).toFixed(1)} MB). Derek can watch it in Coach.</p>}
             {m.coachReply && <p className="ok">Derek replied: {m.coachReply}</p>}
-            {!m.coachReply && <p className="small muted">Waiting for Derek.</p>}
+            {!m.coachReply && m.kind !== 'video-call-request' && <p className="small muted">Waiting for Derek.</p>}
           </div>
+        ))}
+      </div>
+
+      <div className="card">
+        <h3>Book a video call check-in with Derek</h3>
+        <p className="small muted">A live video call, not a recording. The free assessment is 30 to 45 minutes. A check-in call is shorter. Derek replies within one business day to set a time and send the call link. The app itself does not do the video call.</p>
+        <label htmlFor="call-when">Times that work for you</label>
+        <input id="call-when" value={callWhen} onChange={(e) => setCallWhen(e.target.value)} placeholder="e.g. Tue or Thu morning, or any weekday after 5" />
+        <label htmlFor="call-topic">What do you want to talk about?</label>
+        <input id="call-topic" value={callTopic} onChange={(e) => setCallTopic(e.target.value)} placeholder="e.g. my squat form, or my Week 4 retest" />
+        <button className="primary" style={{ marginTop: 10 }} onClick={sendCallRequest} disabled={!callWhen.trim() && !callTopic.trim()}>
+          Request a video call
+        </button>
+        {callMsg && <p className="ok">{callMsg}</p>}
+        {doc.messages.filter((m) => m.kind === 'video-call-request').slice(0, 3).map((m) => (
+          <p key={m.id} className="small" style={{ borderTop: '1px solid #d7e3ee', paddingTop: 8 }}>
+            {m.callStatus === 'confirmed' && m.callTime ? `Confirmed: video call on ${m.callTime}. Derek will send the call link.` : 'Request sent. Derek will reply within one business day to set a time.'}
+          </p>
         ))}
       </div>
 

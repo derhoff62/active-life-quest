@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { Ctx } from '../App';
 import { CLASSES, CLASS_GOOD_FOR, CLASS_SUGGESTED_GOALS, DEFAULT_EQUIPMENT, EQUIPMENT_NOTES, EQUIPMENT_OPTIONS, GOAL_TYPES } from '../lib/data';
+import { checkinFrequenciesForMode, normalizeCheckinFrequency } from '../lib/store';
 import type { ClassId } from '../lib/types';
 
 const COLORS = ['Navy', 'Forest', 'Crimson', 'Gold', 'Teal'];
@@ -14,9 +15,12 @@ export default function Onboarding({ ctx }: { ctx: Ctx }) {
   const [color, setColor] = useState('Navy');
   const [gem, setGem] = useState('Sapphire');
   const [cape, setCape] = useState(true);
+  const [look, setLook] = useState<'Female' | 'Male'>('Female');
   const [goal, setGoal] = useState('weight-loss');
   const [why, setWhy] = useState('');
   const [equipment, setEquipment] = useState<string[]>([...DEFAULT_EQUIPMENT]);
+  const [checkinMode, setCheckinMode] = useState<'text' | 'live-call'>('text');
+  const [checkinFrequency, setCheckinFrequency] = useState<'daily' | '3x-week' | 'weekly' | 'biweekly' | '1x-month' | '2x-month' | '3x-month' | '4x-month'>('daily');
 
   const EQUIP = EQUIPMENT_OPTIONS;
 
@@ -28,7 +32,7 @@ export default function Onboarding({ ctx }: { ctx: Ctx }) {
         <p className="small muted">Nothing here is a test you can fail. The assessment finds where to start, so the plan fits you.</p>
         <button className="primary" onClick={() => setStep(1)} style={{ width: '100%' }}>Pick my guardian</button>
         <p style={{ marginTop: 10 }}>
-          <button onClick={() => update((d) => { d.tutorialDone = true; d.guardianPicked = true; d.guardian = { name: 'Brave Beginner', classId: 'Guardian', color: 'Navy', gem: 'Sapphire', cape: true }; })}>Skip for now</button>
+          <button onClick={() => update((d) => { d.tutorialDone = true; d.guardianPicked = true; d.guardian = { name: 'Brave Beginner', classId: 'Guardian', color: 'Navy', gem: 'Sapphire', cape: true, look: 'Female' }; })}>Skip for now</button>
         </p>
       </div>
     );
@@ -51,6 +55,14 @@ export default function Onboarding({ ctx }: { ctx: Ctx }) {
             </label>
           </div>
         ))}
+        <label>Guardian look</label>
+        <div className="row">
+          {(['Female', 'Male'] as const).map((l) => (
+            <button key={l} type="button" onClick={() => setLook(l)} style={look === l ? { background: '#124571', color: '#fff' } : {}}>
+              {l}
+            </button>
+          ))}
+        </div>
         <label htmlFor="g-name">Guardian name</label>
         <input id="g-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Brave Beginner" />
         <div className="grid2">
@@ -99,6 +111,24 @@ export default function Onboarding({ ctx }: { ctx: Ctx }) {
       </select>
       <label htmlFor="g-why">Why does it matter to you? (optional)</label>
       <input id="g-why" value={why} onChange={(e) => setWhy(e.target.value)} placeholder="In your own words" />
+      <label>How do you want to check in with Derek?</label>
+      <div className="row">
+        {([['text', 'Text check-in in the app'], ['live-call', 'Live video call with Derek']] as const).map(([v, label]) => (
+          <button key={v} type="button" onClick={() => { setCheckinMode(v); setCheckinFrequency(normalizeCheckinFrequency(v, checkinFrequency)); }} style={checkinMode === v ? { background: '#124571', color: '#fff' } : {}}>
+            {label}
+          </button>
+        ))}
+      </div>
+      <p className="small muted">Live video call: you request times in the app, Derek confirms the time and sends the call link, or you schedule it outside the app. You can change this later on Today.</p>
+      <label>How often do you want to check in with Derek?</label>
+      {checkinMode === 'live-call' && <p className="small muted">Live video calls are 1 to 4 times a month. Text or recorded video can be more often.</p>}
+      <div className="row">
+        {checkinFrequenciesForMode(checkinMode).map(({ value: v, label }) => (
+          <button key={v} type="button" onClick={() => setCheckinFrequency(v)} style={checkinFrequency === v ? { background: '#124571', color: '#fff' } : {}}>
+            {label}
+          </button>
+        ))}
+      </div>
       <label>What equipment do you have?</label>
       <div className="equip-list">
         {EQUIP.map((e) => (
@@ -120,10 +150,12 @@ export default function Onboarding({ ctx }: { ctx: Ctx }) {
           className="primary"
           onClick={() => {
             update((d) => {
-              d.guardian = { name: name.trim(), classId, color, gem, cape };
+              d.guardian = { name: name.trim(), classId, color, gem, cape, look };
               d.guardianPicked = true;
               d.tutorialDone = true;
               d.equipment = equipment;
+              d.checkinMode = checkinMode;
+              d.checkinFrequency = checkinFrequency;
               const gt = GOAL_TYPES.find((g) => g.id === goal);
               d.goals = [{ type: goal as never, label: gt?.label || 'My goal', why, started: new Date().toISOString() }];
               d.mainGoal = gt?.label || '';

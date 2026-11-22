@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import type { Ctx } from '../App';
 import * as api from '../lib/api';
-import { ASSESSMENT_EXAMPLES, ASSESSMENT_QUESTIONS, CES_TEMPLATES, CONTRAINDICATIONS, DEFAULT_EQUIPMENT, EQUIPMENT_NOTES, EQUIPMENT_OPTIONS, recommendPhase } from '../lib/data';
-import { currentWeekForDoc } from '../lib/store';
+import { ASSESSMENT_EXAMPLES, ASSESSMENT_QUESTIONS, CES_TEMPLATES, CONTRAINDICATIONS, DEFAULT_EQUIPMENT, EQUIPMENT_NOTES, EQUIPMENT_OPTIONS, FOCUS_AREAS, recommendPhase } from '../lib/data';
+import { currentWeekForDoc, awardBadges } from '../lib/store';
 import type { FindingId, FormRating } from '../lib/types';
 
 const FINDING_LABELS: { id: FindingId; label: string }[] = CES_TEMPLATES.map((t) => ({ id: t.id, label: t.plainName }));
@@ -28,6 +28,13 @@ export default function Assessment({ ctx }: { ctx: Ctx }) {
   const [equipment, setEquipment] = useState<string[]>(
     doc.equipment && doc.equipment.length > 0 ? doc.equipment : [...DEFAULT_EQUIPMENT],
   );
+  const [focus, setFocus] = useState<Record<string, number>>(doc.focus || {});
+  const [socialPerm, setSocialPerm] = useState<boolean>(doc.socialPermission || false);
+  const [retestWeek, setRetestWeek] = useState(4);
+  const [retestClean, setRetestClean] = useState(true);
+  const [retestBalL, setRetestBalL] = useState('');
+  const [retestBalR, setRetestBalR] = useState('');
+  const [retestMsg, setRetestMsg] = useState('');
   const [done, setDone] = useState(false);
   const [retaking, setRetaking] = useState(false);
   const [videoFile, setVideoFile] = useState<File | null>(null);
@@ -112,6 +119,8 @@ export default function Assessment({ ctx }: { ctx: Ctx }) {
         age: Number(age) || null,
         activity: d.body.activity,
       };
+      d.focus = focus;
+      d.socialPermission = socialPerm;
       d.xp += 60;
     });
     setDone(true);
@@ -141,6 +150,71 @@ export default function Assessment({ ctx }: { ctx: Ctx }) {
             ))}
           </div>
           <button className="primary" onClick={() => { setDone(false); setRetaking(true); setStep(0); }}>Retake the assessment</button>
+        </div>
+        <div className="card">
+          <h3>Retest (Weeks 4, 8, and 12)</h3>
+          <p className="small muted">A retest is a short check, not the full assessment. Do it at Week 4, 8, and 12. A clean retest moves you to the next phase and moves your corrective steps one step forward.</p>
+          <label>Which week are you retesting?</label>
+          <div className="row">
+            {[4, 8, 12].map((w) => (
+              <button key={w} type="button" onClick={() => setRetestWeek(w)} style={retestWeek === w ? { background: '#124571', color: '#fff' } : {}}>Week {w}</button>
+            ))}
+          </div>
+          <label>Balance now (seconds each side, general check)</label>
+          <div className="grid2">
+            <input inputMode="numeric" value={retestBalL} onChange={(e) => setRetestBalL(e.target.value)} placeholder={`Left (was ${result.balanceLeftSec}s)`} />
+            <input inputMode="numeric" value={retestBalR} onChange={(e) => setRetestBalR(e.target.value)} placeholder={`Right (was ${result.balanceRightSec}s)`} />
+          </div>
+          <label style={{ display: 'flex', gap: 10, alignItems: 'flex-start', fontWeight: 400 }}>
+            <input type="checkbox" checked={retestClean} onChange={(e) => setRetestClean(e.target.checked)} style={{ width: 'auto', minHeight: 0, marginTop: 4 }} />
+            My movement screen is clean this time (no patterns to work on).
+          </label>
+          {retestMsg && <p className="notice">{retestMsg}</p>}
+          <button
+            className="primary"
+            onClick={() => {
+              const nextPhase = retestWeek === 4 ? 2 : retestWeek === 8 ? 3 : 4;
+              update((d) => {
+                d.retests.push({ week: retestWeek, date: new Date().toISOString(), clean: retestClean, balanceLeftSec: Number(retestBalL) || 0, balanceRightSec: Number(retestBalR) || 0 } as never);
+                if (Number(retestBalL) || Number(retestBalR)) {
+                  d.balanceBaseline = { left: Number(retestBalL) || 0, right: Number(retestBalR) || 0 };
+                }
+                if (retestClean) {
+                  d.phaseOverride = nextPhase;
+                  for (const t of CES_TEMPLATES) {
+                    const cur = d.cesStep?.[t.id] || 0;
+                    d.cesStep = { ...(d.cesStep || {}), [t.id]: Math.min(cur + 1, t.progression.length - 1) };
+                  }
+                  d.xp += 20;
+                }
+                awardBadges(d);
+              });
+              setRetestMsg(retestClean ? `Retest saved. You move to Phase ${nextPhase}. Your corrective steps moved one step forward. +20 XP.` : 'Retest saved. Keep working on your patterns. You stay in your current phase until a clean retest.');
+            }}
+          >
+            Save my retest
+          </button>
+          <p className="small muted">Targets: 10 seconds per side at Week 4, 20 at Week 8, 30 at Week 12.</p>
+        </div>
+        <div className="card">
+          <h3>Week 13: keep going</h3>
+          <p className="small muted">After Week 12, pick where to go next. Nothing resets. Your guardian, gear, and XP stay.</p>
+          <div className="row">
+            {[1, 2, 3].map((ph) => (
+              <button
+                key={ph}
+                type="button"
+                onClick={() => {
+                  update((d) => { d.phaseOverride = ph; d.week13Goal = `Cycle back to Phase ${ph}`; });
+                  setRetestMsg(`Week 13 plan saved. You are back in Phase ${ph}.`);
+                }}
+              >
+                Cycle back to Phase {ph}
+              </button>
+            ))}
+            <button type="button" onClick={() => { update((d) => { d.week13Goal = 'Keep going in Phase 4 or 5'; }); setRetestMsg('Week 13 plan saved. Keep going in Phase 4 or 5.'); }}>Stay in Phase 4 or 5</button>
+          </div>
+          {doc.week13Goal && <p className="small">Your Week 13 plan: {doc.week13Goal}</p>}
         </div>
         {(doc.assessmentVideos || []).length > 0 && (
           <div className="card">
@@ -219,6 +293,17 @@ export default function Assessment({ ctx }: { ctx: Ctx }) {
             <option value="1to3">1 to 3 years</option>
             <option value="over3">Over 3 years</option>
           </select>
+          <label>What do you want to focus on? (1 = not a focus, 5 = a big focus)</label>
+          {FOCUS_AREAS.map((f) => (
+            <div key={f.id} style={{ marginBottom: 8 }}>
+              <label style={{ fontWeight: 400 }}>{f.label}: {focus[f.id] || 3} of 5</label>
+              <input type="range" min={1} max={5} step={1} value={focus[f.id] || 3} onChange={(e) => setFocus((p) => ({ ...p, [f.id]: Number(e.target.value) }))} />
+            </div>
+          ))}
+          <label style={{ display: 'flex', gap: 10, alignItems: 'flex-start', fontWeight: 400 }}>
+            <input type="checkbox" checked={socialPerm} onChange={(e) => setSocialPerm(e.target.checked)} style={{ width: 'auto', minHeight: 0, marginTop: 4 }} />
+            Derek may share my progress or photos in his posts (only with my okay first).
+          </label>
           <label>What equipment do you have? (pick all you have)</label>
           <p className="small muted">Your workouts swap out moves you cannot do. No cable machine, no cable row: you get a dumbbell row instead.</p>
           <div className="equip-list">

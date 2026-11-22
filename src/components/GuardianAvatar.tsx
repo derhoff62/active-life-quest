@@ -340,6 +340,14 @@ export default function GuardianAvatar({
               <path d="M88 30 Q94 25 100 25" fill="none" stroke={light} strokeWidth="2" opacity="0.6" />
               <path d="M83 42 Q87 46 92 48" fill="none" stroke={dark} strokeWidth="1.5" opacity="0.4" />
             </g>
+          ) : g.look === 'Female' ? (
+            <g>
+              <path d="M83 44 Q81 24 100 24 Q119 24 117 44 Q112 30 100 30 Q88 30 83 44 Z" fill="#5b3a1e" />
+              <path d="M83 44 Q79 58 82 70 Q86 74 88 66 Q90 52 88 44 Z" fill="#5b3a1e" />
+              <path d="M117 44 Q121 58 118 70 Q114 74 112 66 Q110 52 112 44 Z" fill="#5b3a1e" />
+              <path d="M88 30 Q94 25 100 25 Q106 25 112 30" fill="none" stroke="#8a6238" strokeWidth="2.5" opacity="0.8" />
+              <path d="M83 42 Q81 36 84 32 M117 42 Q119 36 116 32" fill="none" stroke="#5b3a1e" strokeWidth="2" />
+            </g>
           ) : (
             <g>
               <path d="M83 44 Q81 24 100 24 Q119 24 117 44 Q112 30 100 30 Q88 30 83 44 Z" fill="#5b3a1e" />
