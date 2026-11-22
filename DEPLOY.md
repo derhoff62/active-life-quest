@@ -42,19 +42,21 @@ send a screenshot of the log — do not change the commands.
 
 ## Step 2. Add the settings (environment variables)
 
-## Step 1b. Video storage (R2) — do this BEFORE deploying the video version
+## Step 1b. Video storage (R2) — DEFERRED, videos come later
 
-Assessment videos are stored in Cloudflare R2 (free tier, 10 GB).
-In the Cloudflare dashboard:
+Assessment videos, check-in videos and progress photos are stored in
+Cloudflare R2 (free tier, 10 GB). Videos are deferred for now (Nov 22,
+2026), so the R2 binding has been TEMPORARILY REMOVED from
+`wrangler.toml` and deploys no longer need the bucket. The upload
+buttons show a plain "Video storage is not set up yet" error, and the
+assessment, check-in, message and progress flows still finish fine
+without a file. No video bytes ever go in the Neon database.
 
-1. Go to Storage & databases, then R2. If R2 is not enabled, enable it.
-2. Create a bucket named exactly `active-life-quest-videos`.
-3. Then redeploy the Worker (Deployments > Redeploy, or push a new commit).
-
-If the bucket does not exist yet, the deploy fails, because
-`wrangler.toml` binds it as VIDEOS. Until the bucket exists, the upload
-button shows a plain error and the assessment still finishes fine
-without a video. No video bytes ever go in the Neon database.
+To re-enable videos later: in the Cloudflare dashboard, go to Storage
+& databases, then R2. If R2 is not enabled, enable it. Create a bucket
+named exactly `active-life-quest-videos`, then uncomment the
+`[[r2_buckets]]` block in `wrangler.toml` and redeploy the Worker
+(Deployments > Redeploy, or push a new commit).
 
 In the new Worker project, go to Settings, then Variables and
 secrets, then Add, one at a time. Do not share these values in chat.

@@ -40,16 +40,21 @@ binding = "ASSETS"
 not_found_handling = "single-page-application"
 run_worker_first = true
 
-# Assessment videos live in Cloudflare R2 (free tier, 10 GB storage).
-# BEFORE deploying a version with this binding, Derek must, in the
-# Cloudflare dashboard: enable R2 (Storage & databases > R2), then create
-# a bucket named exactly active-life-quest-videos. If the bucket does not
-# exist yet, the deploy fails. Until the bucket exists, the upload
-# endpoint returns a plain error and the assessment still finishes fine
-# without a video. No video bytes ever go in the Neon profile JSON.
-[[r2_buckets]]
-binding = "VIDEOS"
-bucket_name = "active-life-quest-videos"
+# Videos are DEFERRED (Nov 22, 2026, Derek: "Can we worry about the
+# videos later?"). The R2 binding below was TEMPORARILY REMOVED so
+# deploys work without the R2 bucket, which does not exist yet and
+# could not be created (Cloudflare dashboard sign-in fails from the
+# Muse browser). All video upload code and UI stay in place: with no
+# VIDEOS binding the endpoints return a plain 503 "Video storage is
+# not set up yet" and the assessment / check-in / message still finish
+# fine without a video. No video bytes ever go in the Neon profile JSON.
+# TO RE-ENABLE VIDEOS: first create the bucket in the Cloudflare
+# dashboard (Storage & databases > R2, enable R2, create a bucket named
+# exactly active-life-quest-videos), then uncomment this block and
+# redeploy.
+# [[r2_buckets]]
+# binding = "VIDEOS"
+# bucket_name = "active-life-quest-videos"
 
 # Secrets and environment variables. Do NOT put real values in this file.
 # Set these in the Cloudflare dashboard under Workers & Pages >

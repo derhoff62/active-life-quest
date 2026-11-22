@@ -19,12 +19,17 @@ export type Env = {
   BETA_CODE?: string;
   BETA_USES?: string;
   BETA_EXPIRES?: string;
-  // Cloudflare R2 bucket for assessment videos. Bound in wrangler.toml as
-  // VIDEOS (bucket active-life-quest-videos). R2 must be enabled in the
-  // Cloudflare dashboard and the bucket created before the first deploy
-  // that includes the binding, or the deploy fails. Until then the
-  // upload endpoint returns a plain error and the assessment still
-  // finishes fine without a video.
+  // Cloudflare R2 bucket for assessment videos, check-in videos and
+  // progress photos. Bound in wrangler.toml as VIDEOS (bucket
+  // active-life-quest-videos). VIDEOS is optional: the binding was
+  // TEMPORARILY REMOVED from wrangler.toml on Nov 22, 2026 because
+  // videos are deferred and the bucket does not exist yet (a deploy
+  // with the binding fails when the bucket is missing). With no
+  // binding, every video/photo endpoint returns a plain 503
+  // "Video storage is not set up yet" and the assessment, check-in,
+  // message and progress flows still finish fine without a file.
+  // To re-enable videos, create the bucket first, then uncomment the
+  // [[r2_buckets]] block in wrangler.toml and redeploy.
   VIDEOS?: R2Bucket;
 };
 
