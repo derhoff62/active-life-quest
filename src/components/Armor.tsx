@@ -1,5 +1,7 @@
 import type { Ctx } from '../App';
 import { ARMOR, SPELLS } from '../lib/data';
+import { levelForXp } from '../lib/store';
+import GuardianAvatar from './GuardianAvatar';
 
 export default function Armor({ ctx }: { ctx: Ctx }) {
   const { doc } = ctx;
@@ -15,8 +17,8 @@ export default function Armor({ ctx }: { ctx: Ctx }) {
   return (
     <div>
       <div className="card gold-frame">
+        <GuardianAvatar guardian={doc.guardian} level={levelForXp(doc.xp)} size="large" />
         <div className="creature">
-          <div className="avatar" aria-hidden>🛡️</div>
           <div>
             <h2>Armor vault</h2>
             <p>

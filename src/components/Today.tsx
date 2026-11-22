@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import type { Ctx } from '../App';
 import { PHASES, WORKOUTS, WEEK13, CREATURES } from '../lib/data';
-import { phaseForDoc, hasFullAccess, recoveryScore } from '../lib/store';
+import { phaseForDoc, hasFullAccess, recoveryScore, levelForXp, titleForLevel } from '../lib/store';
+import GuardianAvatar from './GuardianAvatar';
 
 export default function Today({ ctx }: { ctx: Ctx }) {
   const { doc, update, go } = ctx;
@@ -22,6 +23,15 @@ export default function Today({ ctx }: { ctx: Ctx }) {
   const week12Done = doc.retests.some((r) => (r as { week?: number }).week === 12);
   const lastSleep = doc.sleep[doc.sleep.length - 1] as { hours?: number } | undefined;
   const rec = recoveryScore(lastSleep?.hours ?? 7, soreness, energy, true);
+  const level = levelForXp(doc.xp);
+  // XP into the current level: thresholds are 100, 125, 150, ... per level.
+  let xpIntoLevel = doc.xp;
+  let needForNext = 100;
+  for (let l = 1; l < level; l += 1) {
+    xpIntoLevel -= 100 + (l - 1) * 25;
+  }
+  needForNext = 100 + (level - 1) * 25;
+  const xpPct = Math.min(100, Math.max(0, (xpIntoLevel / needForNext) * 100));
 
   function sendMessage() {
     if (!msgBody.trim()) return;
@@ -40,8 +50,15 @@ export default function Today({ ctx }: { ctx: Ctx }) {
   return (
     <div>
       <div className="card gold-frame">
+        <GuardianAvatar guardian={doc.guardian} level={level} size="large" />
+        <p className="small muted" style={{ textAlign: 'center' }}>
+          {doc.guardian ? `${doc.guardian.name} the ${doc.guardian.classId}` : 'Your guardian'} · Level {level} {titleForLevel(level)} · {doc.xp} XP
+        </p>
+        <div className="progress-bar" aria-label={`Level ${level}, ${xpIntoLevel} of ${needForNext} XP to Level ${level + 1}`}>
+          <div style={{ width: `${xpPct}%` }} />
+        </div>
+        <p className="small muted" style={{ textAlign: 'center' }}>{xpIntoLevel} of {needForNext} XP to Level {level + 1}</p>
         <div className="creature">
-          <div className="avatar" aria-hidden>🛡️</div>
           <div>
             <h2>{doc.guardian ? `${doc.guardian.name} is ready` : 'Your next step'}</h2>
             {!doc.assessmentDone && <p>Do the assessment first. It takes 30 to 45 minutes and sets your starting phase.</p>}

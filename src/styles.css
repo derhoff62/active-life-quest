@@ -100,6 +100,18 @@ details summary { cursor: pointer; font-weight: 600; color: var(--navy); padding
 .error { background: #fdecea; border: 1px solid #e5a9a9; color: #7a1f1f; border-radius: 12px; padding: 12px; margin: 12px 0; }
 .ok { background: #e6f4ec; border: 1px solid #9ecfae; color: #14532d; border-radius: 12px; padding: 12px; margin: 12px 0; }
 .creature { display: flex; gap: 12px; align-items: flex-start; }
+.guardian-wrap { text-align: center; margin: 4px 0 8px; }
+.guardian-wrap svg { max-width: 100%; height: auto; }
+.guardian-bob { animation: guardian-bob 3s ease-in-out infinite; }
+@keyframes guardian-bob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-5px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .guardian-bob { animation: none; }
+}
+.guardian-caption { font-weight: 700; color: var(--navy); margin: 4px 0 0; }
+.progress-bar > div { transition: width 0.6s ease; }
 .avatar {
   width: 56px; height: 56px; border-radius: 50%; flex-shrink: 0;
   display: flex; align-items: center; justify-content: center;

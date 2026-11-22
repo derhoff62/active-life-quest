@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import type { Ctx } from '../App';
 import { PHASES, MONSTERS, CREATURES, STORY, SPELLS, CLASSES } from '../lib/data';
-import { phaseForDoc } from '../lib/store';
+import { phaseForDoc, levelForXp } from '../lib/store';
+import GuardianAvatar from './GuardianAvatar';
 
 const AVATAR: Record<string, string> = {
   Bram: '🧔', Sylva: '🧝', Kaelith: '🐉', Tilda: '🧑‍🍳', Pip: '🧙', Hoot: '🦉',
@@ -25,6 +26,16 @@ export default function Journey({ ctx }: { ctx: Ctx }) {
           <p className={phase < 3 ? 'locked' : ''}><span className="land">Land 3: Navy Peaks, Navy Castle, Weeks 9 to 12.</span> {phase < 3 ? 'Locked until your Week 8 retest.' : 'Open.'}</p>
         </div>
         <p className="small muted">Boss rounds at Weeks 4, 8, and 12. Win the round with your class moves and mana, then do the retest to open the next land.</p>
+      </div>
+
+      <div className="card gold-frame">
+        <h3>Your guardian</h3>
+        <GuardianAvatar guardian={doc.guardian} level={levelForXp(doc.xp)} size="medium" />
+        <p className="small muted" style={{ textAlign: 'center' }}>
+          {doc.guardian
+            ? `${doc.guardian.name} the ${doc.guardian.classId} walks this map with you. ${CLASSES.find((c) => c.id === doc.guardian?.classId)?.description || ''}`
+            : 'Pick your guardian on Today, then they walk this map with you.'}
+        </p>
       </div>
 
       <div className="card">
