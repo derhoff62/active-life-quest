@@ -1,8 +1,11 @@
-// GuardianAvatar: a modern, glowing, animated inline SVG drawing of the
-// client's guardian. No external images, no AI images, no new dependencies.
-// Reflects class, color, gem, cape, wings (Level 8+) and crown (Level 10+).
-// Calm, clearly visible motion: bob + glow pulse + gem shimmer, all disabled
-// under prefers-reduced-motion.
+// GuardianAvatar: an epic, fantastical inline SVG drawing of the client's
+// guardian. No external images, no AI images, no new dependencies.
+// Anatomy: neck connects head to shoulders, torso overlaps the head, so the
+// head never floats. Inspiration: Lord of the Rings (cloaked ranger, sturdy
+// armor, journey feel), Eragon (dragon-scale trim, glowing dragon-egg gem),
+// Harry Potter (wizard robe and staff for Spellweaver), Elden Ring (golden
+// light, big sky, epic scale). NOT Dark Souls: nothing dark, grim, or
+// punishing. Warm and beginner-friendly throughout.
 import { useId } from 'react';
 import type { GuardianState } from '../lib/store';
 
@@ -209,6 +212,11 @@ export default function GuardianAvatar({
               </>
             )}
           </linearGradient>
+          <radialGradient id={id('goldlight')} cx="50%" cy="45%" r="55%">
+            <stop offset="0%" stopColor="#f2d878" stopOpacity="0.5" />
+            <stop offset="60%" stopColor="#f2d878" stopOpacity="0.14" />
+            <stop offset="100%" stopColor="#f2d878" stopOpacity="0" />
+          </radialGradient>
           <radialGradient id={id('aura')} cx="50%" cy="50%" r="50%">
             <stop offset="0%" stopColor={gem} stopOpacity="0.65" />
             <stop offset="55%" stopColor={gem} stopOpacity="0.28" />
@@ -255,6 +263,9 @@ export default function GuardianAvatar({
           <rect x="0" y="0" width="200" height="200" fill={`url(#${id('bg')})`} />
           {sceneArt}
         </g>
+        {/* Elden Ring style golden light: a soft golden glow behind the
+            figure, like a big sky at dawn. Warm, never dark. */}
+        <circle className="guardian-aura" cx="100" cy="100" r="95" fill={`url(#${id('goldlight')})`} />
         {/* Glowing aura behind the figure, plus a visible halo ring in the gem color */}
         <circle className="guardian-aura" cx="100" cy="105" r="92" fill={`url(#${id('aura')})`} />
         <circle className="guardian-halo" cx="100" cy="105" r="80" fill="none" stroke={gem} strokeWidth="3.5" />
@@ -287,11 +298,15 @@ export default function GuardianAvatar({
               <path d="M60 82 Q66 98 62 118 M140 82 Q134 98 138 118" fill="none" stroke={main} strokeWidth="1.5" opacity="0.5" />
             </g>
           )}
+          {/* Neck: connects the head to the shoulders, so the head never floats.
+              Drawn before the torso and head, so it fills the seam. */}
+          <rect x="94" y="48" width="12" height="20" rx="4" fill={`url(#${id('skin')})`} stroke={dark} strokeWidth="2" />
           {/* Arms, slim, at the sides */}
           <path d="M82 70 Q74 88 76 106 L83 105 Q82 88 87 74 Z" fill={`url(#${id('tunic')})`} stroke={dark} strokeWidth="2" />
           <path d="M118 70 Q126 88 124 106 L117 105 Q118 88 113 74 Z" fill={`url(#${id('tunic')})`} stroke={dark} strokeWidth="2" />
-          {/* Body: fitted tunic, narrow shoulders, waist, ends at the hips so the legs show */}
-          <path d="M100 62 L118 66 L120 98 L116 122 L84 122 L80 98 L82 66 Z" fill={`url(#${id('tunic')})`} stroke={dark} strokeWidth="2.5" />
+          {/* Body: fitted tunic, narrow shoulders, waist, ends at the hips so the legs show.
+              The top edge (y58) overlaps the bottom of the head (y59) and the neck. */}
+          <path d="M100 58 L118 62 L120 98 L116 122 L84 122 L80 98 L82 62 Z" fill={`url(#${id('tunic')})`} stroke={dark} strokeWidth="2.5" />
           <path d="M86 72 Q84 96 86 118 Q92 120 94 118 Q90 96 92 74 Z" fill="#fff" opacity="0.22" />
           <path d="M114 72 Q116 96 114 118 Q108 120 106 118 Q110 96 108 74 Z" fill="#000" opacity="0.14" />
           {/* Belt */}
@@ -305,6 +320,12 @@ export default function GuardianAvatar({
           {/* Hands */}
           <circle cx="76" cy="108" r="5" fill={`url(#${id('skin')})`} stroke={dark} strokeWidth="1.5" />
           <circle cx="124" cy="108" r="5" fill={`url(#${id('skin')})`} stroke={dark} strokeWidth="1.5" />
+          {/* LOTR style shoulder armor and a cloak clasp at the neck, so the
+              shoulders, neck, and head read as one connected figure. */}
+          <ellipse cx="82" cy="68" rx="11" ry="7" fill={`url(#${id('steel')})`} stroke={dark} strokeWidth="2" />
+          <ellipse cx="118" cy="68" rx="11" ry="7" fill={`url(#${id('steel')})`} stroke={dark} strokeWidth="2" />
+          <circle cx="100" cy="64" r="5" fill={`url(#${id('gold')})`} stroke="#8a6d00" strokeWidth="1.5" />
+          <circle cx="100" cy="64" r="2.5" fill={gem} stroke="#fff" strokeWidth="1" />
           {/* Head, smaller for real human proportions */}
           <circle cx="100" cy="42" r="17" fill={`url(#${id('skin')})`} stroke={dark} strokeWidth="2.5" />
           <ellipse cx="89" cy="50" rx="3.5" ry="2.2" fill="#e88a7a" opacity="0.35" />
@@ -392,6 +413,25 @@ export default function GuardianAvatar({
           <ellipse cx="109" cy="182" rx="9" ry="4.5" fill="#3a2410" />
           <ellipse cx="88" cy="180" rx="4" ry="1.6" fill="#a8763e" opacity="0.6" />
           <ellipse cx="106" cy="180" rx="4" ry="1.6" fill="#a8763e" opacity="0.6" />
+          {/* Spellweaver wizard robe (Harry Potter / Eragon): flows from the
+              waist to the ankles over the legs, boots peeking out below. */}
+          {g.classId === 'Spellweaver' && (
+            <g>
+              <path d="M84 118 L116 118 L128 166 Q100 176 72 166 Z" fill={`url(#${id('tunic')})`} stroke={dark} strokeWidth="2.5" />
+              <path d="M92 124 Q90 146 92 164 M100 126 Q100 146 100 168 M108 124 Q110 146 108 164" fill="none" stroke={dark} strokeWidth="1.5" opacity="0.4" />
+              <path d="M88 130 Q86 148 88 162" fill="#fff" opacity="0.18" />
+              <circle cx="100" cy="140" r="4" fill={`url(#${id('gem')})`} stroke="#fff" strokeWidth="1.5" />
+            </g>
+          )}
+          {/* Guardian dragon-scale trim (Eragon): small scale marks on the
+              chest and shoulders, in the gem color. Friendly, not scary. */}
+          {g.classId === 'Guardian' && (
+            <g fill={gem} opacity="0.5">
+              <path d="M90 76 q4 5 8 0 q-4 5 -8 0 Z" />
+              <path d="M102 76 q4 5 8 0 q-4 5 -8 0 Z" />
+              <path d="M96 84 q4 5 8 0 q-4 5 -8 0 Z" />
+            </g>
+          )}
         </g>
       </svg>
       <p className="guardian-caption">
