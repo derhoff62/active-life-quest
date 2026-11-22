@@ -109,6 +109,20 @@ export function daysForTime(timeMin: 15 | 30 | 45, phase: number): number {
 
 // --------------------------------------------------------------- WORKOUTS
 
+const YMOVE = 'Exercise video by Your Move';
+
+// Playable video clips, served from public/videos/. The six Your Move clips
+// are the exact matches on file; the single-leg RDL clip is Derek's own.
+const EXERCISE_VIDEOS: Record<string, string> = {
+  'Dumbbell Goblet Squat': '/videos/dumbbell-goblet-squat.mp4',
+  'Seated Cable Row': '/videos/seated-cable-row.mp4',
+  'Lat Pulldown': '/videos/lat-pulldown.mp4',
+  'Single-Arm Dumbbell Row': '/videos/single-arm-dumbbell-row.mp4',
+  'Barbell Back Squat': '/videos/barbell-back-squat.mp4',
+  'Barbell Deadlift': '/videos/barbell-deadlift.mp4',
+  'Single-Leg Romanian Deadlift': '/videos/single-leg-rdl-derek.mp4',
+};
+
 function e(
   id: string,
   name: string,
@@ -121,10 +135,8 @@ function e(
   tempo?: string,
   videoLabel?: string,
 ): Exercise {
-  return { id, name, sets, reps, restSec, tempo, howTo, regression, swap, videoLabel };
+  return { id, name, sets, reps, restSec, tempo, howTo, regression, swap, videoLabel, videoUrl: EXERCISE_VIDEOS[name] };
 }
-
-const YMOVE = 'Exercise video by Your Move';
 
 export const WORKOUTS: Workout[] = [
   {
@@ -1897,19 +1909,18 @@ export const ASSESSMENT_QUESTIONS: { questions: string[]; parq: string[] } = {
 
 // ------------------------------------------- ASSESSMENT EXAMPLE DEMOS
 // Text demos for each assessment move. There is no playable example video
-// for these moves yet. Do NOT label a workout clip as an assessment demo:
-// the exact video matches on file are barbell back squat, barbell
-// deadlift, dumbbell goblet squat, lat pulldown, seated cable row, and
-// single-arm dumbbell row, none of which is an overhead squat, a
-// single-leg squat, a postural assessment, or a balance hold. Derek will
-// film these four examples. Until then the text demo is the example.
+// Assessment example videos. These are Derek's own clips from the posts he
+// filmed: overhead squat, single-leg squat, postural assessment, and balance
+// hold. The shoulder-check clip is NOT used here, it is not an assessment.
+// The front-view squat clip is NOT used for the overhead squat, it shows
+// arms crossed over the chest, not arms overhead.
 
 export interface AssessmentExample {
   id: string;
   title: string;
   whatToDo: string[];
   goodForm: string;
-  videoNote: string;
+  videoUrl: string;
 }
 
 export const ASSESSMENT_EXAMPLES: AssessmentExample[] = [
@@ -1923,7 +1934,7 @@ export const ASSESSMENT_EXAMPLES: AssessmentExample[] = [
       'Go as low as you can with your heels down and your chest up, then stand back up.',
     ],
     goodForm: 'Good form looks like heels staying down, knees tracking over toes, arms staying up, and a slow lowering.',
-    videoNote: 'Example video coming. Derek will film this.',
+    videoUrl: '/videos/overhead-squat.mp4',
   },
   {
     id: 'single-leg-squat',
@@ -1935,7 +1946,7 @@ export const ASSESSMENT_EXAMPLES: AssessmentExample[] = [
       'Come back up the same way. Do one side, then the other.',
     ],
     goodForm: 'Good form looks like the standing knee tracking over the toes, hips level, and a slow, controlled lowering.',
-    videoNote: 'Example video coming. Derek will film this.',
+    videoUrl: '/videos/single-leg-squat.mp4',
   },
   {
     id: 'postural-assessment',
@@ -1947,7 +1958,7 @@ export const ASSESSMENT_EXAMPLES: AssessmentExample[] = [
       'Note anything that looks uneven, like one shoulder higher than the other.',
     ],
     goodForm: 'Good posture looks like head over shoulders, shoulders over hips, and weight even on both feet.',
-    videoNote: 'Example video coming. Derek will film this.',
+    videoUrl: '/videos/postural.mp4',
   },
   {
     id: 'balance-baseline',
@@ -1959,7 +1970,7 @@ export const ASSESSMENT_EXAMPLES: AssessmentExample[] = [
       'Do one side, then the other. Stop if you feel unsteady.',
     ],
     goodForm: 'Good balance looks like standing still, hips level, and arms relaxed at your sides.',
-    videoNote: 'Example video coming. Derek will film this.',
+    videoUrl: '/videos/balance.mp4',
   },
 ];
 

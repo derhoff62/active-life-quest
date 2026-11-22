@@ -57,6 +57,7 @@ export interface Exercise {
   regression: string;
   swap?: string;
   videoLabel?: string;
+  videoUrl?: string;
 }
 
 export interface Workout {

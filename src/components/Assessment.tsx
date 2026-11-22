@@ -367,7 +367,8 @@ export default function Assessment({ ctx }: { ctx: Ctx }) {
                 <p key={i}>· {s}</p>
               ))}
               <p><strong>Good form:</strong> {ex.goodForm}</p>
-              <p className="small muted">{ex.videoNote}</p>
+              <video src={ex.videoUrl} controls playsInline preload="metadata" style={{ width: '100%', maxHeight: 320, borderRadius: 8 }} />
+              <p className="small muted">Derek shows the move.</p>
             </details>
           ))}
           <div className="row">

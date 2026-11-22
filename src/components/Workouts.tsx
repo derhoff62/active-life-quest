@@ -310,7 +310,12 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
               <p className="small muted">You are doing the easier version now. Tap "Back to the full move" above to go back.</p>
             )}
             {ex.swap && <p><strong>Swap:</strong> {ex.swap}</p>}
-            {ex.videoLabel && <p className="small muted">Video: {ex.videoLabel}</p>}
+            {ex.videoUrl && (
+              <>
+                <video src={ex.videoUrl} controls playsInline preload="metadata" style={{ width: '100%', maxHeight: 320, borderRadius: 8 }} />
+                {ex.videoLabel && <p className="small muted">Video: {ex.videoLabel}</p>}
+              </>
+            )}
           </details>
           {last && <p className="small">Last time: {last.w ? `${last.w} lb` : ''}{last.w && last.r ? ' x ' : ''}{last.r ? `${last.r} reps` : ''}</p>}
           <div className="row" style={{ marginTop: 6 }}>
