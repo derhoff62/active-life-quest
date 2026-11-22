@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { Ctx } from '../App';
-import { ASSESSMENT_QUESTIONS, CES_TEMPLATES, CONTRAINDICATIONS, recommendPhase } from '../lib/data';
+import { ASSESSMENT_QUESTIONS, CES_TEMPLATES, CONTRAINDICATIONS, DEFAULT_EQUIPMENT, EQUIPMENT_OPTIONS, recommendPhase } from '../lib/data';
 import type { FindingId, FormRating } from '../lib/types';
 
 const FINDING_LABELS: { id: FindingId; label: string }[] = CES_TEMPLATES.map((t) => ({ id: t.id, label: t.plainName }));
@@ -23,6 +23,9 @@ export default function Assessment({ ctx }: { ctx: Ctx }) {
   const [weight, setWeight] = useState('');
   const [goalWeight, setGoalWeight] = useState('');
   const [age, setAge] = useState('');
+  const [equipment, setEquipment] = useState<string[]>(
+    doc.equipment && doc.equipment.length > 0 ? doc.equipment : [...DEFAULT_EQUIPMENT],
+  );
   const [done, setDone] = useState(false);
 
   const toggle = (arr: string[], v: string, set: (a: string[]) => void) =>
@@ -49,6 +52,7 @@ export default function Assessment({ ctx }: { ctx: Ctx }) {
       };
       d.assessmentDone = true;
       d.healthFlags = flags;
+      d.equipment = equipment.length > 0 ? equipment : [...DEFAULT_EQUIPMENT];
       d.contraindications = contra;
       d.balanceBaseline = { left: Number(balL) || 0, right: Number(balR) || 0 };
       d.body = {
@@ -75,6 +79,7 @@ export default function Assessment({ ctx }: { ctx: Ctx }) {
           {result.findings.length === 0 && <p>Your screen was clean. No corrective templates were flagged.</p>}
           {result.findings.length > 0 && <p>Movement patterns to work on: {result.findings.map((f) => FINDING_LABELS.find((x) => x.id === f)?.label).join(', ')}.</p>}
           <p>Balance baseline: {result.balanceLeftSec}s left, {result.balanceRightSec}s right. This is a general balance check, not a NASM test.</p>
+          <p>Your equipment: {(doc.equipment && doc.equipment.length > 0 ? doc.equipment : DEFAULT_EQUIPMENT).join(', ')}. Workouts swap out moves you cannot do with this gear.</p>
           <button className="primary" onClick={() => { setDone(false); setStep(0); }}>Retake the assessment</button>
         </div>
         {templates.map((t) => (
@@ -144,6 +149,20 @@ export default function Assessment({ ctx }: { ctx: Ctx }) {
             <option value="1to3">1 to 3 years</option>
             <option value="over3">Over 3 years</option>
           </select>
+          <label>What equipment do you have? (pick all you have)</label>
+          <p className="small muted">Your workouts swap out moves you cannot do. No cable machine, no cable row: you get a dumbbell row instead.</p>
+          <div className="row">
+            {EQUIPMENT_OPTIONS.map((e) => (
+              <button
+                key={e}
+                type="button"
+                onClick={() => toggle(equipment, e, setEquipment)}
+                style={equipment.includes(e) ? { background: '#124571', color: '#fff' } : {}}
+              >
+                {e}
+              </button>
+            ))}
+          </div>
           <div className="grid2">
             <div>
               <label htmlFor="a-sex">Sex (for nutrition numbers)</label>

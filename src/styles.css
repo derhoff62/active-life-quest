@@ -46,7 +46,10 @@ input, select, textarea {
   min-height: 48px;
 }
 label { display: block; font-weight: 600; margin: 12px 0 4px; }
-.app { max-width: 720px; margin: 0 auto; padding: 0 12px 120px; }
+/* Bottom padding must clear the fixed nav, which wraps to two rows on
+   phones (9 tabs in 6 columns, about 120px tall) plus the safe area. */
+.app { max-width: 720px; margin: 0 auto; padding: 0 12px calc(210px + env(safe-area-inset-bottom)); }
+html { scroll-padding-bottom: calc(210px + env(safe-area-inset-bottom)); }
 @media (min-width: 900px) { .app { max-width: 860px; } }
 .banner {
   background: linear-gradient(135deg, var(--navy), var(--blue));

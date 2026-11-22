@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { Ctx } from '../App';
-import { CLASSES, GOAL_TYPES } from '../lib/data';
+import { CLASSES, DEFAULT_EQUIPMENT, EQUIPMENT_OPTIONS, GOAL_TYPES } from '../lib/data';
 import type { ClassId } from '../lib/types';
 
 const COLORS = ['Navy', 'Forest', 'Crimson', 'Gold', 'Teal'];
@@ -16,9 +16,9 @@ export default function Onboarding({ ctx }: { ctx: Ctx }) {
   const [cape, setCape] = useState(true);
   const [goal, setGoal] = useState('weight-loss');
   const [why, setWhy] = useState('');
-  const [equipment, setEquipment] = useState<string[]>(['Dumbbells']);
+  const [equipment, setEquipment] = useState<string[]>([...DEFAULT_EQUIPMENT]);
 
-  const EQUIP = ['Dumbbells', 'Resistance bands', 'Kettlebell', 'Barbell', 'Cable machine', 'Bodyweight only', 'Bench', 'Stability ball', 'Foam roller', 'Step platform'];
+  const EQUIP = EQUIPMENT_OPTIONS;
 
   if (step === 0) {
     return (

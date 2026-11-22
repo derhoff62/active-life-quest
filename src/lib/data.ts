@@ -553,6 +553,134 @@ export const WORKOUTS: Workout[] = [
   },
 ];
 
+// ---------------------------------------------------------- EQUIPMENT
+// The Muse prototype had 14 equipment options. The assessment asks this
+// question, and workouts swap out moves the user cannot do with what they
+// have. "Gym full access" counts as having everything below it.
+
+export const EQUIPMENT_OPTIONS: string[] = [
+  'Bodyweight only',
+  'Dumbbells',
+  'Resistance bands',
+  'Kettlebell',
+  'Barbell',
+  'Cable machine',
+  'Bench',
+  'Step platform',
+  'Stability ball',
+  'Foam roller',
+  'Suspension trainer',
+  'Pull-up bar',
+  'Leg press machine',
+  'Gym full access',
+];
+
+export const DEFAULT_EQUIPMENT: string[] = ['Bodyweight only', 'Dumbbells'];
+
+/** Equipment already saved, or the default for accounts made before this question existed. */
+export function effectiveEquipment(equipment: string[] | undefined | null): string[] {
+  return equipment && equipment.length > 0 ? equipment : [...DEFAULT_EQUIPMENT];
+}
+
+export function hasEquipment(equipment: string[] | undefined | null, need: string | null): boolean {
+  if (!need) return true;
+  const eff = effectiveEquipment(equipment);
+  if (eff.includes('Gym full access')) return true;
+  return eff.includes(need);
+}
+
+/** What a move needs, by exercise id. Bodyweight moves need nothing. */
+export const EXERCISE_EQUIPMENT: Record<string, { need?: string; anyOf?: string[] }> = {
+  'seated-cable-row': { need: 'Cable machine' },
+  'lat-pulldown': { need: 'Cable machine' },
+  'pallof-press': { anyOf: ['Cable machine', 'Resistance bands'] },
+  'barbell-back-squat': { need: 'Barbell' },
+  'barbell-deadlift': { need: 'Barbell' },
+  'goblet-squat': { need: 'Dumbbells' },
+  'dumbbell-bench-press': { need: 'Dumbbells' },
+  'overhead-press': { need: 'Dumbbells' },
+  'romanian-deadlift': { need: 'Dumbbells' },
+  'single-leg-rdl': { need: 'Dumbbells' },
+  'single-arm-dumbbell-row': { need: 'Dumbbells' },
+  'step-up': { need: 'Step platform' },
+};
+
+/** Fallback moves, by exercise id, tried in order after the exercise's own swap field. */
+export const EXERCISE_FALLBACKS: Record<string, string[]> = {
+  'seated-cable-row': ['Single-Arm Dumbbell Row', 'Bird Dog'],
+  'lat-pulldown': ['Seated Cable Row', 'Single-Arm Dumbbell Row', 'Bird Dog'],
+  'pallof-press': ['Dead Bug'],
+  'barbell-back-squat': ['Dumbbell Goblet Squat', 'Split Squat', 'Glute Bridge'],
+  'barbell-deadlift': ['Romanian Deadlift', 'Glute Bridge'],
+  'goblet-squat': ['Split Squat', 'Glute Bridge'],
+  'dumbbell-bench-press': ['Push-Up', 'Dead Bug'],
+  'overhead-press': ['Push-Up', 'Dead Bug'],
+  'romanian-deadlift': ['Glute Bridge'],
+  'single-leg-rdl': ['Romanian Deadlift', 'Glute Bridge'],
+  'single-arm-dumbbell-row': ['Seated Cable Row', 'Bird Dog'],
+  'step-up': ['Split Squat', 'Glute Bridge'],
+};
+
+export function exerciseNeeds(ex: Exercise): string | null {
+  const gate = EXERCISE_EQUIPMENT[ex.id];
+  if (!gate) return null;
+  if (gate.anyOf) return gate.anyOf.join(' or ');
+  return gate.need ?? null;
+}
+
+export function exerciseNeedsMet(ex: Exercise, equipment: string[] | undefined | null): boolean {
+  const gate = EXERCISE_EQUIPMENT[ex.id];
+  if (!gate) return true;
+  const eff = effectiveEquipment(equipment);
+  if (eff.includes('Gym full access')) return true;
+  if (gate.anyOf) return gate.anyOf.some((n) => eff.includes(n));
+  return eff.includes(gate.need ?? '');
+}
+
+export function findExerciseByName(name: string): Exercise | undefined {
+  const want = name.trim().toLowerCase();
+  for (const w of WORKOUTS) {
+    const found = w.exercises.find((x) => x.name.trim().toLowerCase() === want);
+    if (found) return found;
+  }
+  return undefined;
+}
+
+export interface ResolvedExercise {
+  exercise: Exercise;
+  swappedFrom: string | null;
+  missingEquipment: string | null;
+  unavailable: boolean;
+}
+
+/**
+ * Swap a move the user cannot do for one they can, keeping the original
+ * sets, reps, rest, and tempo. Tries the move's own swap field first, then
+ * its fallback list. If nothing the user owns works, the original is kept
+ * and marked unavailable so the UI can show the easier version instead.
+ */
+export function resolveExercise(ex: Exercise, equipment: string[] | undefined | null): ResolvedExercise {
+  if (exerciseNeedsMet(ex, equipment)) {
+    return { exercise: ex, swappedFrom: null, missingEquipment: null, unavailable: false };
+  }
+  const missing = exerciseNeeds(ex);
+  const candidates: string[] = [];
+  if (ex.swap) candidates.push(ex.swap);
+  candidates.push(...(EXERCISE_FALLBACKS[ex.id] ?? []));
+  for (const name of candidates) {
+    const candidate = findExerciseByName(name);
+    if (!candidate) continue;
+    if (!exerciseNeedsMet(candidate, equipment)) continue;
+    return {
+      exercise: { ...candidate, sets: ex.sets, reps: ex.reps, restSec: ex.restSec, tempo: ex.tempo ?? candidate.tempo },
+      swappedFrom: ex.name,
+      missingEquipment: missing,
+      unavailable: false,
+    };
+  }
+  return { exercise: ex, swappedFrom: null, missingEquipment: missing, unavailable: true };
+}
+
 // ---------------------------------------------------------- CES TEMPLATES
 // NASM corrective structure for each impairment: Inhibit (SMR, hold 30-60
 // seconds), Lengthen (static stretch, 30 seconds), Activation (1-2 sets of

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Ctx } from '../App';
-import { WORKOUTS, PHASES, CES_TEMPLATES } from '../lib/data';
+import { WORKOUTS, PHASES, CES_TEMPLATES, effectiveEquipment, resolveExercise } from '../lib/data';
 import { phaseForDoc, hasFullAccess } from '../lib/store';
 import type { Workout } from '../lib/types';
 
@@ -92,7 +92,9 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
   }
 
   if (active) {
-    const ex = active.exercises[step];
+    const rawEx = active.exercises[step];
+    const resolved = resolveExercise(rawEx, doc.equipment);
+    const ex = resolved.exercise;
     const isLast = step >= active.exercises.length - 1;
     return (
       <div>
@@ -102,6 +104,16 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
             Exercise {step + 1} of {active.exercises.length} · About {active.minutes} minutes · {active.note || ''}
           </p>
           <div className="progress-bar"><div style={{ width: `${((step + 1) / active.exercises.length) * 100}%` }} /></div>
+          {resolved.swappedFrom && (
+            <p className="notice" style={{ marginTop: 10 }}>
+              Swapped in: {ex.name} instead of {resolved.swappedFrom}, because you do not have a {resolved.missingEquipment}. Same sets and reps.
+            </p>
+          )}
+          {resolved.unavailable && (
+            <p className="notice" style={{ marginTop: 10 }}>
+              You do not have a {resolved.missingEquipment} for {rawEx.name}, and no swap fits your gear. Do the easier version below instead, or change your equipment in the assessment.
+            </p>
+          )}
         </div>
         {myTemplates.length > 0 && step === 0 && (
           <div className="card gold-frame">
@@ -209,6 +221,12 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
         )}
       </div>
 
+      <div className="card">
+        <h3>Your equipment</h3>
+        <p>{effectiveEquipment(doc.equipment).join(', ')}. Moves you cannot do with this gear are swapped for one you can, and the swap is shown in the workout.</p>
+        <button onClick={() => ctx.go('assessment')}>Change my equipment in the assessment</button>
+      </div>
+
       {doc.sessions && (
         <div className="card gold-frame">
           <h3>Resume your workout</h3>
@@ -226,6 +244,8 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
         const locked =
           (w.phase === 4 && !doc.retests.some((r) => (r as { week?: number }).week === 12)) ||
           (w.phase === 5 && !doc.retests.some((r) => (r as { clean?: boolean }).clean === true));
+        const resolved = w.exercises.map((e) => resolveExercise(e, doc.equipment));
+        const swapped = resolved.filter((r) => r.swappedFrom);
         return (
           <div className="card" key={w.id}>
             <div className="row space">
@@ -233,7 +253,12 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
               <span className="pill">Phase {w.phase} · ~{w.minutes} min</span>
             </div>
             <p className="muted small">{w.day}{w.note ? ` · ${w.note}` : ''}</p>
-            <p>{w.exercises.map((e) => e.name).join(' · ')}</p>
+            <p>{resolved.map((r) => r.exercise.name).join(' · ')}</p>
+            {swapped.length > 0 && (
+              <p className="small muted">
+                Swapped for your gear: {swapped.map((r) => `${r.exercise.name} in for ${r.swappedFrom}`).join('; ')}.
+              </p>
+            )}
             <button className="primary" disabled={locked} onClick={() => startWorkout(w)}>
               {locked ? 'Locked' : 'Start workout'}
             </button>
