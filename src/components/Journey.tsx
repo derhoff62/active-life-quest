@@ -135,7 +135,12 @@ export default function Journey({ ctx }: { ctx: Ctx }) {
             </button>
           </>
         )}
-        {doc.storySkipped && <p className="muted small">Story skipped. You can still read it here any time.</p>}
+        {doc.storySkipped && (
+          <p className="muted small">
+            Story skipped. You can still read it here any time.{' '}
+            <button onClick={() => update((d) => { d.storySkipped = false; })}>Read the story</button>
+          </p>
+        )}
       </div>
 
       <div className="card">

@@ -14,7 +14,7 @@ interface ClientRow {
 }
 
 export default function Coach({ ctx }: { ctx: Ctx }) {
-  const { doc } = ctx;
+  const { doc, update } = ctx;
   const [pin, setPin] = useState('');
   const [unlocked, setUnlocked] = useState(false);
   const [firstSet, setFirstSet] = useState(false);
@@ -101,11 +101,14 @@ export default function Coach({ ctx }: { ctx: Ctx }) {
   const alerts: string[] = [];
   localClients.forEach((c) => {
     c.data.messages.filter((m) => !m.coachReply).forEach((m) => alerts.push(`New ${m.kind} from ${c.displayName || c.email}`));
-    c.data.checkins.slice(-1).forEach(() => alerts.push(`Check-in to reply to from ${c.displayName || c.email}`));
     if (c.data.week13PlanRequested) alerts.push(`Week 13 plan to send to ${c.displayName || c.email}`);
     if (c.data.sessions) alerts.push(`Unfinished workout for ${c.displayName || c.email}`);
-    if (c.data.assessment?.findings.length) alerts.push(`Balance warning: check balance moves for ${c.displayName || c.email}`);
-    if (c.data.assessmentDone && c.data.retests.length === 0) alerts.push(`Week 4 retest due for ${c.displayName || c.email}`);
+    // A Week 4 retest is only due once the client has been going about 4
+    // weeks. Before that the alert just sat there from day one.
+    const joinedMs = new Date(c.data.joinedAt || Date.now()).getTime();
+    if (c.data.assessmentDone && c.data.retests.length === 0 && Date.now() - joinedMs >= 21 * 24 * 60 * 60 * 1000) {
+      alerts.push(`Week 4 retest due for ${c.displayName || c.email}`);
+    }
     const cleanWeeks = c.data.retests.filter((r) => (r as { clean?: boolean }).clean).map((r) => (r as { week?: number }).week || 0);
     const nextPhase = cleanWeeks.includes(12) ? 4 : cleanWeeks.includes(8) ? 3 : cleanWeeks.includes(4) ? 2 : 0;
     const curPhase = phaseForDoc(c.data);
@@ -168,7 +171,7 @@ export default function Coach({ ctx }: { ctx: Ctx }) {
         {localClients.map((c) => (
           <div key={c.id} style={{ borderTop: '1px solid #d7e3ee', padding: '10px 0' }}>
             <p>
-              <strong>{c.displayName || c.email}</strong> · {c.email} · Phase {c.data.assessment?.startingPhase || 'not assessed'} · {c.data.xp} XP · last active {new Date(c.updatedAt).toLocaleDateString()}
+              <strong>{c.displayName || c.email}</strong> · {c.email} · Phase {phaseForDoc(c.data)} · {c.data.xp} XP · last active {new Date(c.updatedAt).toLocaleDateString()}
             </p>
             <p className="small muted">Check-ins: {checkinPreferenceText(c.data).replace('Your check-ins: ', '')}</p>
             <div className="row">
@@ -181,7 +184,7 @@ export default function Coach({ ctx }: { ctx: Ctx }) {
       {selected && (
         <div className="card gold-frame">
           <h3>{selected.displayName || selected.email}</h3>
-          <p>Phase {selected.data.assessment?.startingPhase || 'not assessed'} · Findings: {selected.data.assessment?.findings.join(', ') || 'none'} · Workouts: {selected.data.workouts.length} · Check-ins: {selected.data.checkins.length} · Cardio: {selected.data.cardio.reduce((s, c) => s + Number(c.minutes || 0), 0)} min</p>
+          <p>Phase {phaseForDoc(selected.data)} · Findings: {selected.data.assessment?.findings.join(', ') || 'none'} · Workouts: {selected.data.workouts.length} · Check-ins: {selected.data.checkins.length} · Cardio: {selected.data.cardio.reduce((s, c) => s + Number(c.minutes || 0), 0)} min</p>
           <p className="small"><strong>Check-in preference: {checkinPreferenceText(selected.data).replace('Your check-ins: ', '')}</strong></p>
           <div className="card">
             <h4 style={{ margin: '0 0 4px' }}>Change this client's check-ins</h4>
@@ -196,6 +199,7 @@ export default function Coach({ ctx }: { ctx: Ctx }) {
                     const freq = normalizeCheckinFrequency(v, selected.data.checkinFrequency);
                     try {
                       if (api.getMode() === 'server') await api.coachSetCheckinPreference(selected.id, v, freq);
+                      if (api.getMode() === 'local') update((d) => { d.checkinMode = v; d.checkinFrequency = freq; });
                       const patch = (d: ProfileDoc) => ({ ...d, checkinMode: v, checkinFrequency: freq });
                       setClients((prev) => prev.map((cl) => (cl.id === selected.id ? { ...cl, data: patch(cl.data) } : cl)));
                       setSelected((prev) => (prev ? { ...prev, data: patch(prev.data) } : prev));
@@ -220,6 +224,7 @@ export default function Coach({ ctx }: { ctx: Ctx }) {
                       onClick={async () => {
                         try {
                           if (api.getMode() === 'server') await api.coachSetCheckinPreference(selected.id, selected.data.checkinMode || 'text', v);
+                          if (api.getMode() === 'local') update((d) => { d.checkinFrequency = v; });
                           const patch = (d: ProfileDoc) => ({ ...d, checkinFrequency: v });
                           setClients((prev) => prev.map((cl) => (cl.id === selected.id ? { ...cl, data: patch(cl.data) } : cl)));
                           setSelected((prev) => (prev ? { ...prev, data: patch(prev.data) } : prev));
@@ -250,7 +255,8 @@ export default function Coach({ ctx }: { ctx: Ctx }) {
               const rows: [string, number, number][] = [
                 ['Workouts', w, 3],
                 ['Cardio minutes', cardio, 150],
-                ['Check-ins', ci, 3],
+                // Daily check-in means 7 in a week, not 3.
+                ['Check-ins', ci, 7],
               ];
               return (
                 <div>
@@ -276,6 +282,7 @@ export default function Coach({ ctx }: { ctx: Ctx }) {
                 onClick={async () => {
                   try {
                     if (api.getMode() === 'server') await api.coachSetPhase5(selected.id, true);
+                    if (api.getMode() === 'local') update((d) => { d.phase5Approved = true; });
                     const patch = (d: ProfileDoc) => ({ ...d, phase5Approved: true });
                     setClients((prev) => prev.map((cl) => (cl.id === selected.id ? { ...cl, data: patch(cl.data) } : cl)));
                     setSelected((prev) => (prev ? { ...prev, data: patch(prev.data) } : prev));
@@ -289,6 +296,7 @@ export default function Coach({ ctx }: { ctx: Ctx }) {
                 onClick={async () => {
                   try {
                     if (api.getMode() === 'server') await api.coachSetPhase5(selected.id, false);
+                    if (api.getMode() === 'local') update((d) => { d.phase5Approved = false; });
                     const patch = (d: ProfileDoc) => ({ ...d, phase5Approved: false });
                     setClients((prev) => prev.map((cl) => (cl.id === selected.id ? { ...cl, data: patch(cl.data) } : cl)));
                     setSelected((prev) => (prev ? { ...prev, data: patch(prev.data) } : prev));
@@ -300,6 +308,43 @@ export default function Coach({ ctx }: { ctx: Ctx }) {
               </button>
             </div>
             {phase5Msg && <p className="ok">{phase5Msg}</p>}
+          </div>
+
+          <div className="card">
+            <h4 style={{ margin: '0 0 4px' }}>Calorie calculator</h4>
+            <p className="small muted">Off by default, no daily tracking. Turning it on shows this client a rough calorie estimate in Nutrition. It still needs their height, weight, and age from the assessment.</p>
+            <p className="small"><strong>{selected.data.calorieCalcEnabled ? 'On for this client.' : 'Off for this client.'}</strong></p>
+            <div className="row">
+              <button
+                className="primary"
+                onClick={async () => {
+                  try {
+                    if (api.getMode() === 'server') await api.coachSetCalorieCalc(selected.id, true);
+                    if (api.getMode() === 'local') update((d) => { d.calorieCalcEnabled = true; });
+                    const patch = (d: ProfileDoc) => ({ ...d, calorieCalcEnabled: true });
+                    setClients((prev) => prev.map((cl) => (cl.id === selected.id ? { ...cl, data: patch(cl.data) } : cl)));
+                    setSelected((prev) => (prev ? { ...prev, data: patch(prev.data) } : prev));
+                    setPhase5Msg('Calorie calculator turned on for this client.');
+                  } catch { setPhase5Msg('That could not be saved. Try again.'); }
+                }}
+              >
+                Turn calculator on
+              </button>
+              <button
+                onClick={async () => {
+                  try {
+                    if (api.getMode() === 'server') await api.coachSetCalorieCalc(selected.id, false);
+                    if (api.getMode() === 'local') update((d) => { d.calorieCalcEnabled = false; });
+                    const patch = (d: ProfileDoc) => ({ ...d, calorieCalcEnabled: false });
+                    setClients((prev) => prev.map((cl) => (cl.id === selected.id ? { ...cl, data: patch(cl.data) } : cl)));
+                    setSelected((prev) => (prev ? { ...prev, data: patch(prev.data) } : prev));
+                    setPhase5Msg('Calorie calculator turned off for this client.');
+                  } catch { setPhase5Msg('That could not be saved. Try again.'); }
+                }}
+              >
+                Turn calculator off
+              </button>
+            </div>
           </div>
 
           <div className="card">
@@ -457,14 +502,28 @@ export default function Coach({ ctx }: { ctx: Ctx }) {
               {m.video && api.getMode() !== 'server' && <p className="small muted">Video attached ({(m.video.sizeBytes / 1024 / 1024).toFixed(1)} MB). Playback needs the live app with video storage set up.</p>}
               {m.video && (
                 <div className="row" style={{ marginTop: 4 }}>
-                  <button onClick={async () => {
-                    try {
-                      if (api.getMode() === 'server') await api.coachDeleteCheckinVideo(selected.id, m.video!.key);
-                      setClients((prev) => prev.map((cl) => (cl.id === selected.id ? { ...cl, data: { ...cl.data, messages: cl.data.messages.map((x) => (x.id === m.id ? { ...x, video: undefined } : x)) } } : cl)));
-                      setSelected((prev) => (prev ? { ...prev, data: { ...prev.data, messages: prev.data.messages.map((x) => (x.id === m.id ? { ...x, video: undefined } : x)) } } : prev));
-                      setVideoMsg('Video deleted.');
-                    } catch { setVideoMsg('That video could not be deleted. Try again.'); }
-                  }}>Delete this video</button>
+                  {deleteVideoKey === `msg-${m.id}` ? (
+                    <span>
+                      Delete this video?{' '}
+                      <button
+                        className="primary"
+                        onClick={async () => {
+                          try {
+                            if (api.getMode() === 'server') await api.coachDeleteCheckinVideo(selected.id, m.video!.key);
+                            setClients((prev) => prev.map((cl) => (cl.id === selected.id ? { ...cl, data: { ...cl.data, messages: cl.data.messages.map((x) => (x.id === m.id ? { ...x, video: undefined } : x)) } } : cl)));
+                            setSelected((prev) => (prev ? { ...prev, data: { ...prev.data, messages: prev.data.messages.map((x) => (x.id === m.id ? { ...x, video: undefined } : x)) } } : prev));
+                            setVideoMsg('Video deleted.');
+                          } catch { setVideoMsg('That video could not be deleted. Try again.'); }
+                          setDeleteVideoKey('');
+                        }}
+                      >
+                        Yes, delete
+                      </button>{' '}
+                      <button onClick={() => setDeleteVideoKey('')}>Cancel</button>
+                    </span>
+                  ) : (
+                    <button onClick={() => setDeleteVideoKey(`msg-${m.id}`)}>Delete this video</button>
+                  )}
                 </div>
               )}
               {m.kind === 'video-call-request' && m.callStatus !== 'confirmed' && (
@@ -475,6 +534,12 @@ export default function Coach({ ctx }: { ctx: Ctx }) {
                     onClick={async () => {
                       if (!callTime.trim()) return;
                       if (api.getMode() === 'server') await api.coachReply(selected.id, m.id, `Video call confirmed for ${callTime.trim()}. I will send the call link before then.`);
+                      if (api.getMode() === 'local') {
+                        update((d) => {
+                          const x = d.messages.find((y) => y.id === m.id);
+                          if (x) { x.callStatus = 'confirmed'; x.callTime = callTime.trim(); x.coachReply = `Video call confirmed for ${callTime.trim()}. I will send the call link before then.`; }
+                        });
+                      }
                       const patch = (arr: typeof selected.data.messages) => arr.map((x) => (x.id === m.id ? { ...x, callStatus: 'confirmed' as const, callTime: callTime.trim(), coachReply: `Video call confirmed for ${callTime.trim()}. I will send the call link before then.` } : x));
                       setClients((prev) => prev.map((cl) => (cl.id === selected.id ? { ...cl, data: { ...cl.data, messages: patch(cl.data.messages) } } : cl)));
                       setSelected((prev) => (prev ? { ...prev, data: { ...prev.data, messages: patch(prev.data.messages) } } : prev));
@@ -494,6 +559,12 @@ export default function Coach({ ctx }: { ctx: Ctx }) {
                     onClick={async () => {
                       if (!reply.trim()) return;
                       if (api.getMode() === 'server') await api.coachReply(selected.id, m.id, reply.trim());
+                      if (api.getMode() === 'local') {
+                        update((d) => {
+                          const x = d.messages.find((y) => y.id === m.id);
+                          if (x) { x.coachReply = reply.trim(); x.repliedAt = new Date().toISOString(); }
+                        });
+                      }
                       setClients((prev) => prev.map((c) => (c.id === selected.id ? { ...c, data: { ...c.data, messages: c.data.messages.map((x) => (x.id === m.id ? { ...x, coachReply: reply.trim(), repliedAt: new Date().toISOString() } : x)) } } : c)));
                       setReply('');
                       setReplyFor('');
@@ -513,6 +584,11 @@ export default function Coach({ ctx }: { ctx: Ctx }) {
               onClick={async () => {
                 if (!nudge.trim()) return;
                 if (api.getMode() === 'server') await api.coachNudge(selected.id, nudge.trim());
+                if (api.getMode() === 'local') {
+                  update((d) => {
+                    d.nudges.push({ id: `n${Date.now()}`, text: nudge.trim(), date: new Date().toISOString(), read: false });
+                  });
+                }
                 setNudge('');
                 setNudgeMsg('Nudge sent. It shows on the client Today screen.');
               }}
@@ -548,6 +624,7 @@ export default function Coach({ ctx }: { ctx: Ctx }) {
               }
               try {
                 if (api.getMode() === 'server') await api.coachSaveCesSheet(selected.id, cesMarks, cesNotes);
+                if (api.getMode() === 'local') update((d) => { d.cesSheet = { marks: cesMarks, notes: cesNotes, date: new Date().toISOString() }; });
                 const sheet = { marks: cesMarks, notes: cesNotes, date: new Date().toISOString() };
                 setClients((prev) => prev.map((cl) => (cl.id === selected.id ? { ...cl, data: { ...cl.data, cesSheet: sheet } } : cl)));
                 setSelected((prev) => (prev ? { ...prev, data: { ...prev.data, cesSheet: sheet } } : prev));

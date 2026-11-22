@@ -71,6 +71,8 @@ export default function App() {
   const [betaMsg, setBetaMsg] = useState('');
   const [betaBusy, setBetaBusy] = useState(false);
   const [confirmSignOut, setConfirmSignOut] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleteMsg, setDeleteMsg] = useState('');
 
   useEffect(() => {
     (async () => {
@@ -207,7 +209,7 @@ export default function App() {
           {tab === 'coach' && <Coach ctx={ctx} />}
         </TabErrorBoundary>
 
-        {!full && doc.guardianPicked && tab !== 'coach' && (
+        {!full && doc.guardianPicked && tab === 'today' && (
           <div className="card gold-frame">
             <h3>Free plan</h3>
             <p>The assessment and Week 1 are free. After that, a 14-day trial, then paid coaching through Stripe. No one is charged in beta.</p>
@@ -292,21 +294,43 @@ export default function App() {
               <button onClick={() => setConfirmSignOut(false)}>Cancel</button>
             </span>
           )}{' '}
+          {!confirmDelete ? (
+            <button onClick={() => setConfirmDelete(true)}>Delete my account</button>
+          ) : (
+            <span>
+              Delete your account and all your progress? This cannot be undone.{' '}
+              <button
+                className="primary"
+                onClick={async () => {
+                  try {
+                    await api.deleteAccount();
+                    api.logout();
+                    clearLocal();
+                    setAuth(null);
+                    setDoc(defaultProfile());
+                  } catch (e) {
+                    setDeleteMsg(e instanceof Error ? e.message : 'Your account could not be deleted. Try again, or message Derek.');
+                  }
+                  setConfirmDelete(false);
+                }}
+              >
+                Yes, delete everything
+              </button>{' '}
+              <button onClick={() => setConfirmDelete(false)}>Cancel</button>
+            </span>
+          )}{' '}
+          {deleteMsg && <span>{deleteMsg}</span>}{' '}
           · Active Life Personal Training by Derek · Derek cannot fix, treat, diagnose, or cure pain.
         </footer>
 
         <nav className="nav" aria-label="Sections">
-          {TABS.filter((t) => t.id !== 'coach').map((t) => (
+          {TABS.map((t) => (
             <button key={t.id} className={tab === t.id ? 'active' : ''} onClick={() => go(t.id)} aria-current={tab === t.id ? 'page' : undefined}>
               <span className="nav-icon" aria-hidden="true">{t.icon}</span>
               <span className="nav-label">{t.label}</span>
               {t.id === 'today' && unread > 0 && <span className="badge">{unread}</span>}
             </button>
           ))}
-          <button className={tab === 'coach' ? 'active' : ''} onClick={() => go('coach')} aria-current={tab === 'coach' ? 'page' : undefined}>
-            <span className="nav-icon" aria-hidden="true">★</span>
-            <span className="nav-label">Coach</span>
-          </button>
         </nav>
       </div>
     </div>

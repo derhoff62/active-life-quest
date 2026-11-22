@@ -1174,6 +1174,29 @@ app.post("/api/coach/checkin-preference", async (c) => {
 
 // Coach-only: approve or revoke Phase 5 for a client. Phase 5 also needs
 // a clean form retest, checked in the app.
+app.post("/api/coach/calorie-calc", async (c) => {
+  const db = getDb(c);
+  if (!db) {
+    return dbMissing(c);
+  }
+  if (!(await hasCoachSession(c, db))) {
+    return c.json({ error: "Coach sign-in is required." }, 401);
+  }
+  const body = await readJson(c);
+  const userId = body && typeof body.userId === "string" ? body.userId : "";
+  const enabled = body && body.enabled === true;
+  if (!userId) {
+    return c.json({ error: "Client not found." }, 404);
+  }
+  const doc = await getProfileDoc(db, userId);
+  if (!doc) {
+    return c.json({ error: "Client not found." }, 404);
+  }
+  doc.calorieCalcEnabled = enabled;
+  await saveProfileDoc(db, userId, doc);
+  return c.json({ ok: true, enabled });
+});
+
 app.post("/api/coach/phase5", async (c) => {
   const db = getDb(c);
   if (!db) {

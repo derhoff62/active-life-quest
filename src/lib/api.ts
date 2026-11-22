@@ -201,6 +201,13 @@ export async function coachDeletePhoto(userId: string, key: string) {
   });
 }
 
+export async function coachSetCalorieCalc(userId: string, enabled: boolean) {
+  return req<{ ok: boolean; enabled: boolean }>('/api/coach/calorie-calc', {
+    method: 'POST',
+    body: JSON.stringify({ userId, enabled }),
+  });
+}
+
 export async function coachSetPhase5(userId: string, approved: boolean) {
   return req<{ ok: boolean; approved: boolean }>('/api/coach/phase5', {
     method: 'POST',

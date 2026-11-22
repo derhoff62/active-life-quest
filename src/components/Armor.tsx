@@ -122,8 +122,6 @@ export default function Armor({ ctx }: { ctx: Ctx }) {
   const earnedCount = ARMOR.filter((a) => earned.has(a.id) || rarityEarned.has(a.id)).length;
   const next = ARMOR.find((a) => !earned.has(a.id) && !rarityEarned.has(a.id));
   const nextHidden = next && (next.tier === 'Legendary' || next.tier === 'Mythical');
-  const [showClassPicker, setShowClassPicker] = useState(false);
-  const [confirmClass, setConfirmClass] = useState<string | null>(null);
   const [showCustomize, setShowCustomize] = useState(false);
   const [draft, setDraft] = useState<GuardianState>(DEFAULT_DRAFT);
   const [customizeMsg, setCustomizeMsg] = useState('');
@@ -140,7 +138,6 @@ export default function Armor({ ctx }: { ctx: Ctx }) {
     });
     setCustomizeMsg('');
     setShowCustomize(true);
-    setShowClassPicker(false);
   };
 
   const byTier = (tier: string) => ARMOR.filter((a) => a.tier === tier && !a.set);
@@ -163,57 +160,12 @@ export default function Armor({ ctx }: { ctx: Ctx }) {
               <p className="small"><strong>{CLASS_WORKOUT_FOCUS[doc.guardian.classId].line}</strong></p>
             )}
             {doc.guardian && (
-              <button onClick={() => { setShowClassPicker((v) => !v); setConfirmClass(null); }}>
-                {showClassPicker ? 'Close class picker' : 'Change class'}
-              </button>
+              <p className="small muted">Change class, color, gem, cape, look, or name in Customize guardian below. Your XP, level, and armor stay.</p>
             )}
             <button onClick={openCustomize}>
               {showCustomize ? 'Close customize' : 'Customize guardian'}
             </button>
             {customizeMsg && <p className="small" style={{ color: '#1e7a46' }}>{customizeMsg}</p>}
-            {showClassPicker && doc.guardian && CLASSES.map((c) => (
-              <div key={c.id} style={{ borderTop: '1px solid #d7e3ee', padding: '10px 0', textAlign: 'left' }}>
-                <p>
-                  <strong>{c.name}</strong>
-                  {c.id === doc.guardian?.classId ? ' (your class now)' : ''}
-                </p>
-                <p className="small">{c.description}</p>
-                <p className="small">{CLASS_GOOD_FOR[c.id] || ''}</p>
-                {CLASS_WORKOUT_FOCUS[c.id] && (
-                  <p className="small"><strong>Workout focus:</strong> {CLASS_WORKOUT_FOCUS[c.id].line}</p>
-                )}
-                {CLASS_WORKOUT_FOCUS[c.id] && (
-                  <details>
-                    <summary>Show more about this workout focus</summary>
-                    <p className="small">{CLASS_WORKOUT_FOCUS[c.id].detail}</p>
-                  </details>
-                )}
-                <p className="small muted">All classes keep the same phase, strength work, and compound lifts first. The class changes spells, weapon, avatar, background, AND workout focus.</p>
-                {c.id !== doc.guardian?.classId && confirmClass !== c.id && (
-                  <button onClick={() => setConfirmClass(c.id)}>Switch to {c.name}</button>
-                )}
-                {confirmClass === c.id && (
-                  <div className="notice">
-                    <p>Switch to {c.name}? Your spells, class weapon, and workout focus will change to {c.name}&apos;s. Your XP, level, and armor stay.</p>
-                    <div className="row">
-                      <button
-                        className="primary"
-                        onClick={() => {
-                          update((d) => {
-                            if (d.guardian) d.guardian.classId = c.id as 'Guardian' | 'Ranger' | 'Spellweaver';
-                          });
-                          setConfirmClass(null);
-                          setShowClassPicker(false);
-                        }}
-                      >
-                        Yes, switch to {c.name}
-                      </button>
-                      <button onClick={() => setConfirmClass(null)}>Cancel</button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            ))}
           </div>
         </div>
       </div>
@@ -221,7 +173,7 @@ export default function Armor({ ctx }: { ctx: Ctx }) {
       {showCustomize && (
         <div className="card">
           <h3>Customize guardian</h3>
-          <p className="small muted">Change how your guardian looks, any time. Your XP, level, armor, workouts, and progress stay the same. Changing class also changes spells, weapon, and workout focus, as above.</p>
+          <p className="small muted">Change how your guardian looks, any time. Your XP, level, armor, workouts, and progress stay the same. Changing class also changes spells, weapon, and workout focus.</p>
           <GuardianAvatar guardian={draft} level={levelForXp(doc.xp)} size="medium" label={`${draft.name.trim() || 'Your guardian'} the ${draft.classId} · Level ${levelForXp(doc.xp)}`} />
           <label htmlFor="g-custom-name">Guardian name</label>
           <input
@@ -306,7 +258,12 @@ export default function Armor({ ctx }: { ctx: Ctx }) {
 
       <div className="card">
         <h3>Spells and abilities</h3>
-        {SPELLS.filter((s) => s.classId === 'any' || s.classId === doc.guardian?.classId).map((s) => (
+        {SPELLS.filter((s) => {
+          // Second Wind is shared by every class but only from Level 9,
+          // here as on Journey. Showing it at Level 1 was a lie.
+          if (s.id === 'second-wind') return levelForXp(doc.xp) >= 9;
+          return s.classId === 'any' || s.classId === doc.guardian?.classId;
+        }).map((s) => (
           <p key={s.id}><strong>{s.name}</strong>: {s.blurb} ({s.cost} mana, {s.damage} damage)</p>
         ))}
         <p className="small muted">Second Wind unlocks at Level 9 for every class.</p>
