@@ -14,11 +14,15 @@ Pain scope: Derek cannot fix, treat, diagnose, or cure pain. The app wording is 
 
 ## Stack
 
-- Cloudflare Pages (free) for hosting and the API
+- Cloudflare Workers (free) for hosting and the API, with the built
+  app served as Static Assets from `dist/`
 - Neon Postgres (free) for the database
 - GitHub for the repo
 - Vite plus React plus TypeScript for the frontend
-- Hono plus `@neondatabase/serverless` for the API, running as a Cloudflare Pages Function
+- Hono plus `@neondatabase/serverless` for the API, running in the
+  Worker (`src/worker.ts`) and, as a fallback, as a Cloudflare Pages
+  Function (`functions/api/[[path]].ts`), both calling the same shared
+  API module in `src/server/api.ts`
 - Passwords hashed with PBKDF2-SHA256 using WebCrypto (100,000 iterations). No bcrypt, no Node APIs in the API code, so it stays edge safe.
 
 ## Local dev
@@ -34,14 +38,15 @@ Set `DATABASE_URL` in `.env` to your Neon connection string, then:
 npm run dev
 ```
 
-The app runs at http://localhost:5173. The API is served from the same origin under `/api/*` when deployed to Cloudflare Pages. For local API work, use `wrangler pages dev` after the frontend builds, or deploy a preview and test against it.
+The app runs at http://localhost:5173. The API is served from the same origin under `/api/*` when deployed to Cloudflare. For local API work, use `wrangler dev` after the frontend builds (Worker, with Static Assets), or `wrangler pages dev dist` (Pages fallback).
 
 Other commands:
 
 ```bash
 npm run build    # tsc -b && vite build
 npm run preview  # vite preview
-npm run deploy   # wrangler pages deploy dist --project-name active-life-quest (Pages only, never `wrangler deploy`)
+npm run deploy   # wrangler deploy (Worker)
+npm run deploy:pages  # wrangler pages deploy dist --project-name active-life-quest
 ```
 
 ## Database setup
@@ -53,34 +58,54 @@ npm run deploy   # wrangler pages deploy dist --project-name active-life-quest (
 
 The `ACTIVEBETA` row is seeded by the API on first redeem if the `beta_codes` table is empty and `BETA_CODE` is set. No seed row is in the migration.
 
-## Deploy to Cloudflare Pages
+## Deploy to Cloudflare (Worker — the flow Derek uses)
 
-> **Pages only, not a Worker.** This app must be a Cloudflare Pages
-> project. A Worker project gets a `*.workers.dev` address, has no
-> entrypoint in this repo, fails at the Deploying step with
-> `npx wrangler deploy`, and serves the Cloudflare "There is nothing
-> here yet" placeholder. Pages Functions in `functions/api/` only run
-> on Pages. See `DEPLOY.md` for the full plain-language steps.
+This app deploys as a **Cloudflare Worker**. The Worker serves the built
+React app from `dist/` (Workers Static Assets) and the Hono API under
+`/api/*` from one entry point, `src/worker.ts`. The API logic itself
+lives in `src/server/api.ts`, shared with the Pages Function, so there
+is only one copy of it.
 
 1. Push this repo to GitHub as `derhoff62/active-life-quest`.
-2. In Cloudflare, Workers & Pages > Create, and pick the **Pages**
-   option (in the current wizard it is a button near the bottom of the
-   Create page, not the Worker option at the top). If a Worker project
-   called `active-life-quest` already exists, delete it first.
-3. Connect that GitHub repo, branch `main`.
-4. Build command: `npm run build`
-5. Build output directory: `dist`
-6. Deploy command: **leave empty**. Do not use `npx wrangler deploy`.
-   A Pages project deploys `dist` itself.
-7. Set these environment variables in Pages settings (production and preview):
+2. In Cloudflare, Workers & Pages > Create, and pick the **Worker**
+   option. Connect that GitHub repo, branch `main`.
+3. Set these exactly, as shown on the "Set up your application" screen:
+   - Build command: `npm run build`
+   - Deploy command: `npx wrangler deploy`
+   - Preview command: `npx wrangler preview`
+   - Project name: `active-life-quest`
+   (There is no "build output directory" field on the Worker screen.
+   The output directory `dist` comes from `wrangler.toml` `[assets]`.)
+4. Set these environment variables in the Worker's Settings >
+   Variables and secrets (production and preview):
    - `DATABASE_URL`: Neon connection string
    - `SESSION_SECRET`: a long random string (set now, kept in reserve; sessions in v1 are opaque random ids stored in the database)
    - `COACH_PIN_HASH`: leave blank at first deploy. Derek sets the Coach PIN on first Coach sign-in, and the API stores its hash in the `settings` table.
    - `BETA_CODE`: `ACTIVEBETA`
    - `BETA_USES`: `25`
    - `BETA_EXPIRES`: `2027-02-19`
-8. Deploy. The live address must end in `.pages.dev`, never
-   `.workers.dev`. `GET /api/health` should return `{"ok": true}`. Any database endpoint without `DATABASE_URL` returns 503 with a plain message telling you to set it.
+5. Deploy. The live address ends in `.workers.dev`, for example
+   `active-life-quest.derhoff62.workers.dev`. `GET /api/health` should
+   return `{"ok": true}`. Any database endpoint without `DATABASE_URL`
+   returns 503 with a plain message telling you to set it.
+
+## Deploy to Cloudflare Pages (fallback, also supported)
+
+The same repo can deploy as a Pages project instead. The Pages
+Function in `functions/api/[[path]].ts` is a thin wrapper around the
+same shared API in `src/server/api.ts`.
+
+1. In Cloudflare, Workers & Pages > Create, and pick the **Pages**
+   option. Connect the GitHub repo, branch `main`.
+2. Build command: `npm run build`
+3. Build output directory: `dist`
+4. Deploy command: **leave empty**. Do not use `npx wrangler deploy`.
+   A Pages project deploys `dist` itself.
+5. Set the same environment variables as in the Worker section above.
+6. Deploy. The live address ends in `.pages.dev`.
+   `GET /api/health` should return `{"ok": true}`.
+
+See `DEPLOY.md` for the full plain-language steps.
 
 ## PWA install on iPhone
 

@@ -3,55 +3,47 @@
 Plain-language steps. No code, no charges. Neon is already set up, so
 this is only the Cloudflare part.
 
-## The mistake to avoid
+## What this is now
 
-This app is a **Cloudflare Pages** project. It is **not** a Worker.
+This app deploys as a **Cloudflare Worker**. That is the flow on the
+screen you are already looking at ("Set up your application" /
+"Configure your Worker project").
 
-- A Pages project gets an address ending in `.pages.dev`.
-- A Worker project gets an address ending in `.workers.dev`.
+- A Worker project gets an address ending in `.workers.dev`, for
+  example `active-life-quest.derhoff62.workers.dev`. That is correct
+  for this app now.
+- The Worker serves the app itself AND the API. The API lives under
+  `/api/*` in the same Worker, backed by Neon.
+- An earlier version of this app only worked as a Pages project, and
+  a Worker showed a Cloudflare placeholder that said "There is nothing
+  here yet". That is fixed: the repo now has a Worker entry point
+  (`src/worker.ts`) that serves the built app from `dist/` and the
+  API, so `npx wrangler deploy` works.
 
-If your address ends in `.workers.dev`, it is the wrong kind of project.
-It will show a Cloudflare placeholder that says "There is nothing here
-yet", and the app and the API will never load, no matter how many times
-you retry the build. That is what happened on Nov 21, 2026: the project
-was created as a Worker, `npx wrangler deploy` failed at the Deploying
-step, and https://active-life-quest.derhoff62.workers.dev/ showed the
-placeholder. The app code itself was fine, `npm run build` passed.
+## Step 1. On the "Set up your application" screen, fill in exactly this
 
-Cloudflare's current Create page pushes you toward a Worker first. The
-Pages option is a smaller button near the bottom of that page. Pick that
-one.
+You should already be on this screen, with
+`derhoff62/active-life-quest` picked as the repository and the project
+name `active-life-quest`.
 
-## Step 1. Delete the wrong Worker project
+- Build command: `npm run build`
+- Deploy command: `npx wrangler deploy`
+- Preview command: `npx wrangler preview`
 
-1. In Cloudflare, go to Workers & Pages.
-2. Open the project called `active-life-quest` that has a `.workers.dev`
-   address.
-3. Go to Settings, scroll to the bottom, and delete the project.
-   (If there are two projects with that name, delete the Worker one and
-   keep nothing until Step 2 is done.)
+There is no "build output directory" box on this Worker screen.
+Do not look for one. The output directory (`dist`) is already in
+the repo's `wrangler.toml` file, under `[assets]`.
 
-## Step 2. Create a Pages project
+Then tap **Deploy** (the blue button at the bottom right).
 
-1. In Cloudflare, go to Workers & Pages, then Create.
-2. Look for the **Pages** option near the bottom of the Create page.
-   Do not pick the big Worker / Hello World option at the top.
-3. Choose "Connect to Git" / "Import a Pages project".
-4. Pick the GitHub repo `derhoff62/active-life-quest`, branch `main`.
-5. Set these exactly:
-   - Build command: `npm run build`
-   - Build output directory: `dist`
-   - Deploy command: **leave empty**. Do not type `npx wrangler deploy`
-     and do not type `echo ok` if you can leave it blank. A Pages
-     project deploys the `dist` folder itself. `npx wrangler deploy`
-     is a Worker command, and it is the command that failed before.
-   - Root directory: `/` (leave as it is)
-6. Save and Deploy.
+Wait for the build to finish. All four steps should be green:
+Initializing, Installing, Building, Deploying. If Deploying fails,
+send a screenshot of the log — do not change the commands.
 
-## Step 3. Add the settings (environment variables)
+## Step 2. Add the settings (environment variables)
 
-In the new Pages project, go to Settings, then Variables and secrets,
-then Add, one at a time. Do not share these values in chat.
+In the new Worker project, go to Settings, then Variables and
+secrets, then Add, one at a time. Do not share these values in chat.
 
 - `DATABASE_URL` - your Neon connection string. Find it in Neon under
   Connection Details. It starts with `postgresql://`.
@@ -63,29 +55,51 @@ then Add, one at a time. Do not share these values in chat.
   Coach sign-in inside the app.
 
 Set them for Production (and Preview, if it asks). If you added them
-to the old Worker project, add them again here. Settings do not move
-over when you delete a project.
+to an older project, add them again here. Settings do not move over
+when you delete a project.
 
-## Step 4. Check it worked
+After adding them, redeploy if Cloudflare asks you to. A new
+deployment picks up the new settings.
 
-1. Wait for the build to finish. All four steps should be green:
-   Initializing, Installing, Building, Deploying.
-2. Open the link Cloudflare gives you. It must end in `.pages.dev`,
-   for example `active-life-quest.pages.dev`.
-3. The app's sign-up page should load, not the Cloudflare placeholder.
-4. Open `<your-link>/api/health` in the browser. It should show
-   `{"ok": true}`. If it shows the placeholder instead, you are still
-   on a Worker address. Go back to Step 1.
-5. On the app, sign up with an email, enter beta code `ACTIVEBETA`,
+## Step 3. Check it worked
+
+1. Open the link Cloudflare gives you. It ends in `.workers.dev`,
+   for example `active-life-quest.derhoff62.workers.dev`.
+2. The app's sign-up page should load, not the Cloudflare placeholder.
+3. Open `<your-link>/api/health` in the browser. It should show
+   `{"ok": true}`.
+4. On the app, sign up with an email, enter beta code `ACTIVEBETA`,
    pick a guardian, do the assessment, and do Day 1.
 
-## If the build fails again
+## If something goes wrong
 
-- Fails at Deploying, and the Deploy command says `npx wrangler deploy`:
-  that is a Worker command. Clear the Deploy command and retry, or
-  check you are in a Pages project, not a Worker.
+- The site loads but sign-up says "Database is not configured yet":
+  `DATABASE_URL` is missing or wrong in the Worker's settings.
+  Fix it there, then redeploy.
+- The site shows the Cloudflare placeholder "There is nothing here
+  yet": the deployment did not finish, or you are looking at an old
+  project. Check the Deployments tab for a green, successful
+  deployment, and open the link from that deployment.
 - Fails at Building: the error is in the build log. Send a screenshot
   of the log.
-- The site loads but sign-up says "Database is not configured yet":
-  `DATABASE_URL` is missing or wrong in the Pages project's settings.
-  Fix it there, then redeploy.
+- Fails at Deploying: send a screenshot of the log. Do not change
+  the Deploy command to `echo ok` — that only makes the build
+  "succeed" by deploying nothing.
+
+## Pages fallback (only if the Worker flow will not work)
+
+The same repo can also deploy as a Cloudflare Pages project. The
+Pages Function in `functions/api/[[path]].ts` calls the same shared
+API as the Worker, so the app behaves the same.
+
+1. In Cloudflare, go to Workers & Pages, then Create, and pick the
+   **Pages** option near the bottom of the Create page. Do not pick
+   the big Worker option at the top.
+2. Connect the GitHub repo `derhoff62/active-life-quest`, branch `main`.
+3. Build command: `npm run build`
+4. Build output directory: `dist`
+5. Deploy command: **leave empty**. Do not type `npx wrangler deploy`.
+   A Pages project deploys the `dist` folder itself.
+6. Add the same environment variables as in Step 2 above.
+7. The live address ends in `.pages.dev`, and
+   `<your-link>/api/health` should show `{"ok": true}`.

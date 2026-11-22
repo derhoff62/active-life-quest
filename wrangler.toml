@@ -1,40 +1,49 @@
 # ---------------------------------------------------------------------------
-# ACTIVE LIFE QUEST - CLOUDFLARE PAGES PROJECT ONLY. NOT A WORKER.
+# ACTIVE LIFE QUEST - CLOUDFLARE WORKER (primary) + PAGES (also supported)
 # ---------------------------------------------------------------------------
-# This file is for a Cloudflare Pages project. It is NOT a Worker config.
+# This app deploys as a Cloudflare Worker. That is the flow Derek uses:
+# Workers & Pages > Create > Worker > Connect to Git > derhoff62/active-life-quest.
+# The Worker serves the built React app from dist/ (Workers Static Assets)
+# AND the Hono API under /api/*, both from one entry point.
 #
-# DO NOT create a Cloudflare Worker for this app, and DO NOT run
-# `npx wrangler deploy` or `wrangler deploy`. A Worker has no entrypoint
-# here (there is no `main`), so `wrangler deploy` fails at the Deploying
-# step, and the Worker serves the Cloudflare placeholder
-# "There is nothing here yet" at a *.workers.dev address.
+#   Build command:   npm run build
+#   Deploy command:  npx wrangler deploy
+#   Preview command: npx wrangler preview
+#   Live address:    *.workers.dev (for example
+#                    active-life-quest.derhoff62.workers.dev)
 #
-# The API lives in functions/api/[[path]].ts. That is a Pages Function.
-# Pages Functions only run on a Pages project. On a Worker they never run.
-#
-# Correct setup (see DEPLOY.md for the full plain-language steps):
-#   1. Delete the wrong Worker project in Cloudflare, if one was made.
-#   2. In Cloudflare, Workers & Pages > Create, and pick the PAGES option
-#      (in the current wizard it is a button near the bottom of the Create
-#      page, not the big Worker option at the top).
-#   3. Connect GitHub repo derhoff62/active-life-quest.
-#   4. Build command: npm run build
-#      Build output directory: dist
-#      Deploy command: leave EMPTY. Do not put `npx wrangler deploy` here.
-#      A Pages project deploys the dist folder itself.
-#   5. Set the environment variables in the Pages project's Settings.
-#   6. The live address must end in .pages.dev, never .workers.dev.
-#      If the address ends in .workers.dev, it is a Worker, not Pages:
-#      delete it and start again at step 2.
+# How it works:
+#   - main = "src/worker.ts" is the Worker entry point.
+#   - [assets] serves dist/ as static assets, with the ASSETS binding so
+#     the Worker can fetch files and fall back to index.html for the
+#     single-page app. run_worker_first = true routes every request
+#     through the Worker first, which then serves /api/* from the Hono
+#     app and everything else from the ASSETS binding.
+#   - The API logic is NOT in the Worker file. It lives in
+#     src/server/api.ts and is shared with the Pages Function in
+#     functions/api/[[path]].ts, so there is one copy of the logic.
+#   - pages_build_output_dir is deliberately NOT in this file. In
+#     Wrangler 3, that key makes Wrangler treat the project as a Pages
+#     project, which rejects the ASSETS binding name and the Worker
+#     assets config. The Pages fallback still works: `wrangler pages
+#     deploy dist` passes the output directory on the command line,
+#     and a Pages project created in the dashboard asks for it there.
 # ---------------------------------------------------------------------------
 
 name = "active-life-quest"
-pages_build_output_dir = "dist"
+main = "src/worker.ts"
 compatibility_date = "2026-11-01"
 
+[assets]
+directory = "./dist"
+binding = "ASSETS"
+not_found_handling = "single-page-application"
+run_worker_first = true
+
 # Secrets and environment variables. Do NOT put real values in this file.
-# Set these in the Cloudflare dashboard under Pages > active-life-quest > Settings > Variables and secrets,
-# or with `wrangler pages secret put <NAME>`:
+# Set these in the Cloudflare dashboard under Workers & Pages >
+# active-life-quest > Settings > Variables and secrets,
+# or with `wrangler secret put <NAME>`:
 #   DATABASE_URL       Neon Postgres connection string (required for all DB endpoints)
 #   SESSION_SECRET     Long random string, set now and kept in reserve for
 #                      future signed cookies. Sessions in v1 are opaque
