@@ -1,0 +1,127 @@
+// Tab badges: a gold light / number on a bottom-nav tab when something in
+// that tab needs doing. One place, so every rule is easy to check and
+// every badge clears when the thing is done.
+//
+// Rules (all from data already on the profile doc):
+// - Today: a NUMBER = check-in not logged today (1) + workout due today
+//   (1) + unread messages/nudges from Derek. Clears as each is done.
+// - Assessment: a dot when the assessment itself is not done yet, when a
+//   retest is due (Week 4/8/12 reached and not saved), or when Week 13 is
+//   available (Week 12 retest saved, no Week 13 goal yet).
+// - Workouts: a dot when today's workout is not done yet. Rest is per
+//   muscle group, not per day: after a full-body day yesterday, today is
+//   a rest day and there is no badge; after a Push/Pull/Legs or short
+//   session yesterday, a different group is due today.
+// - Cardio: a dot while this week's cardio is under 150 minutes.
+// - Sleep: a dot when sleep has not been logged today.
+// - Journey: a dot when a boss round is ready (unlocked, unbeaten, and
+//   enough mana for the cheapest spell) or when the journey has moved to
+//   a later week than the last Journey visit (a new companion / land).
+// - Nutrition: never. It is education only; there is nothing actionable
+//   in the tab, so badging it would just be noise.
+// - Progress: a dot when a weigh-in is due (none in the last 6 days).
+// - Armor: a dot when gear has been earned since the last Armor visit.
+//   armorSeenCount is the count the client had seen; it is only ever
+//   raised when the client opens the Armor tab.
+// - FAQ: never. - Coach: a NUMBER = unread nudges + replies from Derek.
+//
+// Fresh accounts only ever see Today (check-in) and Assessment (do the
+// assessment): Cardio, Sleep, Journey, Workouts and Progress badges are
+// all gated on the assessment being done first.
+import { BOSS_ROUNDS, SPELLS } from './data';
+import {
+  currentWeekForDoc,
+  earnedArmorIds,
+  loggedToday,
+  phaseForDoc,
+  type ProfileDoc,
+} from './store';
+
+export type TabBadge = { count?: number } | null;
+
+const DAY = 24 * 60 * 60 * 1000;
+
+function todayStr(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function yesterdayStr(): string {
+  return new Date(Date.now() - DAY).toISOString().slice(0, 10);
+}
+
+function cardioThisWeek(doc: ProfileDoc): number {
+  const weekAgo = Date.now() - 7 * DAY;
+  return (doc.cardio || [])
+    .filter((c) => new Date(String(c.date)).getTime() >= weekAgo)
+    .reduce((s, c) => s + Number(c.minutes || 0), 0);
+}
+
+function unreadCount(doc: ProfileDoc): number {
+  return (
+    (doc.nudges || []).filter((n) => !n.read).length +
+    (doc.messages || []).filter((m) => m.coachReply && !m.repliedAt).length
+  );
+}
+
+function workoutDueToday(doc: ProfileDoc): boolean {
+  if (!doc.assessmentDone) return false;
+  if (doc.lastWorkoutDate === todayStr()) return false;
+  // Rest is per muscle group: a full-body day yesterday means today is a
+  // rest day; a Push/Pull/Legs or short session yesterday leaves a
+  // different group due today.
+  if (doc.lastWorkoutDate === yesterdayStr() && (doc.trainingStyle || 'full-body') === 'full-body') return false;
+  return true;
+}
+
+function retestDue(doc: ProfileDoc): boolean {
+  if (!doc.assessmentDone) return false;
+  const done = new Set((doc.retests || []).map((r) => (r as { week?: number }).week));
+  const week = currentWeekForDoc(doc);
+  return [4, 8, 12].some((w) => week >= w && !done.has(w));
+}
+
+function weighInDue(doc: ProfileDoc): boolean {
+  if (!doc.assessmentDone) return false;
+  const sixDaysAgo = Date.now() - 6 * DAY;
+  return !(doc.measurements || []).some(
+    (m) => (m as { kind?: string }).kind === 'weigh-in' && new Date(String(m.date)).getTime() >= sixDaysAgo,
+  );
+}
+
+function journeyNeedsAttention(doc: ProfileDoc): boolean {
+  if (!doc.assessmentDone) return false;
+  const phase = phaseForDoc(doc);
+  const cheapestSpell = Math.min(...SPELLS.map((s) => s.cost));
+  const bossReady = BOSS_ROUNDS.some((r) => {
+    const hp = (doc.bossHp || {})[r.id] ?? r.maxHp;
+    return phase >= r.unlockPhase && hp > 0 && doc.mana >= cheapestSpell;
+  });
+  if (bossReady) return true;
+  // The journey has moved on since the client last looked at it: a new
+  // companion or land is waiting.
+  return currentWeekForDoc(doc) > (doc.journeySeenWeek || 0);
+}
+
+export function tabBadges(doc: ProfileDoc): Record<string, TabBadge> {
+  const unread = unreadCount(doc);
+  const checkinDue = !loggedToday(doc.checkins);
+  const workoutDue = workoutDueToday(doc);
+  const todayCount = (checkinDue ? 1 : 0) + (workoutDue ? 1 : 0) + unread;
+
+  const week12Done = (doc.retests || []).some((r) => (r as { week?: number }).week === 12);
+  const week13Available = week12Done && !doc.week13Goal;
+
+  return {
+    today: todayCount > 0 ? { count: todayCount } : null,
+    assessment: !doc.assessmentDone || retestDue(doc) || week13Available ? {} : null,
+    workouts: workoutDue ? {} : null,
+    cardio: doc.assessmentDone && cardioThisWeek(doc) < 150 ? {} : null,
+    sleep: doc.assessmentDone && !loggedToday(doc.sleep) ? {} : null,
+    journey: journeyNeedsAttention(doc) ? {} : null,
+    nutrition: null,
+    progress: weighInDue(doc) ? {} : null,
+    armor: earnedArmorIds(doc).length > (doc.armorSeenCount || 0) ? {} : null,
+    faq: null,
+    coach: unread > 0 ? { count: unread } : null,
+  };
+}

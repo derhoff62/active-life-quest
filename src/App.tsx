@@ -1,6 +1,7 @@
 import { useEffect, useState, Component, type ReactNode } from 'react';
 import type { ProfileDoc } from './lib/store';
-import { defaultProfile, loadLocal, saveLocal, clearLocal, loadLocalAuth, saveLocalAuth, hasFullAccess, levelForXp, titleForLevel , normalizeCheckinFrequency, normalizeProfile, refillMana, earnedArmorIds } from './lib/store';
+import { defaultProfile, loadLocal, saveLocal, clearLocal, loadLocalAuth, saveLocalAuth, hasFullAccess, levelForXp, titleForLevel , normalizeCheckinFrequency, normalizeProfile, refillMana, earnedArmorIds, currentWeekForDoc } from './lib/store';
+import { tabBadges } from './lib/badges';
 import * as api from './lib/api';
 import Auth from './components/Auth';
 import Onboarding from './components/Onboarding';
@@ -202,6 +203,27 @@ export default function App() {
   };
 
   const go = (t: Tab) => {
+    // Visiting Armor or Journey marks what is there as seen, so the
+    // "new gear" / "journey moved on" badge clears. Only ever raises the
+    // counters, and only when there is something new to mark.
+    if (doc) {
+      if (t === 'armor') {
+        const earned = earnedArmorIds(doc).length;
+        if (earned > (doc.armorSeenCount || 0)) {
+          update((d) => {
+            d.armorSeenCount = earnedArmorIds(d).length;
+          });
+        }
+      }
+      if (t === 'journey') {
+        const week = currentWeekForDoc(doc);
+        if (week > (doc.journeySeenWeek || 0)) {
+          update((d) => {
+            d.journeySeenWeek = currentWeekForDoc(d);
+          });
+        }
+      }
+    }
     setTab(t);
     window.scrollTo({ top: 0 });
   };
@@ -275,7 +297,9 @@ export default function App() {
 
   const full = hasFullAccess(doc);
   const level = levelForXp(doc.xp);
-  const unread = doc.nudges.filter((n) => !n.read).length + doc.messages.filter((m) => m.coachReply && !m.repliedAt).length;
+  // Gold badges on the nav tabs: a number where there is a count, a plain
+  // dot where it is just "needs attention". See src/lib/badges.ts.
+  const badges = tabBadges(doc);
 
   return (
     <div className={doc.largeText ? 'large-text' : ''}>
@@ -429,7 +453,9 @@ export default function App() {
         </footer>
 
         <nav className="nav" aria-label="Sections">
-          {TABS.map((t) => (
+          {TABS.map((t) => {
+            const badge = badges[t.id];
+            return (
             <button
               key={t.id}
               className={`${tab === t.id ? 'active' : ''}${pressedTab === t.id ? ' pressed' : ''}`}
@@ -439,12 +465,18 @@ export default function App() {
               onPointerCancel={() => setPressedTab(null)}
               onClick={() => { setPressedTab(null); go(t.id); }}
               aria-current={tab === t.id ? 'page' : undefined}
+              aria-label={badge ? `${t.label}, ${badge.count ? `${badge.count} things to do` : 'needs attention'}` : t.label}
             >
               <span className="nav-icon" aria-hidden="true">{t.icon}</span>
               <span className="nav-label">{t.label}</span>
-              {t.id === 'today' && unread > 0 && <span className="badge">{unread}</span>}
+              {badge && (
+                <span className={`badge${badge.count == null ? ' dot' : ''}`} aria-hidden="true">
+                  {badge.count != null ? (badge.count > 9 ? '9+' : badge.count) : ''}
+                </span>
+              )}
             </button>
-          ))}
+            );
+          })}
         </nav>
       </div>
     </div>

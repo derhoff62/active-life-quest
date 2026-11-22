@@ -169,10 +169,21 @@ html { scroll-padding-bottom: calc(150px + env(safe-area-inset-bottom)); }
   width: 10px; height: 10px; border-radius: 50%; background: var(--gold);
   border: 2px solid #fff; box-shadow: 0 0 6px rgba(201, 162, 39, 0.8);
 }
+/* Tab badges: a gold light on a tab when something in that tab needs
+ * doing. A number when there is a count (Today, Coach), a plain dot when
+ * it is just "needs attention". Gold with navy text reads on both the
+ * white idle tabs and the dark navy active tab, and the white ring keeps
+ * it clear of the label. Small, top-right corner, inside the button so
+ * it shrinks with the pressed state instead of breaking it. */
 .nav button .badge {
-  position: absolute; top: 4px; right: 6px;
-  background: var(--red); color: #fff; border-radius: 999px;
-  font-size: 0.7rem; padding: 0 6px; margin-left: 2px;
+  position: absolute; top: 2px; right: 4px; z-index: 1;
+  background: var(--gold); color: var(--navy); border: 1.5px solid #fff;
+  border-radius: 999px; min-width: 18px; height: 18px; padding: 0 5px;
+  font-size: 0.68rem; font-weight: 800; line-height: 15px; text-align: center;
+  box-shadow: 0 0 4px rgba(201, 162, 39, 0.7); pointer-events: none;
+}
+.nav button .badge.dot {
+  width: 11px; height: 11px; min-width: 0; padding: 0;
 }
 .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
 .row.space { justify-content: space-between; }

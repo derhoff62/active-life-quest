@@ -115,6 +115,11 @@ export interface ProfileDoc {
   manaLastRefill: string;
   week13Goal: string | null;
   week13PlanRequested: boolean;
+  // Tab-badge "seen" counters: how much gear the client had seen the last
+  // time they opened Armor, and which journey week they had seen the last
+  // time they opened Journey. Badges clear when the tab is visited.
+  armorSeenCount: number;
+  journeySeenWeek: number;
   trialStartedAt: string | null;
   betaRedeemed: boolean;
   joinedAt: string;
@@ -182,6 +187,8 @@ export function defaultProfile(email = '', displayName = ''): ProfileDoc {
     manaLastRefill: now.slice(0, 10),
     week13Goal: null,
     week13PlanRequested: false,
+    armorSeenCount: 0,
+    journeySeenWeek: 0,
     trialStartedAt: null,
     betaRedeemed: false,
     joinedAt: now,
@@ -251,6 +258,8 @@ export function normalizeProfile(raw: unknown): ProfileDoc {
   if (typeof out.xp !== 'number') out.xp = 0;
   if (typeof out.mana !== 'number') out.mana = 10;
   if (typeof out.level !== 'number') out.level = 1;
+  if (typeof out.armorSeenCount !== 'number') out.armorSeenCount = 0;
+  if (typeof out.journeySeenWeek !== 'number') out.journeySeenWeek = 0;
   if (typeof out.streakDays !== 'number') out.streakDays = 0;
   if (typeof out.trainingDays !== 'number') out.trainingDays = 3;
   if (out.trainingStyle !== 'full-body' && out.trainingStyle !== 'ppl' && out.trainingStyle !== 'short') out.trainingStyle = 'full-body';
