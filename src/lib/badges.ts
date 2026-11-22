@@ -6,8 +6,8 @@
 // - Today: a NUMBER = check-in not logged today (1) + workout due today
 //   (1) + unread messages/nudges from Derek. Clears as each is done.
 // - Assessment: a dot when the assessment itself is not done yet, when a
-//   retest is due (Week 4/8/12 reached and not saved), or when Week 13 is
-//   available (Week 12 retest saved, no Week 13 goal yet).
+//   retest is due (Week 4/8/12 of any cycle, plus the Week 52 review), or
+//   when Week 13 is available (Week 12 retest saved, no Week 13 goal yet).
 // - Workouts: a dot when today's workout is not done yet. Rest is per
 //   muscle group, not per day: after a full-body day yesterday, today is
 //   a rest day and there is no badge; after a Push/Pull/Legs or short
@@ -29,6 +29,7 @@
 // assessment): Cardio, Sleep, Journey, Workouts and Progress badges are
 // all gated on the assessment being done first.
 import { BOSS_ROUNDS, SPELLS } from './data';
+import { RETEST_WEEKS } from './yearPlan';
 import {
   currentWeekForDoc,
   earnedArmorIds,
@@ -77,7 +78,7 @@ function retestDue(doc: ProfileDoc): boolean {
   if (!doc.assessmentDone) return false;
   const done = new Set((doc.retests || []).map((r) => (r as { week?: number }).week));
   const week = currentWeekForDoc(doc);
-  return [4, 8, 12].some((w) => week >= w && !done.has(w));
+  return RETEST_WEEKS.some((w) => week >= w && !done.has(w));
 }
 
 function weighInDue(doc: ProfileDoc): boolean {

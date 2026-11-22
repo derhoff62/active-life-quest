@@ -267,8 +267,10 @@ export default function JourneyMap({
 
         {castles.map((c) => <Castle key={c.y} x={c.x} y={c.y} color={c.color} />)}
 
-        {/* Boss markers at Weeks 4, 8, 12: glowing red stars. */}
-        {BOSS_ROUNDS.map((r) => {
+        {/* Boss markers at Weeks 4, 8, 12: glowing red stars. The map
+            shows Cycle 1 only; later cycles repeat the road with new lands
+            and boss rounds, listed in the year road below the map. */}
+        {BOSS_ROUNDS.filter((r) => r.week <= 12).map((r) => {
           const hp = bossHp[r.id] ?? r.maxHp;
           const beaten = hp <= 0;
           const y = weekToY(r.week);
@@ -295,7 +297,7 @@ export default function JourneyMap({
             letters. The title pills are drawn last, so a name pill can
             never paint over them, and the name pill can never be
             painted over by them. */}
-        {CREATURES.map((c, i) => {
+        {CREATURES.filter((c) => c.meetWeek <= 12).map((c, i) => {
           const isMet = met.has(c.id);
           const y = weekToY(c.meetWeek);
           const x = i % 2 === 0 ? 52 : 308;

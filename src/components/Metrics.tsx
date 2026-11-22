@@ -9,6 +9,7 @@
 // come first; the scale is last.
 import { useState } from 'react';
 import type { ProfileDoc } from '../lib/store';
+import { metCompanionIds } from '../lib/store';
 
 type MetricKey =
   | 'weight' | 'waist' | 'chest' | 'hips' | 'arms' | 'thighs'
@@ -188,11 +189,13 @@ export default function Metrics({ doc, update, toast }: MetricsProps) {
     setMeasureBusy(true);
     window.setTimeout(() => setMeasureBusy(false), 700);
     const entry = { ...filled, clothesFit: clothes.trim() || undefined };
+    const fern = metCompanionIds(doc).has('fern');
     update((d) => {
       d.measurements.push({ id: `m${Date.now()}`, date: new Date().toISOString(), ...entry });
+      if (fern) d.xp += 5;
     });
-    toast('Measurement saved.');
-    setMeasureMsg('Measurement saved.');
+    toast(fern ? 'Measurement saved. +5 XP from Fern.' : 'Measurement saved.');
+    setMeasureMsg(fern ? 'Measurement saved. +5 XP from Fern.' : 'Measurement saved.');
     setMeasure({});
     setClothes('');
   }
@@ -215,6 +218,7 @@ export default function Metrics({ doc, update, toast }: MetricsProps) {
     }
     update((d) => {
       d.measurements.push({ id: `m${Date.now()}`, date: new Date().toISOString(), weight: Number(weigh), kind: 'weigh-in' });
+      if (metCompanionIds(doc).has('fern')) d.xp += 5;
     });
     setWeigh('');
     setWeighMsg('Weigh-in logged.');

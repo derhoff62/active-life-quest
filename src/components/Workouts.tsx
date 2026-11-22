@@ -2,7 +2,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Ctx } from '../App';
 import { WORKOUTS, CORE_BALANCE_WORKOUT, REFERENCE_TRACKS, PHASES, PHASE_WEEKLY_SETS, daysForTime, splitForDays, TRAINING_STYLES, CES_TEMPLATES, EQUIPMENT_NOTES, effectiveEquipment, resolveExercise, findExerciseByName, CLASS_WORKOUT_FOCUS, applyClassFocus, GOAL_FINISHERS } from '../lib/data';
 import type { TrainingStyle } from '../lib/data';
-import { phaseForDoc, hasFullAccess, metCompanionIds, lastTimeFor, awardBadges, daysInMonthSet } from '../lib/store';
+import { phaseForDoc, hasFullAccess, metCompanionIds, lastTimeFor, awardBadges, daysInMonthSet, currentWeekForDoc } from '../lib/store';
+import { cycleForWeek, nextRetestWeek, isDeloadWeek } from '../lib/yearPlan';
 import type { Workout } from '../lib/types';
 import ExampleVideo from './ExampleVideo';
 
@@ -248,6 +249,8 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
         prNames.push(ex.name);
       }
     }
+    // Ansel cheers a PR: +5 XP once per workout with a new personal record.
+    if (met.has('ansel') && prCount > 0) { bonus += 5; bonusNames.push('Ansel'); }
     update((d) => {
       d.workouts.push({
         id: `w${Date.now()}`,
@@ -330,7 +333,7 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
         {myTemplates.length > 0 && step === 0 && (
           <div className="card gold-frame">
             <h3>Fix-it warm-up first</h3>
-            <p>Do your corrective moves before the workout. They stay the same until your Week 4, 8, or 12 retest clears them.</p>
+            <p>Do your corrective moves before the workout. They stay the same until a retest clears them.</p>
             {myTemplates.map((t) => {
               const stepN = Math.min((doc.cesStep?.[t.id] || 0) + 1, t.progression.length);
               return (
@@ -364,6 +367,12 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
             {ex.swap && <p><strong>Swap:</strong> {ex.swap}</p>}
             {ex.videoUrl && (
               <ExampleVideo src={ex.videoUrl} label={ex.videoLabel} />
+            )}
+            {!ex.videoUrl && ex.demoUrl && (
+              <p style={{ marginTop: 8 }}>
+                <a href={ex.demoUrl} target="_blank" rel="noopener noreferrer">Watch how to do it</a>
+                <span className="small muted"> (opens in a new tab)</span>
+              </p>
             )}
           </details>
           {last && <p className="small">Last time: {last.w ? `${last.w} lb` : ''}{last.w && last.r ? ' x ' : ''}{last.r ? `${last.r} reps` : ''}</p>}
@@ -477,6 +486,20 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
       <div className="card">
         <h2>Workouts</h2>
         <p>Phase {phase}: {PHASES.find((p) => p.phase === phase)?.name}. Take 1 to 2 rest days between strength days.</p>
+        {doc.assessmentDone && (() => {
+          const wWeek = currentWeekForDoc(doc);
+          const { cycle: wCycle } = cycleForWeek(wWeek);
+          const wNextRetest = nextRetestWeek(wWeek, new Set(doc.retests.map((r) => (r as { week?: number }).week || 0)));
+          return (
+            <div className="card gold-frame" style={{ marginTop: 10 }}>
+              <h3 style={{ margin: 0 }}>Cycle {wCycle.cycle} of 4: {wCycle.name} · Week {wWeek} of 52</h3>
+              <p className="small">{wCycle.track}: {wCycle.trackDetail}</p>
+              <p className="small"><strong>How to progress this cycle:</strong> {wCycle.progression}</p>
+              {isDeloadWeek(wWeek) && <p className="small"><strong>Deload week.</strong> Lighter loads this week, then your retest.</p>}
+              <p className="small muted">{wNextRetest !== null ? `Next retest: Week ${wNextRetest}.` : 'All retests done.'} Short daily sessions stay available when time is tight.</p>
+            </div>
+          );
+        })()}
         {!doc.assessmentDone && <div className="notice">Do the assessment first. It sets your starting phase.</div>}
         {notice && (
           <div className="notice">

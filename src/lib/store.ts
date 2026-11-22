@@ -451,6 +451,10 @@ export function earnedArmorIds(doc: ProfileDoc): string[] {
   const bossesBeaten = Object.values(doc.bossHp || {}).filter((hp) => hp <= 0).length;
   const balanceBest = Math.max(doc.balanceBaseline?.left || 0, doc.balanceBaseline?.right || 0);
   const checkinStreak = checkins.length;
+  const retests = doc.retests || [];
+  const hasRetest = (w: number) => retests.some((r) => (r as { week?: number }).week === w);
+  const bossBeaten = (id: string) => (doc.bossHp || {})[id] !== undefined && (doc.bossHp || {})[id]! <= 0;
+  const cardioTotal = cardio.reduce((s, c) => s + Number(c.minutes || 0), 0);
   const out = new Set<string>();
   const add = (id: string, ok: boolean) => { if (ok) out.add(id); };
   add('travelers-boots', workouts.length >= 1);
@@ -483,6 +487,19 @@ export function earnedArmorIds(doc: ProfileDoc): string[] {
   add('voidforged-greatblade', bossesBeaten >= 3);
   add('mantle-long-road', workouts.length >= 25);
   add('circlet-full-journey', phaseForDoc(doc) >= 5);
+  // Year gear: one set per cycle after the first, plus three year pieces.
+  add('emberforged-helm', bossBeaten('boss-week-16'));
+  add('emberforged-chestplate', hasRetest(24));
+  add('emberforged-greaves', prs.length >= 10);
+  add('tideforged-helm', bossBeaten('boss-week-28'));
+  add('tideforged-chestplate', hasRetest(36));
+  add('tideforged-greaves', workouts.length >= 40);
+  add('summitforged-helm', bossBeaten('boss-week-40'));
+  add('summitforged-chestplate', hasRetest(48));
+  add('summitforged-greaves', workouts.length >= 50);
+  add('crown-year', hasRetest(52));
+  add('cloak-year', badges.length >= 20);
+  add('boots-year', cardioTotal >= 2000);
   return [...out];
 }
 
@@ -521,6 +538,20 @@ export function awardBadges(doc: ProfileDoc): string[] {
   add('phase-1-finisher', phaseForDoc(doc) >= 2);
   add('phase-2-finisher', phaseForDoc(doc) >= 3);
   add('phase-3-finisher', retests.some((r) => (r as { week?: number }).week === 12));
+  // Year badges: one per cycle milestone, plus monthly result badges.
+  const hasRetest = (w: number) => retests.some((r) => (r as { week?: number }).week === w);
+  add('cycle-1-finisher', hasRetest(12));
+  add('cycle-2-finisher', hasRetest(24));
+  add('cycle-3-finisher', hasRetest(36));
+  add('cycle-4-finisher', hasRetest(48));
+  add('year-finisher', hasRetest(52));
+  add('ten-prs', prs.length >= 10);
+  add('twenty-five-workouts', workouts.length >= 25);
+  add('fifty-workouts', workouts.length >= 50);
+  add('two-week-checkin', checkinStreakDays(doc) >= 14);
+  add('cardio-1000', cardio.reduce((s, c) => s + Number(c.minutes || 0), 0) >= 1000);
+  add('sleep-30', (doc.sleep || []).length >= 30);
+  add('measurement-tracker', (doc.measurements || []).length >= 6);
   // 3-Day Check-In Streak means 3 check-in days in a row, not 3 total.
   add('three-day-checkin', checkinStreakDays(doc) >= 3);
   return doc.badges;
@@ -533,7 +564,7 @@ export function currentWeekForDoc(doc: ProfileDoc): number {
   const weeks = (doc.retests || []).map((r) => (r as { week?: number }).week || 0);
   const max = Math.max(0, ...weeks);
   const phase = phaseForDoc(doc);
-  return max > 0 ? Math.min(12, max + 1) : phase >= 4 ? 12 : phase === 3 ? 9 : phase === 2 ? 5 : 1;
+  return max > 0 ? Math.min(52, max + 1) : phase >= 4 ? 13 : phase === 3 ? 9 : phase === 2 ? 5 : 1;
 }
 
 export function metCompanionIds(doc: ProfileDoc): Set<string> {

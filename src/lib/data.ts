@@ -123,6 +123,24 @@ const EXERCISE_VIDEOS: Record<string, string> = {
   'Single-Leg Romanian Deadlift': '/videos/single-leg-rdl-derek.mp4',
 };
 
+// Demo videos for moves with no Derek clip yet. Curated form demos (slow lowering,
+// neutral spine, no hype) found via web search Nov 22, 2026. Opens in a new tab so
+// the workout never loses its place. No brand names in the link label.
+const EXERCISE_DEMO_LINKS: Record<string, string> = {
+  'Dumbbell Bench Press': 'https://www.youtube.com/watch?v=q1f4utk67jQ',
+  'Romanian Deadlift': 'https://www.youtube.com/watch?v=JCPd_L-xI5k',
+  'Push-Up': 'https://www.youtube.com/watch?v=8V-ZUMvQKr0',
+  'Glute Bridge': 'https://www.youtube.com/watch?v=B_MWNJOwUcM',
+  'Step-Up': 'https://www.youtube.com/watch?v=9day6RhW8XA',
+  'Split Squat': 'https://www.youtube.com/watch?v=NIDiXDxzvYs',
+  'Pallof Press': 'https://www.youtube.com/watch?v=axgv7H_VQOo',
+  'Dumbbell Overhead Press': 'https://www.youtube.com/watch?v=9jzSIztp6EQ',
+  'Dead Bug': 'https://www.youtube.com/watch?v=GbSC02oU3To',
+  'Bird Dog': 'https://www.youtube.com/watch?v=xEDnlOxeJH4',
+  'Side Plank': 'https://www.youtube.com/watch?v=NXr4Fw8q60o',
+  'Plank': 'https://www.youtube.com/watch?v=ASdvN_XEl_c',
+};
+
 function e(
   id: string,
   name: string,
@@ -135,7 +153,7 @@ function e(
   tempo?: string,
   videoLabel?: string,
 ): Exercise {
-  return { id, name, sets, reps, restSec, tempo, howTo, regression, swap, videoLabel, videoUrl: EXERCISE_VIDEOS[name] };
+  return { id, name, sets, reps, restSec, tempo, howTo, regression, swap, videoLabel, videoUrl: EXERCISE_VIDEOS[name], demoUrl: EXERCISE_DEMO_LINKS[name] };
 }
 
 export const WORKOUTS: Workout[] = [
@@ -1432,6 +1450,20 @@ export const BOSS_ROUNDS: { id: string; week: number; name: string; land: string
   { id: 'boss-week-4', week: 4, name: 'Week 4 boss round', land: 'Sapphire Forest', maxHp: 100, unlockPhase: 1 },
   { id: 'boss-week-8', week: 8, name: 'Week 8 boss round', land: 'Crystal Shores', maxHp: 150, unlockPhase: 2 },
   { id: 'boss-week-12', week: 12, name: 'Week 12 boss round', land: 'Navy Peaks', maxHp: 200, unlockPhase: 3 },
+  // Cycle 2, Ember Highlands. HP climbs every round, so each one is a
+  // real step up from the last.
+  { id: 'boss-week-16', week: 16, name: 'The Heavy Fog', land: 'Ember Highlands', maxHp: 220, unlockPhase: 3 },
+  { id: 'boss-week-20', week: 20, name: 'The Rust Giant', land: 'Ember Highlands', maxHp: 240, unlockPhase: 4 },
+  { id: 'boss-week-24', week: 24, name: 'The Ember Drake', land: 'Ember Highlands', maxHp: 260, unlockPhase: 4 },
+  // Cycle 3, Storm Coast.
+  { id: 'boss-week-28', week: 28, name: 'The Gale Howler', land: 'Storm Coast', maxHp: 280, unlockPhase: 4 },
+  { id: 'boss-week-32', week: 32, name: 'The Tide Troll', land: 'Storm Coast', maxHp: 300, unlockPhase: 4 },
+  { id: 'boss-week-36', week: 36, name: 'The Storm Serpent', land: 'Storm Coast', maxHp: 320, unlockPhase: 4 },
+  // Cycle 4, Golden Summit, plus the Week 52 year review round.
+  { id: 'boss-week-40', week: 40, name: 'The Gold Golem', land: 'Golden Summit', maxHp: 340, unlockPhase: 4 },
+  { id: 'boss-week-44', week: 44, name: 'The Summit Wraith', land: 'Golden Summit', maxHp: 360, unlockPhase: 4 },
+  { id: 'boss-week-48', week: 48, name: 'The Peak Keeper', land: 'Golden Summit', maxHp: 380, unlockPhase: 4 },
+  { id: 'boss-week-52', week: 52, name: 'The Year Review', land: 'Golden Summit', maxHp: 400, unlockPhase: 4 },
 ];
 
 // ---------------------------------------------------------------- MONSTERS
@@ -1594,6 +1626,44 @@ export const CREATURES: Creature[] = [
     line: 'Miso is a cat you befriend at the inn. She keeps you company on rest days and naps beside you while you stretch.',
     meetWeek: 3,
     effect: '+5 XP when you log a rest day.',
+  },
+  // Cycle 2 to 4 companions. Befriendable people and animals only. Bosses
+  // are never friends, and none of these four is a boss.
+  {
+    id: 'wren',
+    name: 'Wren',
+    kind: 'Scout',
+    place: 'Ember Highlands',
+    line: 'Wren is a scout you meet on the climb into the Ember Highlands. She knows every short cut and counts your steps along the way.',
+    meetWeek: 14,
+    effect: '+5 XP when you log steps.',
+  },
+  {
+    id: 'fern',
+    name: 'Fern',
+    kind: 'Gardener',
+    place: 'Ember Highlands',
+    line: 'Fern is a gardener who tends the rest stops in the Highlands. She keeps a notebook of every measurement, and cheers when the numbers move.',
+    meetWeek: 18,
+    effect: '+5 XP when you log a measurement.',
+  },
+  {
+    id: 'ansel',
+    name: 'Ansel',
+    kind: 'Old climber',
+    place: 'Storm Coast',
+    line: 'Ansel is an old climber you meet on the Storm Coast. He has climbed these stairs a hundred times and knows that steady beats fast.',
+    meetWeek: 26,
+    effect: '+5 XP when you set a personal record.',
+  },
+  {
+    id: 'lark',
+    name: 'Lark',
+    kind: 'Messenger bird',
+    place: 'Golden Summit',
+    line: 'Lark is a messenger bird who flies ahead with news of the road home. She sings when a boss round falls.',
+    meetWeek: 38,
+    effect: '+5 XP when you beat a boss round.',
   },
 ];
 
@@ -1836,6 +1906,19 @@ export const BADGES: Badge[] = [
   { id: 'first-pr', name: 'First PR', how: 'Set your first personal record.' },
   { id: 'five-prs', name: 'Five PRs', how: 'Set 5 personal records.' },
   { id: 'two-to-three-strength', name: '2 to 3 Strength This Week', how: 'Finish 2 to 3 strength workouts in one week.' },
+  // Year badges: one per cycle milestone, plus monthly result badges.
+  { id: 'cycle-1-finisher', name: 'Cycle 1 Finisher', how: 'Finish Cycle 1: save the Week 12 retest.' },
+  { id: 'cycle-2-finisher', name: 'Cycle 2 Finisher', how: 'Finish Cycle 2: save the Week 24 retest.' },
+  { id: 'cycle-3-finisher', name: 'Cycle 3 Finisher', how: 'Finish Cycle 3: save the Week 36 retest.' },
+  { id: 'cycle-4-finisher', name: 'Cycle 4 Finisher', how: 'Finish Cycle 4: save the Week 48 retest.' },
+  { id: 'year-finisher', name: 'Year Finisher', how: 'Finish the year: save the Week 52 review retest.' },
+  { id: 'ten-prs', name: 'Ten PRs', how: 'Set 10 personal records.' },
+  { id: 'twenty-five-workouts', name: '25 Workouts', how: 'Finish 25 workouts.' },
+  { id: 'fifty-workouts', name: '50 Workouts', how: 'Finish 50 workouts.' },
+  { id: 'two-week-checkin', name: '14-Day Check-In Streak', how: 'Check in 14 days in a row.' },
+  { id: 'cardio-1000', name: '1,000 Cardio Minutes', how: 'Log 1,000 minutes of cardio in total.' },
+  { id: 'sleep-30', name: '30 Nights Logged', how: 'Log sleep 30 times.' },
+  { id: 'measurement-tracker', name: 'Measurement Tracker', how: 'Log 6 measurements.' },
 ];
 
 // -------------------------------------------------------------------- ARMOR
@@ -1871,9 +1954,23 @@ export const ARMOR: ArmorPiece[] = [
   { id: 'sunforged-chestplate', name: 'Sunforged Chestplate', tier: 'Legendary', how: 'Finish Phase 2.', effect: 'Morning light in your chest. You wake up ready to move.' },
   { id: 'stormcaller-longbow', name: 'Stormcaller Longbow', tier: 'Legendary', how: 'Defeat your first boss round.', effect: 'Thunder on your side. Boss rounds feel winnable.' },
   { id: 'gauntlets-many-wins', name: 'Gauntlets of Many Wins', tier: 'Legendary', how: 'Earn 8 badges.', effect: 'Hands that have done the work. Every win is written on them.' },
-  { id: 'voidforged-greatblade', name: 'Voidforged Greatblade', tier: 'Mythical', how: 'Defeat all 3 boss rounds.', effect: 'A blade that has seen every boss fall. Nothing on the road scares you now.' },
+  { id: 'voidforged-greatblade', name: 'Voidforged Greatblade', tier: 'Mythical', how: 'Defeat your first 3 boss rounds.', effect: 'A blade that has seen every boss fall. Nothing on the road scares you now.' },
   { id: 'mantle-long-road', name: 'Mantle of the Long Road', tier: 'Mythical', how: 'Finish 25 workouts.', effect: 'The road is yours. Twenty-five workouts prove you show up.' },
   { id: 'circlet-full-journey', name: 'Circlet of the Full Journey', tier: 'Mythical', how: 'Unlock Phase 5.', effect: 'A crown for the whole journey. You earned every step of it.' },
+  // Year gear: one new set per cycle after the first, plus three year
+  // pieces. Legendary and Mythical pieces stay hidden until earned.
+  { id: 'emberforged-helm', name: 'Emberforged Helm', tier: 'Rare', set: 'Emberforged', how: 'Defeat the Week 16 boss round.', effect: 'Warm focus. The Highlands feel less steep.' },
+  { id: 'emberforged-chestplate', name: 'Emberforged Chestplate', tier: 'Rare', set: 'Emberforged', how: 'Finish Cycle 2: save the Week 24 retest.', effect: 'A strong chest. Getting stronger feels normal now.' },
+  { id: 'emberforged-greaves', name: 'Emberforged Greaves', tier: 'Rare', set: 'Emberforged', how: 'Set 10 personal records.', effect: 'Legs that keep a record of every PR.' },
+  { id: 'tideforged-helm', name: 'Tideforged Helm', tier: 'Rare', set: 'Tideforged', how: 'Defeat the Week 28 boss round.', effect: 'Clear head in the storm. Heavy sets stay steady.' },
+  { id: 'tideforged-chestplate', name: 'Tideforged Chestplate', tier: 'Rare', set: 'Tideforged', how: 'Finish Cycle 3: save the Week 36 retest.', effect: 'Storm-steady. You hold your form when the work gets hard.' },
+  { id: 'tideforged-greaves', name: 'Tideforged Greaves', tier: 'Rare', set: 'Tideforged', how: 'Finish 40 workouts.', effect: 'Forty workouts of miles in these legs.' },
+  { id: 'summitforged-helm', name: 'Summitforged Helm', tier: 'Rare', set: 'Summitforged', how: 'Defeat the Week 40 boss round.', effect: 'Summit focus. The top of the year is in sight.' },
+  { id: 'summitforged-chestplate', name: 'Summitforged Chestplate', tier: 'Rare', set: 'Summitforged', how: 'Finish Cycle 4: save the Week 48 retest.', effect: 'A peak chest. A year of training sits behind every rep.' },
+  { id: 'summitforged-greaves', name: 'Summitforged Greaves', tier: 'Rare', set: 'Summitforged', how: 'Finish 50 workouts.', effect: 'Fifty workouts. The road is worn smooth under your feet.' },
+  { id: 'crown-year', name: 'Crown of the Year', tier: 'Mythical', how: 'Finish the year: save the Week 52 review retest.', effect: 'A crown for 52 weeks. You did the whole year.' },
+  { id: 'cloak-year', name: 'Cloak of Twenty Wins', tier: 'Legendary', how: 'Earn 20 badges.', effect: 'Twenty wins sewn into one cloak.' },
+  { id: 'boots-year', name: 'Boots of a Thousand Minutes', tier: 'Legendary', how: 'Log 2,000 minutes of cardio in total.', effect: 'Two thousand minutes of moving. Your heart knows the road.' },
 ];
 
 // ---------------------------------------------------------------- NUTRITION

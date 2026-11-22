@@ -39,6 +39,10 @@ const PALS: Record<string, Pal> = {
   mara: { glow: '#1e9e5a', glowLight: '#7ed3a4', cloth: '#fffdf4', clothDark: '#1e7a46', skin: '#f7d9ae', hair: '#5b3a1e', accent: '#1e7a46' },
   quill: { glow: '#5b6b8a', glowLight: '#9aa5c8', cloth: '#1c2b3a', clothDark: '#0e1822', skin: '#2a3a4a', hair: '#1c2b3a', accent: '#e8a91c' },
   miso: { glow: '#e8a91c', glowLight: '#f7cf6b', cloth: '#f2a541', clothDark: '#b96f14', skin: '#f7cf9e', hair: '#e8a91c', accent: '#c96a7a' },
+  wren: { glow: '#2f6fd0', glowLight: '#8db4f2', cloth: '#2f6f4a', clothDark: '#1d4f30', skin: '#f7d9ae', hair: '#5b3a1e', accent: '#c9a227' },
+  fern: { glow: '#1e9e5a', glowLight: '#7ed3a4', cloth: '#1e7a46', clothDark: '#0f4d28', skin: '#f7d9ae', hair: '#3a6b2f', accent: '#e88a7a' },
+  ansel: { glow: '#8a9aa8', glowLight: '#c8d2da', cloth: '#5b6b7a', clothDark: '#3a4a5a', skin: '#f7d9ae', hair: '#e8e2d4', accent: '#c9a227' },
+  lark: { glow: '#e8a91c', glowLight: '#f7cf6b', cloth: '#e8a91c', clothDark: '#b96f14', skin: '#f7cf9e', hair: '#e8a91c', accent: '#2f6fd0' },
   unknown: { glow: '#5b6b7a', glowLight: '#9aa5b1', cloth: '#5b6b7a', clothDark: '#3a4a5a', skin: '#9aa5b1', hair: '#5b6b7a', accent: '#ffffff' },
 };
 
@@ -449,6 +453,80 @@ export default function CompanionAvatar({ id }: { id: string }) {
 // a red ring, sterner faces, and no friendly smile.
 export function BossAvatar({ id }: { id: string }) {
   const pal = BOSS_PALS[id] ?? BOSS_PALS['the-slump'];
+
+  // Cycle 2 to 4 companions: befriendable people and animals only.
+  if (id === 'wren') {
+    return (
+      <Portrait
+        pal={pal}
+        face={<FriendlyFace />}
+        front={
+          <g>
+            <path d="M19 24 Q19 13 32 13 Q45 13 45 24 Q41 16 32 16 Q23 16 19 24 Z" fill={pal.hair} />
+            <path d="M32 13 L36 6 L35 14 Z" fill={pal.accent} />
+            <path d="M20 28 Q20 42 32 42 Q44 42 44 28 Q40 35 32 35 Q24 35 20 28 Z" fill={pal.hair} opacity="0.35" />
+          </g>
+        }
+      />
+    );
+  }
+
+  if (id === 'fern') {
+    return (
+      <Portrait
+        pal={pal}
+        face={<FriendlyFace />}
+        front={
+          <g>
+            <path d="M19 24 Q19 13 32 13 Q45 13 45 24 Q41 16 32 16 Q23 16 19 24 Z" fill={pal.hair} />
+            <circle cx="32" cy="12" r="3" fill={pal.accent} />
+            <circle cx="29" cy="13" r="2" fill={pal.glowLight} />
+            <circle cx="35" cy="13" r="2" fill={pal.glowLight} />
+          </g>
+        }
+      />
+    );
+  }
+
+  if (id === 'ansel') {
+    return (
+      <Portrait
+        pal={pal}
+        face={<FriendlyFace />}
+        front={
+          <g>
+            <path d="M19 24 Q19 13 32 13 Q45 13 45 24 Q41 16 32 16 Q23 16 19 24 Z" fill={pal.hair} />
+            <path d="M20 28 Q20 42 32 42 Q44 42 44 28 Q40 35 32 35 Q24 35 20 28 Z" fill={pal.hair} />
+          </g>
+        }
+      />
+    );
+  }
+
+  if (id === 'lark') {
+    return (
+      <Portrait
+        pal={pal}
+        animal
+        behind={
+          <g>
+            <path d="M18 30 Q8 18 17 12 Q23 18 25 28 Z" fill={pal.glowLight} opacity="0.85" />
+            <path d="M46 30 Q56 18 47 12 Q41 18 39 28 Z" fill={pal.glowLight} opacity="0.85" />
+          </g>
+        }
+        face={
+          <g>
+            <circle cx="25" cy="25" r="2.4" fill="#1c2b3a" />
+            <circle cx="39" cy="25" r="2.4" fill="#1c2b3a" />
+            <circle cx="25.8" cy="24.2" r="0.8" fill="#fff" />
+            <circle cx="39.8" cy="24.2" r="0.8" fill="#fff" />
+            <polygon points="32,29 28,33 36,33" fill={pal.accent} />
+            <path d="M27 32 Q32 36 37 32" stroke="#1c2b3a" strokeWidth="1.8" fill="none" strokeLinecap="round" />
+          </g>
+        }
+      />
+    );
+  }
 
   if (id === 'the-slump') {
     return (

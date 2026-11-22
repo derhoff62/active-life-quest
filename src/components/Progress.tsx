@@ -4,7 +4,8 @@ import * as api from '../lib/api';
 import Switch from './Switch';
 import Metrics from './Metrics';
 import { GOAL_TYPES, BADGES } from '../lib/data';
-import { levelForXp, titleForLevel, daysInMonthSet, streakDaysForDoc } from '../lib/store';
+import { cycleForWeek, nextRetestWeek, nextBossWeek } from '../lib/yearPlan';
+import { levelForXp, titleForLevel, daysInMonthSet, streakDaysForDoc, metCompanionIds, currentWeekForDoc } from '../lib/store';
 
 export default function Progress({ ctx }: { ctx: Ctx }) {
   const { doc, update, toast, go } = ctx;
@@ -35,6 +36,17 @@ export default function Progress({ ctx }: { ctx: Ctx }) {
   // can never sit at 0 forever the way the stored field did.
   const streak = streakDaysForDoc(doc);
   const cardioTotal = cardioArr.reduce((s, c) => s + Number(c.minutes || 0), 0);
+  // Your year: Week X of 52, Cycle Y of 4, next retest, next boss.
+  const yearWeek = currentWeekForDoc(doc);
+  const { cycle: yearCycle } = cycleForWeek(yearWeek);
+  const yearDoneRetests = new Set(retests.map((r) => (r as { week?: number }).week || 0));
+  const yearNextRetest = nextRetestWeek(yearWeek, yearDoneRetests);
+  const yearBeatenBossWeeks = new Set(
+    Object.entries(doc.bossHp || {}).filter(([, hp]) => hp <= 0).map(([id]) => Number(id.replace('boss-week-', ''))),
+  );
+  const yearNextBoss = nextBossWeek(yearWeek, yearBeatenBossWeeks);
+  const yearWaists = measurements.map((m) => Number((m as { waist?: string }).waist || 0)).filter((w) => w > 0);
+  const yearWaistChange = yearWaists.length >= 2 ? yearWaists[yearWaists.length - 1] - yearWaists[0] : null;
   const workoutsThisWeek = workouts.filter((w) => {
     const d = new Date(String(w.date));
     return Date.now() - d.getTime() < 7 * 24 * 60 * 60 * 1000;
@@ -65,7 +77,10 @@ export default function Progress({ ctx }: { ctx: Ctx }) {
       <div className="card">
         <h2>Progress</h2>
         <p>Level {level} · {titleForLevel(level)} · {doc.xp} XP · Streak {streak} {streak === 1 ? 'day' : 'days'}</p>
+        <p>Week {yearWeek} of 52 · Cycle {yearCycle.cycle} of 4, {yearCycle.name} · {yearCycle.goal}</p>
+        <p className="small">{yearNextRetest !== null ? `Next retest: Week ${yearNextRetest}.` : 'All retests done.'} {yearNextBoss !== null ? `Next boss round: Week ${yearNextBoss}.` : 'All boss rounds beaten.'}</p>
         <p>Workouts this week: {workoutsThisWeek} · Cardio logged: {cardioTotal} min · Check-ins: {checkins.length}</p>
+        <p className="small muted">Results so far: {prs.length} personal record{prs.length === 1 ? '' : 's'} · {cardioTotal.toLocaleString()} cardio minutes total{yearWaistChange !== null ? ` · Waist ${yearWaistChange > 0 ? '+' : ''}${yearWaistChange} in since your first measurement` : ''} · {badges.length} badges · {workouts.length} workouts total</p>
         {last && <p className="muted small">Last workout: {last.title} on {new Date(String(last.date)).toLocaleDateString()}.</p>}
         <div className="switch-row">
           <span><strong>Bigger text</strong></span>
@@ -170,10 +185,12 @@ export default function Progress({ ctx }: { ctx: Ctx }) {
             className="primary"
             onClick={() => {
               if (!stepsToday) return;
+              const wren = metCompanionIds(doc).has('wren');
               update((d) => {
                 d.steps.push({ id: `s${Date.now()}`, date: new Date().toISOString(), steps: Number(stepsToday) });
+                if (wren) d.xp += 5;
               });
-              toast(`Steps logged: ${stepsToday}.`);
+              toast(wren ? `Steps logged: ${stepsToday}. +5 XP from Wren.` : `Steps logged: ${stepsToday}.`);
               setStepsToday('');
             }}
           >

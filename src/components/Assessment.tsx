@@ -2,7 +2,8 @@ import { useState } from 'react';
 import type { Ctx } from '../App';
 import * as api from '../lib/api';
 import { ASSESSMENT_EXAMPLES, ASSESSMENT_QUESTIONS, CES_TEMPLATES, CONTRAINDICATIONS, DEFAULT_EQUIPMENT, EQUIPMENT_NOTES, EQUIPMENT_OPTIONS, FOCUS_AREAS, recommendPhase } from '../lib/data';
-import { currentWeekForDoc, awardBadges } from '../lib/store';
+import { currentWeekForDoc, awardBadges, phaseForDoc } from '../lib/store';
+import { RETEST_WEEKS } from '../lib/yearPlan';
 import type { FindingId, FormRating } from '../lib/types';
 import ExampleVideo from './ExampleVideo';
 
@@ -200,11 +201,11 @@ export default function Assessment({ ctx }: { ctx: Ctx }) {
           <button className="primary" onClick={startRetake}>Retake the assessment</button>
         </div>
         <div className="card">
-          <h3>Retest (Weeks 4, 8, and 12)</h3>
-          <p className="small muted">A retest is a short check, not the full assessment. Do it at Week 4, 8, and 12. A clean retest moves you to the next phase and moves your corrective steps one step forward.</p>
+          <h3>Retest (Weeks 4, 8, and 12 of each cycle, plus Week 52)</h3>
+          <p className="small muted">A retest is a short check, not the full assessment. Do it at Weeks 4, 8, and 12 of each 12-week cycle, and a final review at Week 52. A clean retest moves you to the next phase and moves your corrective steps one step forward. Week 12 of each cycle is also a deload week: lighter loads that week. The next cycle only opens after that cycle's retest.</p>
           <label>Which week are you retesting?</label>
           <div className="row">
-            {[4, 8, 12].map((w) => (
+            {RETEST_WEEKS.map((w) => (
               <button key={w} type="button" onClick={() => setRetestWeek(w)} style={retestWeek === w ? { background: '#124571', color: '#fff' } : {}}>Week {w}</button>
             ))}
           </div>
@@ -221,23 +222,25 @@ export default function Assessment({ ctx }: { ctx: Ctx }) {
           <button
             className="primary"
             onClick={() => {
-              // One retest per week, in order. Saving Week 8 before Week 4,
-              // or the same week twice, used to hand out +20 XP and a phase
-              // jump every tap.
+              // One retest per week, in order, across all four cycles.
+              // Saving Week 8 before Week 4, or the same week twice, used
+              // to hand out +20 XP and a phase jump every tap.
               const doneWeeks = new Set(doc.retests.map((r) => (r as { week?: number }).week));
               if (doneWeeks.has(retestWeek)) {
                 setRetestMsg(`Week ${retestWeek} retest is already saved. Pick the next week.`);
                 return;
               }
-              if (retestWeek === 8 && !doneWeeks.has(4)) {
-                setRetestMsg('Do the Week 4 retest first.');
+              const retestIdx = RETEST_WEEKS.indexOf(retestWeek);
+              const prevRetest = retestIdx > 0 ? RETEST_WEEKS[retestIdx - 1] : null;
+              if (prevRetest !== null && !doneWeeks.has(prevRetest)) {
+                setRetestMsg(`Do the Week ${prevRetest} retest first.`);
                 return;
               }
-              if (retestWeek === 12 && !doneWeeks.has(8)) {
-                setRetestMsg('Do the Week 8 retest first.');
-                return;
-              }
-              const nextPhase = retestWeek === 4 ? 2 : retestWeek === 8 ? 3 : 4;
+              // Weeks 4, 8, and 12 move the phase. Later retests keep the
+              // phase you are in: Phase 5 still needs a clean retest and
+              // Derek's approval, and later cycles build on what you have.
+              const currentPhase = phaseForDoc(doc);
+              const nextPhase = retestWeek === 4 ? 2 : retestWeek === 8 ? 3 : retestWeek === 12 ? 4 : currentPhase;
               update((d) => {
                 d.retests.push({ week: retestWeek, date: new Date().toISOString(), clean: retestClean, balanceLeftSec: Number(retestBalL) || 0, balanceRightSec: Number(retestBalR) || 0 } as never);
                 if (Number(retestBalL) || Number(retestBalR)) {
@@ -253,13 +256,14 @@ export default function Assessment({ ctx }: { ctx: Ctx }) {
                 }
                 awardBadges(d);
               });
-              setRetestMsg(retestClean ? `Retest saved. You move to Phase ${nextPhase}. Your corrective steps moved one step forward. +20 XP.` : 'Retest saved. Keep working on your patterns. You stay in your current phase until a clean retest.');
-              toast(retestClean ? `Retest saved. You move to Phase ${nextPhase}. +20 XP.` : 'Retest saved.');
+              const phaseMoved = retestWeek <= 12 && nextPhase !== currentPhase;
+              setRetestMsg(retestClean ? (phaseMoved ? `Retest saved. You move to Phase ${nextPhase}. Your corrective steps moved one step forward. +20 XP.` : `Retest saved. You stay in Phase ${currentPhase} and move to the next stretch. Your corrective steps moved one step forward. +20 XP.`) : 'Retest saved. Keep working on your patterns. You stay in your current phase until a clean retest.');
+              toast(retestClean ? (phaseMoved ? `Retest saved. You move to Phase ${nextPhase}. +20 XP.` : 'Retest saved. +20 XP.') : 'Retest saved.');
             }}
           >
             Save my retest
           </button>
-          <p className="small muted">Targets: 10 seconds per side at Week 4, 20 at Week 8, 30 at Week 12.</p>
+          <p className="small muted">Targets: 10 seconds per side at Week 4, 20 at Week 8, 30 at Week 12, then hold 30 seconds and beat your best each cycle after.</p>
         </div>
         {(week12Done || doc.week13Goal) && (
         <div className="card">
