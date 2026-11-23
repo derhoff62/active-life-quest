@@ -242,6 +242,26 @@ details summary { cursor: pointer; font-weight: 600; color: var(--navy); padding
 @media (prefers-reduced-motion: reduce) {
   .guardian-bob, .guardian-aura, .guardian-halo, .guardian-gem, .guardian-shadow, .guardian-sparkle, .xp-glow > div { animation: none; }
 }
+/* Generated guardians (TRY-OUT, Nov 22, 2026): flat composite images, so
+   the bob is gentler than the SVG's -16px (a flat image has no separate
+   shadow layer to counter-move) and the glow is a whole-image shimmer,
+   not a masked gem glow. Both honour reduced motion, same as the SVG. */
+.gen-guardian-wrap { position: relative; display: block; padding-top: 8px; line-height: 0; text-align: center; }
+.gen-guardian-wrap img { display: block; max-width: 100%; height: auto; margin: 0 auto; border-radius: 12px; }
+.gen-guardian-bob { animation: gen-guardian-bob 2s ease-in-out infinite; will-change: transform; }
+@keyframes gen-guardian-bob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+.gen-glow-pulse-single { animation: gen-glow-pulse-single 2s ease-in-out infinite; will-change: filter; }
+@keyframes gen-glow-pulse-single {
+  0%, 100% { filter: brightness(1) drop-shadow(0 0 0 rgba(201, 162, 39, 0)); }
+  50% { filter: brightness(1.08) drop-shadow(0 0 14px rgba(201, 162, 39, 0.55)); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .gen-guardian-bob, .gen-glow-pulse-single { animation: none; }
+}
+.reduced-motion .gen-guardian-bob, .reduced-motion .gen-glow-pulse-single { animation: none; }
 /* Modern hero card on Today: soft gradient, glowing gold border. */
 .guardian-hero {
   background: linear-gradient(160deg, #fffdf4 0%, #eef5fb 55%, #dbe9f5 100%);

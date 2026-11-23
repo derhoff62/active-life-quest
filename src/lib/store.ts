@@ -23,6 +23,12 @@ export interface GuardianState {
   armColor?: string;
   legColor?: string;
   capeColor?: string;
+  // Guardian art style. 'svg' is the classic GuardianAvatar: full
+  // customisation (skin, hair, per-part colours, builds). 'generated' is
+  // the TRY-OUT generated art: only 3 combos exist as pictures, skin and
+  // part colours are baked in and do nothing. Default 'svg'; old profiles
+  // fill in 'svg' so nothing changes for existing guardians.
+  avatarStyle?: 'svg' | 'generated';
 }
 
 export interface ProgressPhoto {
@@ -278,6 +284,11 @@ export function normalizeProfile(raw: unknown): ProfileDoc {
     // the avatar shipped with. An unknown value is reset the same way.
     if (!out.guardian.skinColor || !(SKIN_TONES as readonly string[]).includes(out.guardian.skinColor)) {
       out.guardian.skinColor = 'Light';
+    }
+    // Guardian art style: only 'svg' or 'generated' are valid. Old
+    // profiles have none, so fill in 'svg', the classic avatar.
+    if (out.guardian.avatarStyle !== 'svg' && out.guardian.avatarStyle !== 'generated') {
+      out.guardian.avatarStyle = 'svg';
     }
     // Per-part colors default to the overall color, so old profiles and a
     // single overall pick still look the same.
