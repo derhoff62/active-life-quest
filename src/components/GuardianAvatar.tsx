@@ -23,7 +23,7 @@
 // GLOW (Derek, Nov 22 6:49 PM: "Make sure there's still glowing effects
 // when there needs to be"): glow is CONTEXTUAL, never a permanent aura
 // ring around the figure. Kept: chest gem pulse (.guardian-gem), the
-// Spellweaver star's glow, the Ranger arrow's glowing tip, the shield
+// Spellweaver orb's glow, the Ranger arrow's glowing tip, the shield
 // gem's soft glow, the sword pommel gem, Legendary/Mythical gear shine
 // (Armor), boss/companion map glows (JourneyMap). NOT kept: any permanent
 // halo/aura around the guardian — that was part of the old shape look.
@@ -88,19 +88,6 @@ export const DEFAULT_GUARDIAN: GuardianState = {
   cape: true,
   skinColor: 'Light',
 };
-
-// Star polygon centred at (cx, cy), outer radius r, inner r * 0.42.
-function starPoints(cx: number, cy: number, r = 13): string {
-  const inner = r * 0.42;
-  const pts: string[] = [];
-  for (let i = 0; i < 5; i++) {
-    const aOuter = (-90 + i * 72) * (Math.PI / 180);
-    const aInner = (-54 + i * 72) * (Math.PI / 180);
-    pts.push(`${Math.round((cx + r * Math.cos(aOuter)) * 10) / 10},${Math.round((cy + r * Math.sin(aOuter)) * 10) / 10}`);
-    pts.push(`${Math.round((cx + inner * Math.cos(aInner)) * 10) / 10},${Math.round((cy + inner * Math.sin(aInner)) * 10) / 10}`);
-  }
-  return pts.join(' ');
-}
 
 function shade(hex: string, amount: number): string {
   const n = hex.replace('#', '');
@@ -290,7 +277,7 @@ export default function GuardianAvatar({
           <path d="M89.5 27.5 Q92.5 29.8 95.5 27.5 M104.5 27.5 Q107.5 29.8 110.5 27.5" fill="none" stroke="#1c2b3a" strokeWidth="1.6" strokeLinecap="round" />
           <path d="M96 35 L104 35" fill="none" stroke={mouthStroke} strokeWidth={mouthWidth} strokeLinecap="round" />
           {/* "Z" sits in clear sky: top-right for Guardian/Ranger, but
-              top-LEFT for Spellweaver, whose staff star glow disc sits
+              top-LEFT for Spellweaver, whose staff orb glow disc sits
               top-right and the Z stamped on it read as a misprint. */}
           <text x={g.classId === 'Spellweaver' ? 70 : 126} y="14" fontSize="11" fill="#f2d878" fontWeight="700">Z</text>
         </>
@@ -358,6 +345,58 @@ export default function GuardianAvatar({
   const handLx = isFemale ? 81 : 76;
   const handRx = isFemale ? 119 : 124;
   const handR = isFemale ? 5 : 5.5;
+  // Wizard staff (Derek, Nov 23 7:32 AM: "Can the staff look more
+  // like [a wizard] staff rather than a stick with a star?").
+  // A proper wizard staff, not a straight stick with a star on top:
+  // gnarled / twisted natural wood shaft (slight S-curve, taper,
+  // knots, bark lines, gold carved rings, wrapped grip), thicker at
+  // the bottom, and a forked crook top holding a glowing crystal
+  // orb IN the fork — the orb sits between the two prongs and in a
+  // wood cup under it, clearly mounted, no gap, no floating. The
+  // glow disc is drawn FIRST (before the shaft) so it never tints
+  // the wood grey-blue and reads as a gap — that was the last
+  // star-gap bug. Orb: gem-coloured crystal with a white heart, so
+  // it reads as glowing crystal at 56px, not a flat star. The
+  // equipped staff uses the same shape; its glow is the tier colour
+  // (Legendary gold) and its orb stays the gem colour.
+  const wizardStaff = (orbFill: string, glowFill: string) => {
+    const ox = handRx + 2;
+    const oy = 18;
+    return (
+      <g>
+        <g className="guardian-gem"><circle cx={ox} cy={oy} r="11" fill={glowFill} opacity="0.45" /></g>
+        {/* Gnarled shaft: S-curve, 9 wide at the bottom, ~7 at the top. */}
+        <path d={`M${handRx - 4} 34 Q${handRx - 6} 58 ${handRx - 3} 84 Q${handRx - 1} 108 ${handRx - 4} 146 L${handRx + 5} 146 Q${handRx + 2} 108 ${handRx + 4} 84 Q${handRx + 6} 58 ${handRx + 4} 34 Z`} fill={WOOD} stroke={WOOD_DARK} strokeWidth="1.5" />
+        {/* Wood highlight, split at the grip (hand at y90 covers it). */}
+        <path d={`M${handRx - 1} 38 Q${handRx - 3} 60 ${handRx - 1} 82 M${handRx - 1} 98 Q${handRx - 2} 120 ${handRx - 1} 142`} fill="none" stroke="#a8763e" strokeWidth="2" opacity="0.7" strokeLinecap="round" />
+        {/* Knots and bark lines. */}
+        <ellipse cx={handRx - 2} cy="58" rx="2.2" ry="3.2" fill={WOOD_DARK} opacity="0.8" />
+        <ellipse cx={handRx + 2} cy="122" rx="2" ry="3" fill={WOOD_DARK} opacity="0.8" />
+        <path d={`M${handRx - 3} 48 L${handRx + 2} 51 M${handRx + 3} 66 L${handRx - 2} 69`} fill="none" stroke={WOOD_DARK} strokeWidth="2" opacity="0.6" strokeLinecap="round" />
+        {/* Carved gold rings, plus wrap lines at the grip. */}
+        <path d={`M${handRx - 3.5} 44 L${handRx + 3.5} 44 M${handRx - 3.5} 58 L${handRx + 3.5} 58 M${handRx - 3.5} 72 L${handRx + 3.5} 72`} stroke={GOLD} strokeWidth="3.5" />
+        <path d={`M${handRx - 3} 106 L${handRx + 3} 108 M${handRx - 3} 112 L${handRx + 3} 114`} stroke={WOOD_DARK} strokeWidth="2.5" />
+        {/* Forked crook: knob where the shaft splits, then two prongs
+            curving up around the orb. Prongs drawn dark-then-wood so
+            they have an outline at preview size. */}
+        <circle cx={handRx} cy="33" r="4.5" fill={WOOD} stroke={WOOD_DARK} strokeWidth="1.5" />
+        <path d={`M${handRx - 1} 34 Q${handRx - 8} 26 ${handRx - 6} 13`} fill="none" stroke={WOOD_DARK} strokeWidth="5.5" strokeLinecap="round" />
+        <path d={`M${handRx + 1} 34 Q${handRx + 9} 26 ${handRx + 8} 14`} fill="none" stroke={WOOD_DARK} strokeWidth="5.5" strokeLinecap="round" />
+        <path d={`M${handRx - 1} 34 Q${handRx - 8} 26 ${handRx - 6} 13`} fill="none" stroke={WOOD} strokeWidth="4" strokeLinecap="round" />
+        <path d={`M${handRx + 1} 34 Q${handRx + 9} 26 ${handRx + 8} 14`} fill="none" stroke={WOOD} strokeWidth="4" strokeLinecap="round" />
+        {/* Wood cup under the orb, joining it to the fork. */}
+        <path d={`M${handRx - 5} 23 Q${handRx + 2} 29 ${handRx + 9} 23`} fill="none" stroke={WOOD} strokeWidth="3" strokeLinecap="round" />
+        {/* Crystal orb, IN the fork: prong tips (handRx-6,13) and
+            (handRx+8,14) sit just outside its edges, the cup holds
+            its bottom, so it is mounted, not floating. */}
+        <circle cx={ox} cy={oy} r="7.5" fill={orbFill} stroke="#fff" strokeWidth="1" />
+        {/* White heart kept SMALL (r2.2, not r3.5): a bigger white
+            centre read at large size as a pupil, like a blue eye. */}
+        <circle cx={ox} cy={oy} r="2.2" fill="#fff" opacity="0.85" />
+        <circle cx={ox - 2.5} cy={oy - 2.5} r="1.2" fill="#fff" opacity="0.9" />
+      </g>
+    );
+  };
   const torsoD = isFemale
     ? `M100 46 L${f(100 + 11 * bw)} 50 L${f(100 + 13 * bw)} 74 L${f(100 + 9 * bw)} 94 L${f(100 - 9 * bw)} 94 L${f(100 - 13 * bw)} 74 L${f(100 - 11 * bw)} 50 Z`
     : `M100 46 L${f(100 + 17 * bw)} 50 L${f(100 + 19 * bw)} 76 L${f(100 + 14 * bw)} 94 L${f(100 - 14 * bw)} 94 L${f(100 - 19 * bw)} 76 L${f(100 - 17 * bw)} 50 Z`;
@@ -1212,7 +1251,7 @@ export default function GuardianAvatar({
           {/* Equipped weapon: replaces the class weapon entirely, in
               the same hand positions, with a tier-coloured accent so
               the change reads at preview size. Legendary/Mythical
-              weapons get a soft glow disc behind the blade/star. */}
+              weapons get a soft glow disc behind the blade/orb. */}
           {equippedWeapon && equippedWeaponKind && (
             <g>
               {(equippedWeapon.tier === 'Legendary' || equippedWeapon.tier === 'Mythical') && (
@@ -1262,32 +1301,7 @@ export default function GuardianAvatar({
                   <polygon points={`${handRx + 2},90 ${handRx - 13},84 ${handRx - 13},96`} fill="#fff" opacity="0.9" />
                 </g>
               )}
-              {equippedWeaponKind === 'staff' && (
-                <g>
-                  {/* Staff, STRAIGHT and star MOUNTED on the shaft (see
-                      class staff below): star centre (handRx,24),
-                      r8.5, shaft top y16 (flush with the star top y16.5,
-                      so no brown stub pokes out above it), so the shaft runs through
-                      the star body — the old (handRx,21)/r7.5 star
-                      still read as floating live (Nov 23 4:37 AM:
-                      ~2px gap at 100px preview). The star's white
-                      2-unit stroke also read as a gap, so it is
-                      now 1 unit. */}
-                  {/* Glow disc FIRST, before the shaft: the old order drew
-                      it over the shaft and tinted the wood grey-blue
-                      for ~7 units below the star's centre notch
-                      (fig y27.4-35), which read live as a ~2px gap
-                      between the star and the brown shaft. Now the
-                      shaft stays brown right up to the star. */}
-                  <g className="guardian-gem"><circle cx={handRx} cy="25" r="10" fill={weaponTier ?? gem} opacity="0.45" /></g>
-                  <rect x={handRx - 3} y="16" width="6" height="68" rx="3" fill={WOOD} stroke={WOOD_DARK} strokeWidth="1.5" />
-                  <rect x={handRx - 3} y="96" width="6" height="50" rx="3" fill={WOOD} stroke={WOOD_DARK} strokeWidth="1.5" />
-                  <path d={`M${handRx - 3} 44 L${handRx + 3} 44 M${handRx - 3} 58 L${handRx + 3} 58 M${handRx - 3} 72 L${handRx + 3} 72`} stroke={weaponTier ?? GOLD} strokeWidth="3.5" />
-                  <g className="guardian-gem">
-                    <polygon points={starPoints(handRx, 25, 8.5)} fill={weaponTier ?? gem} stroke="none" />
-                  </g>
-                </g>
-              )}
+              {equippedWeaponKind === 'staff' && wizardStaff(gem, weaponTier ?? gem)}
               {equippedWeaponKind === 'shield' && (
                 <g>
                   <path d={`M${handRx - 2} 66 L${handRx + 28} 66 L${handRx + 28} 86 Q${handRx + 13} 102 ${handRx - 2} 86 Z`} fill={STEEL} stroke={weaponTier ?? GOLD} strokeWidth="3" />
@@ -1352,50 +1366,7 @@ export default function GuardianAvatar({
               <polygon points={`${handRx + 2},90 ${handRx - 9},92 ${handRx - 9},98`} fill="#dfe8f0" opacity="0.9" />
             </g>
           )}
-          {!equippedWeapon && g.classId === 'Spellweaver' && (
-            <g>
-              {/* Staff: held in the image-right hand, shaft split at the
-                  grip so the hand reads as holding it. STRAIGHT, star
-                  ON the shaft axis — and now MOUNTED on it, not
-                  floating above it (live check Nov 22 10:06 PM:
-                  star floated above and slightly left of the shaft
-                  tip, with a gap). ROOT CAUSE (measured in the
-                  shipped render): the old star was centred at
-                  (handRx,17), r9, with the shaft top at y20 — so
-                  the shaft only touched the star's narrow BOTTOM
-                  POINT (2-4 units wide at y20-26), while the star
-                  itself was 18 wide and the glow disc r14 made it
-                  a separate orb. At 100px/56px that point contact
-                  vanishes and the star reads detached. Fix: star
-                  centre (handRx,25), r8.5, glow disc r10, shaft
-                  top y16, so the 6-wide shaft runs
-                  THROUGH the star body (overlap y10-32, star
-                  ~13-15 wide at y23-27) with broad contact, no
-                  side gaps. Star top y16, left tip x111.4 — clear
-                  of the face (face right edge x108.3 at y19). */}
-              <g>
-                {/* Glow disc FIRST, before the shaft — see equipped
-                    staff above: drawing it over the shaft tinted
-                    the wood grey-blue below the star's centre
-                    notch and read live as a gap. */}
-                <g className="guardian-gem"><circle cx={handRx} cy="25" r="10" fill={gem} opacity="0.45" /></g>
-                <rect x={handRx - 3} y="16" width="6" height="68" rx="3" fill={WOOD} stroke={WOOD_DARK} strokeWidth="1.5" />
-                <rect x={handRx - 3} y="96" width="6" height="50" rx="3" fill={WOOD} stroke={WOOD_DARK} strokeWidth="1.5" />
-                <rect x={handRx - 1} y="18" width="2" height="64" fill="#a8763e" opacity="0.7" />
-                <rect x={handRx - 1} y="98" width="2" height="46" fill="#a8763e" opacity="0.7" />
-                {/* Carved rings, GOLD and BOLD — the old dark thin bands
-                    were invisible on the brown wood at preview size
-                    live (staff read as plain brown). Four rings, plus
-                    bolder wrap lines at the grip. */}
-                <path d={`M${handRx - 3} 44 L${handRx + 3} 44 M${handRx - 3} 58 L${handRx + 3} 58 M${handRx - 3} 72 L${handRx + 3} 72 M${handRx - 3} 118 L${handRx + 3} 118`} stroke={GOLD} strokeWidth="3.5" />
-                <path d={`M${handRx - 3} 106 L${handRx + 3} 108 M${handRx - 3} 112 L${handRx + 3} 114`} stroke={WOOD_DARK} strokeWidth="2.5" />
-                <g className="guardian-gem">
-                  <polygon points={starPoints(handRx, 25, 8.5)} fill={gem} stroke="none" />
-                </g>
-                <polygon points={`${handRx},20 ${handRx + 3},25 ${handRx},30 ${handRx - 3},25`} fill="#fff" opacity="0.5" />
-              </g>
-            </g>
-          )}
+          {!equippedWeapon && g.classId === 'Spellweaver' && wizardStaff(gem, gem)}
           {/* Hands, drawn LAST over the weapon grips, so every weapon
               reads as held. Skin circles with a dark outline.
               EXCEPT the shield hand: when a shield covers the right

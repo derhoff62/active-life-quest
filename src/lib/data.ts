@@ -2214,7 +2214,7 @@ export const ARMOR: ArmorPiece[] = [
   { id: 'epic-stormhammer', name: 'Stormhammer Mjolnir', tier: 'Legendary', set: 'Epic weapons', how: 'Set 5 personal records.', effect: 'Thunder in your hands. Your heavy lifts hit harder and steadier.' },
   { id: 'epic-starforged-blade', name: 'Starforged Blade', tier: 'Legendary', set: 'Epic weapons', how: 'Finish 15 workouts.', effect: 'A blade that hums with light. Fifteen workouts, and it is yours.' },
   { id: 'epic-windrunner-bow', name: 'Windrunner Bow', tier: 'Legendary', set: 'Epic weapons', how: 'Beat your best balance hold of 45 seconds.', effect: 'An arrow that finds its mark. Balance you can trust on one leg.' },
-  { id: 'epic-starfall-staff', name: 'Starfall Staff', tier: 'Legendary', set: 'Epic weapons', how: 'Check in 14 days in a row.', effect: 'A star at the end of a staff. Showing up every day is the real magic.' },
+  { id: 'epic-starfall-staff', name: 'Starfall Staff', tier: 'Legendary', set: 'Epic weapons', how: 'Check in 14 days in a row.', effect: 'A glowing crystal orb at the end of a gnarled staff. Showing up every day is the real magic.' },
   { id: 'epic-vanguard-shield', name: 'Vanguard Shield', tier: 'Mythical', set: 'Epic weapons', how: 'Earn 12 badges.', effect: 'A shield that has seen twelve wins. Nothing gets through.' },
   { id: 'epic-truthbound-lasso', name: 'Truthbound Lasso', tier: 'Legendary', set: 'Epic weapons', how: 'Log sleep 30 times.', effect: 'A rope that only tells the truth: rest is part of training.' },
   { id: 'epic-shadowstep-dagger', name: 'Shadowstep Dagger', tier: 'Mythical', set: 'Epic weapons', how: 'Reach Level 12.', effect: 'Quick and quiet. Twelve levels of showing up, in one small blade.' },
