@@ -41,7 +41,7 @@
 // curl bumps, bun wrap, ponytail gem tie. Clean lines only — nothing
 // that turns to muddle at 56px.
 import { useId } from 'react';
-import type { GuardianState } from '../lib/store';
+import type { GuardianMood, GuardianState } from '../lib/store';
 import { ARMOR } from '../lib/data';
 import { armorKind, tierColor, weaponKind } from '../lib/equip';
 import {
@@ -57,7 +57,7 @@ import {
 const COLOR_MAP: Record<string, string> = COLOR_HEX;
 const GEM_MAP: Record<string, string> = GEM_HEX;
 
-const SIZES = { large: 180, medium: 120, small: 72 } as const;
+const SIZES = { large: 180, medium: 120, compact: 96, small: 72 } as const;
 
 export type GuardianAvatarSize = keyof typeof SIZES;
 
@@ -137,12 +137,17 @@ export default function GuardianAvatar({
   size = 'large',
   label,
   background,
+  face,
 }: {
   guardian: GuardianState | null;
   level: number;
   size?: GuardianAvatarSize;
   label?: string;
   background?: GuardianScene;
+  // Explicit face override (Today's auto mood). Without it the face is
+  // the guardian's picked default mood (guardian.mood, 'determined'
+  // on old profiles) — never stuck on angry.
+  face?: GuardianMood;
 }) {
   const g = guardian ?? DEFAULT_GUARDIAN;
   const main = COLOR_MAP[g.bodyColor ?? g.color] ?? COLOR_MAP.Navy;
@@ -227,6 +232,76 @@ export default function GuardianAvatar({
   const capeDark = shade(capeMain, -45);
   const f = (n: number) => Math.round(n * 100) / 100;
 
+  // Face (Derek, Nov 22 9:21 PM: the guardian must not be stuck with
+  // the angry Determined look). Six faces, same shapes as GuardianEmote:
+  // Celebrate, Determined, Tired, Strong, Struggling, Good job.
+  // `face` (Today's auto mood) wins; otherwise the guardian's picked
+  // default mood; old profiles get 'determined'. Brows keep the v68
+  // dark-skin halo + core so they read on every tone; closed/half-closed
+  // eyes get the same halo treatment. No nose, no ears, no white sclera.
+  const faceId: GuardianMood = face ?? g.mood ?? 'determined';
+  const browD: Record<GuardianMood, string> = {
+    determined: 'M88.5 22.5 L95.5 25 M104.5 25 L111.5 22.5',
+    celebrate: 'M88.5 21 L95.5 19.5 M104.5 19.5 L111.5 21',
+    tired: 'M88.5 23.5 L95.5 23.5 M104.5 23.5 L111.5 23.5',
+    strong: 'M88.5 20 L95.5 22.5 M104.5 25 L111.5 22.5',
+    struggling: 'M88.5 24 L95.5 21 M104.5 21 L111.5 24',
+    'thumbs-up': 'M88.5 20.5 L95.5 19 M104.5 19 L111.5 20.5',
+  };
+  const faceArt = (
+    <g>
+      {browHalo && (
+        <path d={browD[faceId]} fill="none" stroke={browHalo} strokeWidth={browHaloWidth} strokeLinecap="round" />
+      )}
+      <path d={browD[faceId]} fill="none" stroke={browCore} strokeWidth={browCoreWidth} strokeLinecap="round" />
+      {isFemale && faceId === 'determined' && (
+        <path d="M90 24.5 L88.5 22.5 M110 24.5 L111.5 22.5" fill="none" stroke={browCore} strokeWidth="1.8" strokeLinecap="round" />
+      )}
+      {faceId === 'celebrate' ? (
+        <>
+          {browHalo && (
+            <path d="M89 27.5 Q92.5 24 96 27.5 M104 27.5 Q107.5 24 111 27.5" fill="none" stroke={browHalo} strokeWidth="4.4" strokeLinecap="round" />
+          )}
+          <path d="M89 27.5 Q92.5 24 96 27.5 M104 27.5 Q107.5 24 111 27.5" fill="none" stroke="#1c2b3a" strokeWidth="2.2" strokeLinecap="round" />
+          <path d="M94 32 Q100 39.5 106 32 Q100 35.5 94 32 Z" fill={mouthStroke} />
+        </>
+      ) : faceId === 'tired' ? (
+        <>
+          {browHalo && (
+            <path d="M89.5 27.5 L95.5 27.5 M104.5 27.5 L110.5 27.5" fill="none" stroke={browHalo} strokeWidth="4.4" strokeLinecap="round" />
+          )}
+          <path d="M89.5 27.5 L95.5 27.5 M104.5 27.5 L110.5 27.5" fill="none" stroke="#1c2b3a" strokeWidth="2" strokeLinecap="round" />
+          <path d="M89.5 27.5 Q92.5 29.8 95.5 27.5 M104.5 27.5 Q107.5 29.8 110.5 27.5" fill="none" stroke="#1c2b3a" strokeWidth="1.6" strokeLinecap="round" />
+          <path d="M96 35 L104 35" fill="none" stroke={mouthStroke} strokeWidth={mouthWidth} strokeLinecap="round" />
+          {/* "Z" sits in clear sky: top-right for Guardian/Ranger, but
+              top-LEFT for Spellweaver, whose staff star glow disc sits
+              top-right and the Z stamped on it read as a misprint. */}
+          <text x={g.classId === 'Spellweaver' ? 70 : 126} y="14" fontSize="11" fill="#f2d878" fontWeight="700">Z</text>
+        </>
+      ) : (
+        <>
+          <circle cx="92.5" cy="27.5" r="2.7" fill="#1c2b3a" />
+          <circle cx="107.5" cy="27.5" r="2.7" fill="#1c2b3a" />
+          {faceId === 'determined' && (
+            <path d="M96 34.5 L104 34.5" fill="none" stroke={mouthStroke} strokeWidth={mouthWidth} strokeLinecap="round" />
+          )}
+          {faceId === 'strong' && (
+            <path d="M94 32 Q100 38.5 106 32 Q100 35.5 94 32 Z" fill="#fff" stroke={mouthStroke} strokeWidth="1.4" />
+          )}
+          {faceId === 'struggling' && (
+            <>
+              <path d="M96 36 Q100 33.5 104 36" fill="none" stroke={mouthStroke} strokeWidth={mouthWidth} strokeLinecap="round" />
+              <path d="M110 30.5 Q112 33.5 110 35.5 Q108 33.5 110 30.5 Z" fill="#4a90c2" />
+            </>
+          )}
+          {faceId === 'thumbs-up' && (
+            <path d="M95 32 Q100 36.5 105 32" fill="none" stroke={mouthStroke} strokeWidth={mouthWidth} strokeLinecap="round" />
+          )}
+        </>
+      )}
+    </g>
+  );
+
   // --- Geometry, ONE coordinate space, viewBox 0 0 200 200 ---
   // Head: centre (100,29), r13, y16-42. Hair top y13.5, chin y42, so
   // head+hair is ~28 of ~173, about 1/6. The head was r11 in v56/v57
@@ -309,10 +384,34 @@ export default function GuardianAvatar({
       </g>
     );
   };
-  const longLocks = () => (
+  // LONG hair (Derek, Nov 22 9:18 PM: "The long hair looks weird"):
+  // the old long locks were two straight, uniform-width straps hanging
+  // to mid-chest (y57-60), dangling OVER the chest plate like ties,
+  // with no taper, no curve, and no centre part — the cap dome and the
+  // two rectangles read as separate pieces. Each new lock is widest
+  // at the temple, curves slightly outward as it falls, tapers to a
+  // rounded tip, and ends ON the pauldron (tip y54 Guardian/Ranger,
+  // y46 under the hat brim) — hair resting on the shoulders, never
+  // dangling over the armour. A skin-coloured centre part at the crown
+  // splits the cap in two, so the top reads as long hair, not a dome.
+  const longLock = (left: boolean, topY = 30) => {
+    const d = left
+      ? `M86 ${topY - 1} Q81 ${topY + 9} 82 ${topY + 17} Q83 ${topY + 24} 87 ${topY + 24} Q91 ${topY + 23} 91 ${topY + 15} Q91 ${topY + 6} 90 ${topY} Z`
+      : `M114 ${topY - 1} Q119 ${topY + 9} 118 ${topY + 17} Q117 ${topY + 24} 113 ${topY + 24} Q109 ${topY + 23} 109 ${topY + 15} Q109 ${topY + 6} 110 ${topY} Z`;
+    const strand = left
+      ? `M85 ${topY + 8} Q84 ${topY + 16} 86 ${topY + 21}`
+      : `M115 ${topY + 8} Q116 ${topY + 16} 114 ${topY + 21}`;
+    return (
+      <g fill={HAIR_C}>
+        <path d={d} />
+        <path d={strand} fill="none" stroke={HAIR_L} strokeWidth="2" opacity="0.7" strokeLinecap="round" />
+      </g>
+    );
+  };
+  const longLocks = (topY = 30) => (
     <g>
-      {sideLock(true)}
-      {sideLock(false)}
+      {longLock(true, topY)}
+      {longLock(false, topY)}
     </g>
   );
   // Short side locks (Bun / Topknot / ManBun / ShortBob): same anchored
@@ -396,6 +495,7 @@ export default function GuardianAvatar({
   const hairArt = isFemale ? (
     <g>
       {hair === 'Curly' ? curlyTop : hairCap}
+      {hair === 'Long' && <path d="M100 14.5 L100 18.5" stroke={SKIN} strokeWidth="1.2" strokeLinecap="round" />}
       {hair === 'Bun' && knot(false)}
       {hair === 'Topknot' && knot(true)}
     </g>
@@ -410,6 +510,7 @@ export default function GuardianAvatar({
           higher hairline, shorter sides — so it reads as a buzz cut
           next to Short instead of being identical to it. */}
       {hair === 'Curly' ? curlyTop : hair === 'Buzz' ? buzzCap : hairCap}
+      {hair === 'Long' && <path d="M100 14.5 L100 18.5" stroke={SKIN} strokeWidth="1.2" strokeLinecap="round" />}
       {hair === 'ManBun' && knot(true)}
     </g>
   );
@@ -479,12 +580,7 @@ export default function GuardianAvatar({
   // cone tip where it reads as one bun.
   const spellweaverHair = (
     <g>
-      {hair === 'Long' && (
-        <g>
-          {sideLock(true, 57, 22)}
-          {sideLock(false, 57, 22)}
-        </g>
-      )}
+      {hair === 'Long' && longLocks(22)}
       {hair === 'Ponytail' && ponytailTail}
       {hair === 'Braided' && braid}
       {hair === 'Curly' && curlySides}
@@ -921,42 +1017,7 @@ export default function GuardianAvatar({
               <circle cx="109" cy="18" r="1.8" fill={gem} stroke="#fff" strokeWidth="1" />
             </g>
           )}
-          {/* Face: determined warrior, like the reference sheets. Small
-              dark dot eyes (NO white sclera, NO iris ring, NO highlight).
-              Strong brows angled down toward the centre. A firm straight
-              mouth, not a smile. NO nose, NO ears, NO blush. Female is
-              serious too, with slimmer brows and small lashes; male brows
-              are thick, with jaw lines. On dark skin tones the brows get
-              a light halo under the dark core and the mouth is light
-              cream — see the contrast note above; without the halo the
-              dark brow vanishes into dark skin at preview size. */}
-          <g>
-            {isFemale ? (
-              <>
-                {browHalo && (
-                  <path d="M88.5 22.5 L95.5 25 M104.5 25 L111.5 22.5" fill="none" stroke={browHalo} strokeWidth={browHaloWidth} strokeLinecap="round" />
-                )}
-                <path d="M88.5 22.5 L95.5 25 M104.5 25 L111.5 22.5" fill="none" stroke={browCore} strokeWidth={browCoreWidth} strokeLinecap="round" />
-                <path d="M90 24.5 L88.5 22.5 M110 24.5 L111.5 22.5" fill="none" stroke={browCore} strokeWidth="1.8" strokeLinecap="round" />
-              </>
-            ) : (
-              <>
-                {browHalo && (
-                  <path d="M88 22.5 L95.5 25 M104.5 25 L112 22.5" fill="none" stroke={browHalo} strokeWidth={browHaloWidth} strokeLinecap="round" />
-                )}
-                <path d="M88 22.5 L95.5 25 M104.5 25 L112 22.5" fill="none" stroke={browCore} strokeWidth={browCoreWidth} strokeLinecap="round" />
-              </>
-            )}
-            <circle cx="92.5" cy="27.5" r="2.7" fill="#1c2b3a" />
-            <circle cx="107.5" cy="27.5" r="2.7" fill="#1c2b3a" />
-            {/* Mouth: GENUINELY thin and short — 2.0/2.8 wide, 8 units
-                long (x96-104), at y34.5, in a muted brown on light skin
-                (#6b4a3a) and light cream on dark skin (#ffe3c2), NOT
-                near-black. The old 1.8/2.2 near-black bar read as a
-                thick band at 4x; the old 1.2/1.4 line vanished at 56px.
-                Nothing else dark sits at mouth level. */}
-            <path d="M96 34.5 L104 34.5" fill="none" stroke={mouthStroke} strokeWidth={mouthWidth} strokeLinecap="round" />
-          </g>
+          {faceArt}
           {/* Arms, drawn AFTER the torso and chest, BEFORE the
               pauldrons and weapons: thick shapes in the arm colour
               running from under the pauldrons down to the hands, with

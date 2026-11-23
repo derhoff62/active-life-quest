@@ -6,6 +6,7 @@
 // fallback ("Sent an emote: Celebrate") so the emote still reads if the
 // face ever fails to render.
 import type { GuardianState } from '../lib/store';
+import { SKIN_HEX } from '../lib/guardianOptions';
 
 export type EmoteId = 'celebrate' | 'determined' | 'tired' | 'strong' | 'struggling' | 'thumbs-up';
 
@@ -29,7 +30,6 @@ export function emoteById(id: string | undefined): EmoteDef | undefined {
   return EMOTES.find((e) => e.id === id);
 }
 
-const SKIN = '#f7d9ae';
 const DARK = '#1c2b3a';
 const HAIR_C = '#5b3a1e';
 const BEARD_C = '#40260f';
@@ -47,7 +47,14 @@ function faceFor(guardian: GuardianState | null): { female: boolean; bearded: bo
 
 export default function GuardianEmote({ emote, guardian, size = 44 }: { emote: EmoteId; guardian?: GuardianState | null; size?: number }) {
   const { female, bearded } = faceFor(guardian ?? null);
-  const browW = female ? 1.4 : 2;
+  const tone = guardian?.skinColor ?? 'Light';
+  const skin = SKIN_HEX[tone] ?? '#f7d9ae';
+  const darkSkin = tone === 'Brown' || tone === 'Deep';
+  const browW = (female ? 1.4 : 2) + (darkSkin ? 1 : 0);
+  const browStroke = darkSkin ? '#ffe3c2' : HAIR_C;
+  const mouthStroke = darkSkin ? '#ffe3c2' : MOUTH;
+  const faceStroke = darkSkin ? '#e5b183' : '#c0a277';
+  const dotEyes = emote === 'determined' || emote === 'strong' || emote === 'struggling' || emote === 'thumbs-up';
   return (
     <svg
       viewBox="0 0 48 48"
@@ -60,28 +67,34 @@ export default function GuardianEmote({ emote, guardian, size = 44 }: { emote: E
       {/* Hair cap, same warm brown as the avatar — a thick band across the top of the head. */}
       <path d="M6 26 Q6 6 24 6 Q42 6 42 26 Q38 15 24 15 Q10 15 6 26 Z" fill={HAIR_C} />
       {/* Face. */}
-      <circle cx="24" cy="26" r="18" fill={SKIN} stroke="#c0a277" strokeWidth="1.2" />
+      <circle cx="24" cy="26" r="18" fill={skin} stroke={faceStroke} strokeWidth="1.2" />
+      {darkSkin && dotEyes && (
+        <g fill="#ffe3c2">
+          <circle cx="16" cy="25.5" r="3.1" />
+          <circle cx="32" cy="25.5" r="3.1" />
+        </g>
+      )}
       {/* Beard: a thin crescent hugging the chin only (top ~y38, chin y44),
           so the mouth at y33 stays clear. The first version sat at y33.5
           and filled the whole lower face like a second mouth. */}
       {bearded && (
-        <path d="M15 38 Q14.5 43 24 44 Q33.5 43 33 38 Q29 40.5 24 40.5 Q19 40.5 15 38 Z" fill={BEARD_C} />
+        <path d="M15 38 Q14.5 43 24 44 Q33.5 43 33 38 Q29 40.5 24 40.5 Q19 40.5 15 38 Z" fill={BEARD_C} stroke={darkSkin ? '#e5b183' : 'none'} strokeWidth="1" />
       )}
       {emote === 'celebrate' && (
         <g>
           {/* Happy closed eyes, big open smile, gold star above. */}
           <path d="M13 25 Q16.5 21.5 20 25 M28 25 Q31.5 21.5 35 25" fill="none" stroke={DARK} strokeWidth="2" strokeLinecap="round" />
-          <path d="M17 30 Q24 38 31 30 Q24 33.5 17 30 Z" fill={MOUTH} />
+          <path d="M17 30 Q24 38 31 30 Q24 33.5 17 30 Z" fill={mouthStroke} />
           <path d="M24 1 L25.2 4 L28.5 4 L26 6 L27 9.2 L24 7.2 L21 9.2 L22 6 L19.5 4 L22.8 4 Z" fill={GOLD} />
         </g>
       )}
       {emote === 'determined' && (
         <g>
           {/* The guardian's own face: brows angled down, dot eyes, firm straight mouth. */}
-          <path d="M12.5 20 L19 22.5 M29 22.5 L35.5 20" fill="none" stroke={HAIR_C} strokeWidth={browW} strokeLinecap="round" />
+          <path d="M12.5 20 L19 22.5 M29 22.5 L35.5 20" fill="none" stroke={browStroke} strokeWidth={browW} strokeLinecap="round" />
           <circle cx="16" cy="25.5" r="2.2" fill={DARK} />
           <circle cx="32" cy="25.5" r="2.2" fill={DARK} />
-          <path d="M20.5 33 L27.5 33" fill="none" stroke={MOUTH} strokeWidth="1.4" strokeLinecap="round" />
+          <path d="M20.5 33 L27.5 33" fill="none" stroke={mouthStroke} strokeWidth="1.4" strokeLinecap="round" />
         </g>
       )}
       {emote === 'tired' && (
@@ -89,39 +102,39 @@ export default function GuardianEmote({ emote, guardian, size = 44 }: { emote: E
           {/* Half-closed eyes, flat tired mouth, small "Z". */}
           <path d="M13 24.5 L19 24.5 M29 24.5 L35 24.5" fill="none" stroke={DARK} strokeWidth="2" strokeLinecap="round" />
           <path d="M13 24.5 Q16 27 19 24.5 M29 24.5 Q32 27 35 24.5" fill="none" stroke={DARK} strokeWidth="1.4" strokeLinecap="round" />
-          <path d="M20.5 33.5 L27.5 33.5" fill="none" stroke={MOUTH} strokeWidth="1.4" strokeLinecap="round" />
+          <path d="M20.5 33.5 L27.5 33.5" fill="none" stroke={mouthStroke} strokeWidth="1.4" strokeLinecap="round" />
           <text x="38" y="12" fontSize="9" fill="#124571" fontWeight="700">Z</text>
         </g>
       )}
       {emote === 'strong' && (
         <g>
           {/* Big grin, one brow raised, determined eyes. */}
-          <path d="M12.5 19 L19 22 M29 22.5 L35.5 21" fill="none" stroke={HAIR_C} strokeWidth={browW} strokeLinecap="round" />
+          <path d="M12.5 19 L19 22 M29 22.5 L35.5 21" fill="none" stroke={browStroke} strokeWidth={browW} strokeLinecap="round" />
           <circle cx="16" cy="25.5" r="2.2" fill={DARK} />
           <circle cx="32" cy="25.5" r="2.2" fill={DARK} />
-          <path d="M17 30 Q24 37 31 30 Q24 33 17 30 Z" fill="#fff" stroke={MOUTH} strokeWidth="1.2" />
+          <path d="M17 30 Q24 37 31 30 Q24 33 17 30 Z" fill="#fff" stroke={mouthStroke} strokeWidth="1.2" />
         </g>
       )}
       {emote === 'struggling' && (
         <g>
           {/* Worried brows raised in the middle, downturned mouth, small tear. */}
-          <path d="M12.5 22 L19 19.5 M29 19.5 L35.5 22" fill="none" stroke={HAIR_C} strokeWidth={browW} strokeLinecap="round" />
+          <path d="M12.5 22 L19 19.5 M29 19.5 L35.5 22" fill="none" stroke={browStroke} strokeWidth={browW} strokeLinecap="round" />
           <circle cx="16" cy="25.5" r="2.2" fill={DARK} />
           <circle cx="32" cy="25.5" r="2.2" fill={DARK} />
-          <path d="M20 34 Q24 31 28 34" fill="none" stroke={MOUTH} strokeWidth="1.4" strokeLinecap="round" />
+          <path d="M20 34 Q24 31 28 34" fill="none" stroke={mouthStroke} strokeWidth="1.4" strokeLinecap="round" />
           <path d="M35 28 Q37 31.5 35 33.5 Q33 31.5 35 28 Z" fill="#4a90c2" />
         </g>
       )}
       {emote === 'thumbs-up' && (
         <g>
           {/* Smile, raised brows, and a thumbs-up hand beside the face. */}
-          <path d="M12.5 20 L19 22.5 M29 22.5 L35.5 20" fill="none" stroke={HAIR_C} strokeWidth={browW} strokeLinecap="round" />
+          <path d="M12.5 20 L19 22.5 M29 22.5 L35.5 20" fill="none" stroke={browStroke} strokeWidth={browW} strokeLinecap="round" />
           <circle cx="16" cy="25.5" r="2.2" fill={DARK} />
           <circle cx="32" cy="25.5" r="2.2" fill={DARK} />
-          <path d="M18 30 Q24 35.5 30 30" fill="none" stroke={MOUTH} strokeWidth="1.4" strokeLinecap="round" />
+          <path d="M18 30 Q24 35.5 30 30" fill="none" stroke={mouthStroke} strokeWidth="1.4" strokeLinecap="round" />
           <g transform="translate(36 30)">
-            <circle cx="4" cy="6" r="5" fill={SKIN} stroke="#c0a277" strokeWidth="1" />
-            <path d="M4 6 L4 -3 Q4 -6 6.5 -6 Q8 -6 8 -3 L8 2" fill={SKIN} stroke="#c0a277" strokeWidth="1" strokeLinecap="round" />
+            <circle cx="4" cy="6" r="5" fill={skin} stroke={faceStroke} strokeWidth="1" />
+            <path d="M4 6 L4 -3 Q4 -6 6.5 -6 Q8 -6 8 -3 L8 2" fill={skin} stroke={faceStroke} strokeWidth="1" strokeLinecap="round" />
           </g>
         </g>
       )}

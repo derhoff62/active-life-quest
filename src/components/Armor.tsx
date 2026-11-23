@@ -8,6 +8,7 @@ import { showToast } from '../lib/toast';
 import type { GuardianState } from '../lib/store';
 import type { ClassId } from '../lib/types';
 import GuardianAvatar from './GuardianAvatar';
+import GuardianEmote, { EMOTES } from './GuardianEmote';
 
 // Same color, gem, hair, and build options as onboarding, so a client can
 // change after signup what they picked (or skipped) at signup.
@@ -191,6 +192,7 @@ export default function Armor({ ctx }: { ctx: Ctx }) {
       capeColor: g?.capeColor || color,
       equippedWeaponId: g?.equippedWeaponId,
       equippedArmorId: g?.equippedArmorId,
+      mood: g?.mood || 'determined',
     });
     setCustomizeMsg('');
     setShowCustomize(true);
@@ -253,7 +255,18 @@ export default function Armor({ ctx }: { ctx: Ctx }) {
         <div className="card">
           <h3>Customize guardian</h3>
           <p className="small muted">Change how your guardian looks, any time. Your XP, level, armor, workouts, and progress stay the same. Changing class also changes spells, weapon, and workout focus.</p>
-          <GuardianAvatar guardian={draft} level={levelForXp(doc.xp)} size="medium" label={`${draft.name.trim() || 'Your guardian'} the ${draft.classId} · Level ${levelForXp(doc.xp)}`} />
+          <div className="guardian-sticky-preview">
+            <GuardianAvatar guardian={draft} level={levelForXp(doc.xp)} size="compact" label={`${draft.name.trim() || 'Your guardian'} the ${draft.classId} · Level ${levelForXp(doc.xp)}`} />
+            <div className="guardian-preview-text">
+              <strong>{draft.name.trim() || 'Your guardian'} the {draft.classId}</strong>
+              <p className="small muted" style={{ margin: '2px 0 0' }}>Level {levelForXp(doc.xp)} · {draft.look} · {HAIR_LABELS[draft.hair ?? 'Long'] || draft.hair}</p>
+              <p className="small" style={{ margin: '2px 0 0' }}>
+                {equippedWeaponName(draft) || equippedArmorName(draft)
+                  ? `Equipped: ${[equippedWeaponName(draft), equippedArmorName(draft)].filter(Boolean).join(' · ')}`
+                  : 'Nothing equipped.'}
+              </p>
+            </div>
+          </div>
           <label htmlFor="g-custom-name">Guardian name</label>
           <input
             id="g-custom-name"
@@ -376,6 +389,24 @@ export default function Armor({ ctx }: { ctx: Ctx }) {
           <label style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
             <input type="checkbox" checked={draft.cape} onChange={(e) => setDraft((d) => ({ ...d, cape: e.target.checked }))} style={{ width: 'auto', minHeight: 0 }} /> Cape
           </label>
+          <h4 style={{ margin: '14px 0 4px' }}>Default mood</h4>
+          <p className="small muted">Your guardian's usual face — not stuck on angry. Pick one; the preview above changes at once. On Today the face can still change for the day based on how you are doing (tired after a short night, celebrating a personal record), and Today will say why.</p>
+          <div className="row" style={{ alignItems: 'flex-start' }}>
+            {EMOTES.map((e) => (
+              <button
+                key={e.id}
+                type="button"
+                onClick={() => setDraft((d) => ({ ...d, mood: e.id }))}
+                style={draft.mood === e.id ? { background: '#124571', color: '#fff', borderColor: '#c9a227', borderWidth: 2 } : {}}
+                aria-pressed={draft.mood === e.id}
+              >
+                <span style={{ display: 'block', textAlign: 'center' }}>
+                  <GuardianEmote emote={e.id} guardian={draft} size={44} />
+                </span>
+                {e.label}
+              </button>
+            ))}
+          </div>
           {doc.guardian && draft.classId !== doc.guardian.classId && (
             <p className="small">Switching to {draft.classId} changes your spells, class weapon, and workout focus. Your XP, level, and armor stay.</p>
           )}

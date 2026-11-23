@@ -259,6 +259,25 @@ details summary { cursor: pointer; font-weight: 600; color: var(--navy); padding
   100% { background-position: 200% 0; }
 }
 .guardian-caption { font-weight: 700; color: var(--navy); margin: 4px 0 0; }
+/* Sticky live preview (Derek, Nov 22 9:16 PM): the guardian stays
+   visible at the top of Customize guardian and Pick your guardian
+   while the pickers scroll underneath, so every change reads at once.
+   One row tall: a 96px avatar beside name / class / level / equipped,
+   so it never covers the pickers or the Save button on a 390px phone.
+   The avatar's own caption / equipped / scene lines are hidden inside
+   the bar — that text lives in the column beside it instead. */
+.guardian-sticky-preview {
+  position: sticky; top: 0; z-index: 5;
+  display: flex; gap: 12px; align-items: center;
+  background: #fff;
+  margin: -16px -16px 12px; padding: 10px 16px;
+  border-bottom: 2px solid var(--gold);
+  box-shadow: 0 2px 8px rgba(18, 69, 113, 0.14);
+}
+.guardian-sticky-preview .guardian-wrap { flex: none; margin: 0; }
+.guardian-sticky-preview .guardian-wrap > p { display: none; }
+.guardian-sticky-preview .guardian-preview-text { min-width: 0; }
+.guardian-sticky-preview .guardian-preview-text strong { color: var(--navy); }
 /* Rarity gear cards: Common plain, Rare soft blue glow, Legendary strong
    gold glow + shimmer, Mythical strongest animated gold-purple glow. */
 .gear-item {

@@ -6,6 +6,9 @@ import { ARMOR, CREATURES } from './data';
 import type { TrainingStyle } from './data';
 import { HAIR_OPTIONS, SKIN_TONES } from './guardianOptions';
 
+export const GUARDIAN_MOODS = ['celebrate', 'determined', 'tired', 'strong', 'struggling', 'thumbs-up'] as const;
+export type GuardianMood = (typeof GUARDIAN_MOODS)[number];
+
 export interface GuardianState {
   name: string;
   classId: 'Guardian' | 'Ranger' | 'Spellweaver';
@@ -29,6 +32,13 @@ export interface GuardianState {
   // exactly as before (class weapon, no trim) until something is equipped.
   equippedWeaponId?: string;
   equippedArmorId?: string;
+  // Default mood / emote face (Derek, Nov 22 9:21 PM: the guardian
+  // should not be stuck with the angry Determined look). The client
+  // picks it in Customize guardian; Today can override it for the day
+  // based on how they are doing (see lib/mood.ts). Optional on old
+  // profiles: normalize fills in 'determined', the look the avatar
+  // shipped with.
+  mood?: GuardianMood;
 }
 
 export interface ProgressPhoto {
@@ -290,6 +300,12 @@ export function normalizeProfile(raw: unknown): ProfileDoc {
     for (const f of ['equippedWeaponId', 'equippedArmorId'] as const) {
       const v = out.guardian[f];
       if (v && !ARMOR.some((a) => a.id === v)) out.guardian[f] = undefined;
+    }
+    // Default mood: old profiles have none, so fill in 'determined',
+    // the look the avatar shipped with. An unknown value is reset
+    // the same way.
+    if (!out.guardian.mood || !(GUARDIAN_MOODS as readonly string[]).includes(out.guardian.mood)) {
+      out.guardian.mood = 'determined';
     }
     // Per-part colors default to the overall color, so old profiles and a
     // single overall pick still look the same.

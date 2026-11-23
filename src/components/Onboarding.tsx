@@ -80,7 +80,13 @@ export default function Onboarding({ ctx }: { ctx: Ctx }) {
             </label>
           </div>
         ))}
-        <GuardianAvatar guardian={{ name: name.trim() || 'Your guardian', classId, color, gem, cape, look, hair, build, skinColor, bodyColor, armColor, legColor, capeColor }} level={1} size="medium" label={`${name.trim() || 'Your guardian'} the ${classId} · Level 1`} />
+        <div className="guardian-sticky-preview">
+          <GuardianAvatar guardian={{ name: name.trim() || 'Your guardian', classId, color, gem, cape, look, hair, build, skinColor, bodyColor, armColor, legColor, capeColor }} level={1} size="compact" label={`${name.trim() || 'Your guardian'} the ${classId} · Level 1`} />
+          <div className="guardian-preview-text">
+            <strong>{name.trim() || 'Your guardian'} the {classId}</strong>
+            <p className="small muted" style={{ margin: '2px 0 0' }}>Level 1 · {look} · {HAIR_LABELS[hair] || hair}</p>
+          </div>
+        </div>
         <label>Guardian look</label>
         <div className="row">
           {(['Female', 'Male'] as const).map((l) => (

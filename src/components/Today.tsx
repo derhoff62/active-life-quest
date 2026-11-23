@@ -8,6 +8,7 @@ import { cycleForWeek, nextRetestWeek, nextBossWeek, nextRetestLabel, nextBossLa
 import type { AssessmentVideo } from '../lib/store';
 import GuardianAvatar from './GuardianAvatar';
 import GuardianEmote, { EMOTES } from './GuardianEmote';
+import { autoMood } from '../lib/mood';
 
 export default function Today({ ctx }: { ctx: Ctx }) {
   const { doc, update, go, toast } = ctx;
@@ -90,6 +91,11 @@ export default function Today({ ctx }: { ctx: Ctx }) {
     !!lastCheckin,
   );
   const level = levelForXp(doc.xp);
+  // Today's face: the auto mood (how they are doing) wins over the
+  // picked default mood; null means no rule fired, so the avatar
+  // falls back to the picked mood. Computed once, used for the face
+  // and for the caption under it.
+  const moodToday = autoMood(doc);
   // XP into the current level: thresholds are 100, 125, 150, ... per level.
   let xpIntoLevel = doc.xp;
   let needForNext = 100;
@@ -202,7 +208,12 @@ export default function Today({ ctx }: { ctx: Ctx }) {
   return (
     <div>
       <div className="card gold-frame guardian-hero">
-        <GuardianAvatar guardian={doc.guardian} level={level} size="large" />
+        <GuardianAvatar guardian={doc.guardian} level={level} size="large" face={moodToday?.face} />
+        {moodToday && (
+          <p className="small muted" style={{ textAlign: 'center' }}>
+            Your guardian looks {moodToday.label} — {moodToday.reason}.
+          </p>
+        )}
         <p className="small muted" style={{ textAlign: 'center' }}>
           {doc.guardian ? `${doc.guardian.name} the ${doc.guardian.classId}` : 'Your guardian'} · Level {level} {titleForLevel(level)} · {doc.xp} XP
         </p>
