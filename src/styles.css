@@ -229,6 +229,17 @@ details summary { cursor: pointer; font-weight: 600; color: var(--navy); padding
   0%, 100% { opacity: 0.8; transform: scale(0.94); }
   50% { opacity: 1; transform: scale(1.08); }
 }
+/* GLOW FIX (Derek, Nov 23 2:55 PM): pulse the GLOW DISC only, not
+   the gem. The old .guardian-gem pulse moved the gem itself by
+   ±0.35px at 100px — invisible live. This scales the glow disc
+   1 -> 1.22 and breathes its opacity, so the light spill around
+   each gem visibly grows and shrinks. Per-gem only, never a
+   whole-figure halo. */
+.guardian-glow-pulse { animation: glow-pulse 1.8s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+@keyframes glow-pulse {
+  0%, 100% { opacity: 0.55; transform: scale(1); }
+  50% { opacity: 0.95; transform: scale(1.22); }
+}
 .guardian-shadow { animation: shadow-pulse 2.4s ease-in-out infinite; transform-origin: center; transform-box: fill-box; }
 @keyframes shadow-pulse {
   0%, 100% { transform: scaleX(1); opacity: 0.18; }
@@ -240,7 +251,7 @@ details summary { cursor: pointer; font-weight: 600; color: var(--navy); padding
   50% { opacity: 1; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .guardian-bob, .guardian-aura, .guardian-halo, .guardian-gem, .guardian-shadow, .guardian-sparkle, .xp-glow > div { animation: none; }
+  .guardian-bob, .guardian-aura, .guardian-halo, .guardian-gem, .guardian-glow-pulse, .guardian-shadow, .guardian-sparkle, .xp-glow > div { animation: none; }
 }
 /* Modern hero card on Today: soft gradient, glowing gold border. */
 .guardian-hero {

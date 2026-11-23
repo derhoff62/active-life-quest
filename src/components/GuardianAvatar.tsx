@@ -47,6 +47,7 @@ import { armorKind, tierColor, weaponKind } from '../lib/equip';
 import {
   COLOR_HEX,
   GEM_HEX,
+  GEM_LIGHT_HEX,
   HAIR_WITH_BEARD,
   buildWidth,
   hairForLook,
@@ -182,6 +183,7 @@ export default function GuardianAvatar({
   // edge gets a light-tan rim on dark tones instead.
   const beardStroke = skinIsDark ? '#e5b183' : '#2e1a08';
   const gem = GEM_MAP[g.gem] ?? GEM_MAP.Sapphire;
+  const gemLight = GEM_LIGHT_HEX[g.gem] ?? GEM_LIGHT_HEX.Sapphire;
   // Equipped gear (Derek, Nov 22 8:53 PM): an equipped weapon replaces
   // the class weapon in the hand, an equipped armor piece adds a
   // tier-coloured trim + kind-specific piece (helm band, crown, chest
@@ -398,40 +400,80 @@ export default function GuardianAvatar({
     // disc tinting the gap, only ~2px of sky read at 100px on the
     // left. V4 widens both arms (tips ox-23 / ox+22, controls
     // ox-/+28) so ~7-8 units of sky show, and shrinks the glow disc
-    // to r9 so it tints less of the gap.
+    // to r9 so it tints less of the gap. (V6 supersedes the arm
+    // geometry: the whole staff top moved right, ox = handRx+17,
+    // arms thinner at 8/5.5 — see FACE-BLOCK FIX below.)
     // FOOT DIAGNOSIS: the v3 lower segment bulged RIGHT to x125.7
     // at y120 then came back LEFT to x117 at y146, reading live as
     // a pronounced leftward hook at robe-hem level. V4 ends the
     // shaft at (handRx+2,146) with a much smaller lower bend, so
     // the foot plants straight down; the gnarl stays in the upper
     // S-curve and the knots.
-    const ox = handRx + 2;
+    // FACE-BLOCK FIX v6 (Derek, Nov 23 2:54 PM: "The staff blocks
+    // the face"): measured — the v4/v5 fork's LEFT arm passed through
+    // (101,28) Female / (106,28) Male, i.e. dead centre of the face
+    // (head (100,29) r13, right eye ~x107), and the orb at
+    // (handRx+2,28) sat at x112.5, touching the face edge (x113) and
+    // the Spellweaver hat brim (ends x119). The shaft's upper bend
+    // also swung LEFT to x105-106 at y55-72, over the chin/shoulder.
+    // Fix: the whole staff TOP moves right, ox = handRx+17 (was +2),
+    // while the GRIP stays at (handRx-2,90) so the fist still holds
+    // it — the shaft now leans gently right from grip to knob instead
+    // of bending left over the face. Orb centre (ox,28) r7.5: left
+    // edge ox-7.5 = 128.5 Female / 133.5 Male, clear of the face by
+    // 15+ and of the hat brim by ~9. Fork arms are THINNER (8/5.5,
+    // was 10/7) so a sky gap fits: left arm centre ~122.5 at y27
+    // (left edge 118.5, clear of the face by 5.5; inner edge 126.5,
+    // ~2 units of sky to the orb), right arm centre ~150.5 (inner
+    // edge ~146.5, ~3 units of sky). Arms stay rounded, warm brown,
+    // non-demonic (see rule above). Knob, cup, glow disc, knots,
+    // bark and gold rings all move with the new centreline.
+    const ox = handRx + 17;
     const oy = 28;
-    // Centreline: top (knob) -> bend LEFT -> grip -> small bend RIGHT -> straight foot.
-    const shaftD = `M${handRx + 2} 40 C${handRx - 13} 55 ${handRx - 14} 72 ${handRx - 2} 90 C${handRx + 4} 108 ${handRx + 6} 126 ${handRx + 2} 146`;
+    // Centreline: top (knob) -> gentle curve RIGHT-DOWN to the grip
+    // -> small bend RIGHT -> straight foot. No leftward excursion
+    // above the grip any more.
+    const shaftD = `M${ox} 40 C${ox - 5} 55 ${ox - 9} 72 ${handRx - 2} 90 C${handRx + 4} 108 ${handRx + 6} 126 ${handRx + 2} 146`;
     return (
       <g>
-        <g className="guardian-gem"><circle cx={ox} cy={oy} r="9" fill={glowFill} opacity="0.3" /></g>
         {/* Gnarled shaft: dark outline stroke, then wood, so the bend
             has a visible edge at preview size. Width 14 -> 11.5. */}
         <path d={shaftD} fill="none" stroke={WOOD_DARK} strokeWidth="14" strokeLinecap="round" />
         <path d={shaftD} fill="none" stroke={WOOD} strokeWidth="11.5" strokeLinecap="round" />
         {/* Wood highlight following the bend, split at the grip. */}
-        <path d={`M${handRx - 3} 46 C${handRx - 12} 58 ${handRx - 12} 70 ${handRx - 6} 84 M${handRx + 1} 98 C${handRx + 4} 112 ${handRx + 5} 124 ${handRx + 2} 142`} fill="none" stroke="#a8763e" strokeWidth="3" opacity="0.8" strokeLinecap="round" />
+        <path d={`M${ox - 3} 46 C${ox - 6} 58 ${ox - 8} 70 ${handRx - 4} 84 M${handRx + 1} 98 C${handRx + 4} 112 ${handRx + 5} 124 ${handRx + 2} 142`} fill="none" stroke="#a8763e" strokeWidth="3" opacity="0.8" strokeLinecap="round" />
         {/* Knots: LARGE dark blobs with a light centre dot, on the bends. */}
-        <ellipse cx={handRx - 11} cy="62" rx="5.5" ry="6.5" fill={WOOD_DARK} opacity="0.9" />
-        <circle cx={handRx - 11} cy="62" r="2.2" fill="#a8763e" opacity="0.9" />
+        <ellipse cx={ox - 6} cy="62" rx="5.5" ry="6.5" fill={WOOD_DARK} opacity="0.9" />
+        <circle cx={ox - 6} cy="62" r="2.2" fill="#a8763e" opacity="0.9" />
         <ellipse cx={handRx + 5} cy="124" rx="5.5" ry="6.5" fill={WOOD_DARK} opacity="0.9" />
         <circle cx={handRx + 5} cy="124" r="2.2" fill="#a8763e" opacity="0.9" />
         {/* Bark lines: thick dark diagonals across the shaft. */}
-        <path d={`M${handRx - 13} 48 L${handRx - 2} 55 M${handRx - 1} 104 L${handRx + 10} 111 M${handRx - 4} 134 L${handRx + 7} 141`} fill="none" stroke={WOOD_DARK} strokeWidth="4" opacity="0.75" strokeLinecap="round" />
+        <path d={`M${ox - 11} 48 L${ox} 55 M${handRx - 1} 104 L${handRx + 10} 111 M${handRx - 4} 134 L${handRx + 7} 141`} fill="none" stroke={WOOD_DARK} strokeWidth="4" opacity="0.75" strokeLinecap="round" />
         {/* Carved gold rings: thick bands across the shaft. */}
-        <path d={`M${handRx - 17} 76 L${handRx - 5} 76 M${handRx - 1} 112 L${handRx + 13} 112`} stroke={GOLD} strokeWidth="5" strokeLinecap="round" />
+        <path d={`M${handRx - 2} 76 L${handRx + 12} 76 M${handRx - 1} 112 L${handRx + 13} 112`} stroke={GOLD} strokeWidth="5" strokeLinecap="round" />
         {/* Forked crook: big rounded knob, then a wide wood cup under
             the orb. The cup is drawn BEFORE the orb, so the orb sits
             in it. */}
-        <circle cx={handRx + 1} cy="40" r="7" fill={WOOD} stroke={WOOD_DARK} strokeWidth="2" />
+        <circle cx={ox} cy="40" r="6.5" fill={WOOD} stroke={WOOD_DARK} strokeWidth="2" />
         <path d={`M${ox - 11} 32 Q${ox} 42 ${ox + 11} 32 L${ox + 9} 38 Q${ox} 44 ${ox - 9} 38 Z`} fill={WOOD} stroke={WOOD_DARK} strokeWidth="1.5" />
+        {/* Orb glow, GLOW FIX (Derek, Nov 23 2:55 PM): the old disc
+            was r9, opacity 0.3, drawn FIRST before the shaft, only
+            0.5 units bigger than the orb — visible ring 0.25px at
+            100px, and the shaft/fork/orb covered the rest, so live
+            it was a flat solid blue orb. Now r18, radialGradient
+            fading to transparent, drawn AFTER the shaft/fork/cup
+            but BEFORE the orb, so it spills around the orb and
+            between the prongs instead of hiding behind the shaft.
+            It pulses (.guardian-glow-pulse) so the spill breathes;
+            the orb itself stays static. */}
+        <defs>
+          <radialGradient id={id('glowOrb')} cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stopColor={shade(glowFill, 80)} stopOpacity="0.95" />
+            <stop offset="45%" stopColor={glowFill} stopOpacity="0.5" />
+            <stop offset="100%" stopColor={glowFill} stopOpacity="0" />
+          </radialGradient>
+        </defs>
+        <g className="guardian-glow-pulse"><circle cx={ox} cy={oy} r="18" fill={`url(#${id('glowOrb')})`} /></g>
         {/* Crystal orb, DOWN between the prongs: centre (ox,28),
             r8.5, bottom y36.5 overlaps the cup and the shaft top,
             so it is mounted, not floating. */}
@@ -445,15 +487,16 @@ export default function GuardianAvatar({
             isolated blobs: each arm starts at the knob (ox,42) and
             curves up and out, then slightly back in, ending in a
             fully rounded tip — a tree-branch cup, NOT horns or a
-            trident: no points, no spikes, no isolated eggs. V4
-            widens both arms (tips ox-23 / ox+22, controls ox-/+28)
-            so ~7-8 units of sky show between each arm and the orb
-            at orb height (v3 was ~4.5 units and read live as a
-            1-2px sliver on the left). */}
-        <path d={`M${ox} 42 Q${ox - 28} 30 ${ox - 23} 10`} fill="none" stroke={WOOD_DARK} strokeWidth="10" strokeLinecap="round" />
-        <path d={`M${ox} 42 Q${ox + 27} 31 ${ox + 22} 11`} fill="none" stroke={WOOD_DARK} strokeWidth="10" strokeLinecap="round" />
-        <path d={`M${ox} 42 Q${ox - 28} 30 ${ox - 23} 10`} fill="none" stroke={WOOD} strokeWidth="7" strokeLinecap="round" />
-        <path d={`M${ox} 42 Q${ox + 27} 31 ${ox + 22} 11`} fill="none" stroke={WOOD} strokeWidth="7" strokeLinecap="round" />
+            trident: no points, no spikes, no isolated eggs. V6
+            (face-block fix): arms are THINNER (8 dark / 5.5 wood,
+            was 10/7) and stay right of the face — left arm centre
+            ~122.5 at orb height (Female), right arm centre ~150.5,
+            so ~2-3 units of sky show between each arm and the orb
+            and nothing crosses the face, eye, or hat brim. */}
+        <path d={`M${ox} 42 Q${ox - 18} 28 ${ox - 18} 10`} fill="none" stroke={WOOD_DARK} strokeWidth="8" strokeLinecap="round" />
+        <path d={`M${ox} 42 Q${ox + 20} 30 ${ox + 18} 11`} fill="none" stroke={WOOD_DARK} strokeWidth="8" strokeLinecap="round" />
+        <path d={`M${ox} 42 Q${ox - 18} 28 ${ox - 18} 10`} fill="none" stroke={WOOD} strokeWidth="5.5" strokeLinecap="round" />
+        <path d={`M${ox} 42 Q${ox + 20} 30 ${ox + 18} 11`} fill="none" stroke={WOOD} strokeWidth="5.5" strokeLinecap="round" />
       </g>
     );
   };
@@ -944,6 +987,31 @@ export default function GuardianAvatar({
           <clipPath id={id('frame')}>
             <rect x="0" y="0" width="200" height="200" rx="18" />
           </clipPath>
+          {/* GLOW (Derek, Nov 23 2:55 PM: fix the glow — live Nov 23
+              11:30 AM it was flat everywhere, no glow, no pulse.
+              Diagnosis: the chest diamond was drawn BEFORE the chest
+              plate, which painted over it; the orb glow disc was
+              r9, only 0.5 units bigger than the orb, drawn FIRST so
+              the shaft/fork/orb covered it; shield/sword/arrow
+              "glows" were same-colour flat discs, no gradient, no
+              lighter colour. These gradients are the real glow,
+              copied from CompanionAvatar's radialGradient aura
+              (stops 0.85 -> 0.35 -> 0): bright light centre fading
+              to transparent, so the spill reads as light, not a
+              solid disc. glowGem = the picked gem colour, glowTier
+              = the equipped piece's tier colour. NO permanent halo
+              / aura ring around the whole figure — glow stays
+              per-gem, contextual, per Derek Nov 22. */}
+          <radialGradient id={id('glowGem')} cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stopColor={gemLight} stopOpacity="0.95" />
+            <stop offset="45%" stopColor={gemLight} stopOpacity="0.5" />
+            <stop offset="100%" stopColor={gem} stopOpacity="0" />
+          </radialGradient>
+          <radialGradient id={id('glowTier')} cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stopColor={shade(weaponTier ?? gemLight, 80)} stopOpacity="0.95" />
+            <stop offset="45%" stopColor={weaponTier ?? gem} stopOpacity="0.5" />
+            <stop offset="100%" stopColor={weaponTier ?? gem} stopOpacity="0" />
+          </radialGradient>
         </defs>
 
         {/* Flat background scene, clipped to the rounded frame */}
@@ -1022,13 +1090,15 @@ export default function GuardianAvatar({
               used to be drawn after the belt and covered its bottom
               3 units, so the legs read as being over the belt
               (Derek, Nov 23 1:12 PM). */}
-          {/* Glowing gem on chest: flat diamond with a white facet.
-              The gem PULSES (.guardian-gem) — a subtle contextual glow,
-              not a halo around the figure. */}
-          <g className="guardian-gem">
-            <polygon points="100,62 109,71 100,80 91,71" fill={gem} stroke="#fff" strokeWidth="2" />
-            <polygon points="100,66 104,71 100,76 96,71" fill="#fff" opacity="0.55" />
-          </g>
+          {/* Glowing gem on chest: MOVED (GLOW FIX, Derek Nov 23
+              2:55 PM) — this diamond used to be drawn here, BEFORE
+              the legs/neck/arms, and the Guardian chest plate
+              (opacity 0.95, drawn ~200 lines later) painted straight
+              over it, so live there was no diamond at all, only the
+              plate's tiny r4 circle with no glow. The gem now lives
+              after the chest plate (see below): a glow disc + gem
+              for Guardian, and the diamond + glow for Ranger /
+              Spellweaver, whose torso has no plate to cover it. */}
           {/* Legs, with a shade strip and a knee band each, so they read
               as armoured legs, not plain sticks (Derek's screenshot:
               long plain red rectangles, no knees, no shading). */}
@@ -1238,9 +1308,26 @@ export default function GuardianAvatar({
               <path d="M90 50 L110 50 L112 68 L100 78 L88 68 Z" fill={STEEL} stroke={STEEL_DARK} strokeWidth="2" opacity="0.95" />
               <path d="M90 50 L110 50 L111 60 L89 60 Z" fill={main} opacity="0.85" />
               <path d="M94 54 L92 66 M106 54 L108 66" stroke={STEEL_DARK} strokeWidth="1.5" opacity="0.6" strokeLinecap="round" />
-              <g className="guardian-gem">
-                <circle cx="100" cy="70" r="4" fill={gem} stroke="#fff" strokeWidth="1.5" />
-              </g>
+              {/* Chest gem GLOW (GLOW FIX, Derek Nov 23 2:55 PM):
+                  r18 radialGradient disc drawn AFTER the plate, so
+                  the plate can no longer cover it — it spills past
+                  the plate edges onto the torso/background. It
+                  pulses (.guardian-glow-pulse); the gem itself is
+                  static. The old plate gem had no glow disc at all. */}
+              <g className="guardian-glow-pulse"><circle cx="100" cy="70" r="18" fill={`url(#${id('glowGem')})`} /></g>
+              <circle cx="100" cy="70" r="4" fill={gem} stroke="#fff" strokeWidth="1.5" />
+            </g>
+          )}
+          {/* Chest gem for Ranger / Spellweaver (no plate): the flat
+              diamond with a white facet, drawn AFTER the torso so
+              nothing covers it, with the same r18 glow disc behind
+              it. Guardian already has the plate gem above, so it
+              does not get a second gem here. */}
+          {g.classId !== 'Guardian' && (
+            <g>
+              <g className="guardian-glow-pulse"><circle cx="100" cy="71" r="18" fill={`url(#${id('glowGem')})`} /></g>
+              <polygon points="100,62 109,71 100,80 91,71" fill={gem} stroke="#fff" strokeWidth="2" />
+              <polygon points="100,66 104,71 100,76 96,71" fill="#fff" opacity="0.55" />
             </g>
           )}
           {/* Hanging hair in front of the armour (Guardian only — the
@@ -1262,8 +1349,8 @@ export default function GuardianAvatar({
               <path d="M88 58 L112 58 L112 64 L88 64 Z" fill={equipTier} stroke="#fff" strokeWidth="1" opacity="0.95" />
               <circle cx="100" cy="61" r="3" fill="#fff" stroke={equipTier} strokeWidth="1.5" />
               {(equippedArmor.tier === 'Legendary' || equippedArmor.tier === 'Mythical') && (
-                <g className="guardian-gem">
-                  <circle cx="100" cy="70" r="12" fill={equipTier} opacity="0.35" />
+                <g className="guardian-glow-pulse">
+                  <circle cx="100" cy="70" r="20" fill={`url(#${id('glowTier')})`} />
                 </g>
               )}
               {equippedArmorKind === 'helm' && (
@@ -1304,8 +1391,8 @@ export default function GuardianAvatar({
           {equippedWeapon && equippedWeaponKind && (
             <g>
               {(equippedWeapon.tier === 'Legendary' || equippedWeapon.tier === 'Mythical') && (
-                <g className="guardian-gem">
-                  <circle cx={equippedWeaponKind === 'bow' || equippedWeaponKind === 'staff' || equippedWeaponKind === 'shield' || equippedWeaponKind === 'lasso' ? handRx + 12 : handLx} cy="70" r="14" fill={weaponTier ?? GOLD} opacity="0.3" />
+                <g className="guardian-glow-pulse">
+                  <circle cx={equippedWeaponKind === 'bow' || equippedWeaponKind === 'staff' || equippedWeaponKind === 'shield' || equippedWeaponKind === 'lasso' ? handRx + 12 : handLx} cy="70" r="20" fill={`url(#${id('glowTier')})`} />
                 </g>
               )}
               {equippedWeaponKind === 'sword' && (
@@ -1314,7 +1401,7 @@ export default function GuardianAvatar({
                   <rect x={handLx - 1} y="42" width="1.8" height="38" fill="#fff" opacity="0.7" />
                   <rect x={handLx - 10} y="82" width="20" height="6" rx="3" fill={weaponTier ?? GOLD} stroke={GOLD_DARK} strokeWidth="1.5" />
                   <rect x={handLx - 4.5} y="88" width="9" height="13" rx="3" fill={WOOD} />
-                  <circle cx={handLx} cy="101" r="6" fill={weaponTier ?? gem} opacity="0.4" />
+                  <g className="guardian-glow-pulse"><circle cx={handLx} cy="101" r="12" fill={`url(#${id('glowTier')})`} /></g>
                   <circle cx={handLx} cy="101" r="3.5" fill={weaponTier ?? gem} stroke="#fff" strokeWidth="1.5" />
                 </g>
               )}
@@ -1346,7 +1433,7 @@ export default function GuardianAvatar({
                   <line x1={handRx} y1="66" x2={handRx} y2="126" stroke={weaponTier ?? '#e8e2d4'} strokeWidth="2" />
                   <line x1={handRx} y1="90" x2={handRx + 24} y2="90" stroke={weaponTier ?? gem} strokeWidth="3.5" strokeLinecap="round" />
                   <polygon points={`${handRx + 24},90 ${handRx + 17},87 ${handRx + 17},93`} fill={STEEL_DARK} />
-                  <circle cx={handRx + 24} cy="90" r="6" fill={weaponTier ?? gem} opacity="0.45" />
+                  <g className="guardian-glow-pulse"><circle cx={handRx + 24} cy="90" r="12" fill={`url(#${id('glowTier')})`} /></g>
                   <polygon points={`${handRx + 2},90 ${handRx - 13},84 ${handRx - 13},96`} fill="#fff" opacity="0.9" />
                 </g>
               )}
@@ -1355,6 +1442,7 @@ export default function GuardianAvatar({
                 <g>
                   <path d={`M${handRx - 2} 66 L${handRx + 28} 66 L${handRx + 28} 86 Q${handRx + 13} 102 ${handRx - 2} 86 Z`} fill={STEEL} stroke={weaponTier ?? GOLD} strokeWidth="3" />
                   <path d={`M${handRx + 3} 71 L${handRx + 23} 71 L${handRx + 23} 85 Q${handRx + 13} 96 ${handRx + 3} 85 Z`} fill={main} opacity="0.9" />
+                  <g className="guardian-glow-pulse"><circle cx={handRx + 13} cy="81" r="14" fill={`url(#${id('glowTier')})`} /></g>
                   <circle cx={handRx + 13} cy="81" r="5.5" fill={weaponTier ?? gem} stroke="#fff" strokeWidth="1.5" />
                 </g>
               )}
@@ -1377,7 +1465,11 @@ export default function GuardianAvatar({
                   place instead. */}
               <path d={`M${handRx - 2} 66 L${handRx + 28} 66 L${handRx + 28} 86 Q${handRx + 13} 102 ${handRx - 2} 86 Z`} fill={STEEL} stroke={GOLD} strokeWidth="3" />
               <path d={`M${handRx + 3} 71 L${handRx + 23} 71 L${handRx + 23} 85 Q${handRx + 13} 96 ${handRx + 3} 85 Z`} fill={main} opacity="0.9" />
-              <circle cx={handRx + 13} cy="81" r="10" fill={gem} opacity="0.45" />
+              {/* Shield gem GLOW (GLOW FIX): the old r10 disc was the
+                  same colour as the gem, no gradient — a flat slightly
+                  larger blue disc. Now a r14 radialGradient glow,
+                  light centre fading out, pulsing. */}
+              <g className="guardian-glow-pulse"><circle cx={handRx + 13} cy="81" r="14" fill={`url(#${id('glowGem')})`} /></g>
               <circle cx={handRx + 13} cy="81" r="5.5" fill={gem} stroke="#fff" strokeWidth="1.5" />
               {!equippedWeapon && (
               <g transform={`rotate(-12 ${handLx} 68)`}>
@@ -1390,7 +1482,10 @@ export default function GuardianAvatar({
                     at preview size live (grip read as solid brown). */}
                 <rect x={handLx - 4.5} y="88" width="9" height="13" rx="3" fill={WOOD} />
                 <path d={`M${handLx - 4.5} 90 L${handLx + 4.5} 92 M${handLx - 4.5} 94 L${handLx + 4.5} 96 M${handLx - 4.5} 98 L${handLx + 4.5} 100`} stroke={WOOD_DARK} strokeWidth="2.5" />
-                <circle cx={handLx} cy="101" r="6" fill={gem} opacity="0.4" />
+                {/* Sword pommel gem GLOW (GLOW FIX): old r6 disc was
+                    the same colour as the gem, no gradient. Now a
+                    r12 radialGradient glow, pulsing, gem static. */}
+                <g className="guardian-glow-pulse"><circle cx={handLx} cy="101" r="12" fill={`url(#${id('glowGem')})`} /></g>
                 <circle cx={handLx} cy="101" r="3.5" fill={gem} stroke="#fff" strokeWidth="1.5" />
               </g>
               )}
@@ -1407,7 +1502,10 @@ export default function GuardianAvatar({
               <path d={`M${handRx - 3} 86 L${handRx + 3} 86 M${handRx - 3} 94 L${handRx + 3} 94`} stroke={WOOD_DARK} strokeWidth="2" />
               <line x1={handRx} y1="90" x2={handRx + 24} y2="90" stroke={gem} strokeWidth="3.5" strokeLinecap="round" />
               <polygon points={`${handRx + 24},90 ${handRx + 17},87 ${handRx + 17},93`} fill={STEEL_DARK} />
-              <circle cx={handRx + 24} cy="90" r="6" fill={gem} opacity="0.45" />
+              {/* Arrow tip GLOW (GLOW FIX): the old r6 disc was a
+                  ~3px pale-blue dot at 100px, not a glow. Now a r12
+                  radialGradient glow, pulsing, around the arrowhead. */}
+              <g className="guardian-glow-pulse"><circle cx={handRx + 24} cy="90" r="12" fill={`url(#${id('glowGem')})`} /></g>
               {/* Fletching, BIG — the old small white triangle was
                   invisible at preview size live. A large white feather
                   at the arrow tail, with a second smaller one. */}
@@ -1439,38 +1537,30 @@ export default function GuardianAvatar({
               2 units onto the sleeve end (cy88, r+0.5) so it is not
               detached at the waist either. Other classes keep the
               generic hands exactly as before (they passed live).
-              FINGERS v5 (Derek, Nov 23 2:11 PM: "make the fingers
-              visible"; live Nov 23 1:14 PM: hand IS on the shaft,
-              no gap, but NO finger bands — "smooth, featureless
-              pale oval", "pale blob resting on the shaft"):
-              DIAGNOSIS — the v4 finger lines were
-              shade(SKIN,-40) = #cfb186 on Light skin, only 2 units
-              wide (1px at 100px, 0.5px at 56px), drawn ON a pale
-              skin ellipse: tan-on-pale has almost no contrast, and
-              over the wood they were a single faint tan line that
-              antialiasing washed out at 4x/8x. Lines cannot read
-              at preview size; the fingers must be STRUCTURAL.
-              The fist is now three separate skin CAPSULES across
-              the shaft (y83.5-87, 88.5-92, 93.5-97), joined on the
-              palm side by a skin column, with 1.5-unit GAPS
-              between them where the dark WOOD shaft shows through
-              — wood-between-skin is the separation, and it reads
-              at 100px because the bands are 3.5 tall (~1.75px)
-              and the gaps are wood, not a thin line. Capsule
-              outlines use the light-cream halo colour on Brown/
-              Deep skin (same skinIsDark rule as the brows), dark
-              navy otherwise, so the outline reads on every tone. */}
+              FINGERS v6 (Derek, Nov 23 2:54 PM: "the fingers look
+              really big"): the v5 capsules were 11.5 wide x 3.5 tall
+              with a 5-wide palm column — bounding box 15 x 13.5,
+              ~1.4x a generic hand (10-11 across), and at live size
+              they read as a big block. V6 shrinks them ~30% in skin
+              area: capsules 9.5 wide x 3.0 tall (y84.7/89.0/93.3,
+              gaps 1.3, total height 11.6), palm column 4 wide x
+              11.6, bounding box 12 x 11.6 — proportionate to the
+              hand and the shaft, fingertips ending ~3 units short
+              of the shaft's far edge so wood shows on the right
+              and the grip still reads as wrapping. NOT back to
+              thin lines (v4, invisible) — the capsules stay
+              structural, just smaller. */}
           {isStaffGrip ? (
             <g>
               <circle cx={handLx} cy="88" r={handR + 0.5} fill={SKIN} stroke={dark} strokeWidth="1.5" />
               {/* Palm column (left / body side), joins the fingers. */}
-              <rect x={handRx - 9.5} y="83.5" width="5" height="13.5" rx="2" fill={SKIN} stroke={skinIsDark ? '#ffe3c2' : dark} strokeWidth="1.5" />
-              {/* Three finger capsules across the shaft; the 1.5-unit
+              <rect x={handRx - 10.5} y="84.7" width="4" height="11.6" rx="1.8" fill={SKIN} stroke={skinIsDark ? '#ffe3c2' : dark} strokeWidth="1.2" />
+              {/* Three finger capsules across the shaft; the 1.3-unit
                   gaps between them show the dark wood shaft, so the
                   fingers read as separate bands wrapping the wood. */}
-              <rect x={handRx - 6} y="83.5" width="11.5" height="3.5" rx="1.75" fill={SKIN} stroke={skinIsDark ? '#ffe3c2' : dark} strokeWidth="1.2" />
-              <rect x={handRx - 6} y="88.5" width="11.5" height="3.5" rx="1.75" fill={SKIN} stroke={skinIsDark ? '#ffe3c2' : dark} strokeWidth="1.2" />
-              <rect x={handRx - 6} y="93.5" width="11.5" height="3.5" rx="1.75" fill={SKIN} stroke={skinIsDark ? '#ffe3c2' : dark} strokeWidth="1.2" />
+              <rect x={handRx - 7.5} y="84.7" width="9.5" height="3" rx="1.5" fill={SKIN} stroke={skinIsDark ? '#ffe3c2' : dark} strokeWidth="1" />
+              <rect x={handRx - 7.5} y="89" width="9.5" height="3" rx="1.5" fill={SKIN} stroke={skinIsDark ? '#ffe3c2' : dark} strokeWidth="1" />
+              <rect x={handRx - 7.5} y="93.3" width="9.5" height="3" rx="1.5" fill={SKIN} stroke={skinIsDark ? '#ffe3c2' : dark} strokeWidth="1" />
             </g>
           ) : (
             <g>
