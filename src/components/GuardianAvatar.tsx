@@ -350,6 +350,12 @@ export default function GuardianAvatar({
   const handLx = isFemale ? 81 : 76;
   const handRx = isFemale ? 119 : 124;
   const handR = isFemale ? 5 : 5.5;
+  // Staff grip: the wizard staff is present exactly when the class
+  // is Spellweaver with no equipped weapon, or when the equipped
+  // weapon is a staff (any class). Only then does the right hand
+  // get the gripping-fist treatment in the hands block below.
+  const isStaffGrip =
+    (!equippedWeapon && g.classId === 'Spellweaver') || equippedWeaponKind === 'staff';
   // Wizard staff (Derek, Nov 23 7:32 AM: "Can the staff look more
   // like [a wizard] staff rather than a stick with a star?").
   // A proper wizard staff, not a straight stick with a star on top:
@@ -373,46 +379,54 @@ export default function GuardianAvatar({
   // sides, warm brown wood, pale blue/white orb, soft glow. If it
   // ever reads as horns or a trident, it has failed this rule.
   const wizardStaff = (orbFill: string, glowFill: string) => {
-    // BOLD wizard staff, v3 (Nov 23: live 7:50 AM, the v2 fork still
-    // FAILED — "narrow, no sky gap, orb wedged/perched").
-    // DIAGNOSIS (measured, not guessed): the v2 prong inner edge was
-    // only 2.5 units from the orb edge (inner x ox-11 vs orb ox-8.5),
-    // and the prong's 2-unit dark outline + the orb's 1-unit white
-    // stroke + the r12 glow disc (0.45) tinting the gap blue closed
-    // that 2.5 units completely at 100px (0.5px/unit = 1.25px, minus
-    // strokes = ~0). The old S-curve swung only 8 units and the
-    // knots were 4.5 units, so the shaft still read mostly vertical.
-    // V3 tried detached rounded lobes at ox+/-20; the 100px render
-    // showed them as two floating brown eggs beside the orb,
-    // disconnected from the shaft. So the fork is now CONTINUOUS
-    // curved arms from the knob, tips (ox-19,10)/(ox+19,11), arm
-    // inner edges ~ox+/-15 at orb height — ~4-6 units of sky after
-    // strokes, = 2-3px at 100px. Orb centre oy=28, r8.5, top
-    // y19.5 — 9.5 units BELOW the arm tips, so it sits DOWN between
-    // them, nestled, not perched. Shaft centreline swings 12-14
-    // units each way and passes through the hand (handRx,90).
+    // BOLD wizard staff, v4 (Nov 23: live 10:09 AM, fork v3 PASSED —
+    // gnarled shaft, wide rounded fork, orb nestled low, not demonic —
+    // but the HAND failed: "3-4px gap between the pale hand circle
+    // and the brown shaft, no fingers wrapping it", and the left sky
+    // gap was only a 1-2px sliver).
+    // HAND DIAGNOSIS (measured, not guessed): the generic hand sat
+    // at (handRx,90) but the shaft centreline at the grip is
+    // (handRx-2,90), and above the grip it bends LEFT (x109 at y64,
+    // x114 at y85 — bezier-sampled), so the hand's right half hung
+    // in empty air right of the shaft, and its thick dark-navy ring
+    // (1.5 units on a 5-unit circle) read at preview size as a dark
+    // separator between hand and wood. The fix is in the hands block
+    // below (fist centred ON the shaft centreline, thin outline,
+    // finger lines across the shaft), not in this function.
+    // LEFT-GAP DIAGNOSIS: the v3 arms' inner edges sat ~ox+/-13 at
+    // orb height, so after the orb's white stroke and the r10 glow
+    // disc tinting the gap, only ~2px of sky read at 100px on the
+    // left. V4 widens both arms (tips ox-23 / ox+22, controls
+    // ox-/+28) so ~7-8 units of sky show, and shrinks the glow disc
+    // to r9 so it tints less of the gap.
+    // FOOT DIAGNOSIS: the v3 lower segment bulged RIGHT to x125.7
+    // at y120 then came back LEFT to x117 at y146, reading live as
+    // a pronounced leftward hook at robe-hem level. V4 ends the
+    // shaft at (handRx+2,146) with a much smaller lower bend, so
+    // the foot plants straight down; the gnarl stays in the upper
+    // S-curve and the knots.
     const ox = handRx + 2;
     const oy = 28;
-    // Centreline: top (knob) -> bend LEFT -> grip -> bend RIGHT -> foot.
-    const shaftD = `M${handRx + 2} 40 C${handRx - 13} 55 ${handRx - 14} 72 ${handRx - 2} 90 C${handRx + 7} 108 ${handRx + 12} 126 ${handRx - 2} 146`;
+    // Centreline: top (knob) -> bend LEFT -> grip -> small bend RIGHT -> straight foot.
+    const shaftD = `M${handRx + 2} 40 C${handRx - 13} 55 ${handRx - 14} 72 ${handRx - 2} 90 C${handRx + 4} 108 ${handRx + 6} 126 ${handRx + 2} 146`;
     return (
       <g>
-        <g className="guardian-gem"><circle cx={ox} cy={oy} r="10" fill={glowFill} opacity="0.35" /></g>
+        <g className="guardian-gem"><circle cx={ox} cy={oy} r="9" fill={glowFill} opacity="0.3" /></g>
         {/* Gnarled shaft: dark outline stroke, then wood, so the bend
             has a visible edge at preview size. Width 14 -> 11.5. */}
         <path d={shaftD} fill="none" stroke={WOOD_DARK} strokeWidth="14" strokeLinecap="round" />
         <path d={shaftD} fill="none" stroke={WOOD} strokeWidth="11.5" strokeLinecap="round" />
         {/* Wood highlight following the bend, split at the grip. */}
-        <path d={`M${handRx - 3} 46 C${handRx - 12} 58 ${handRx - 12} 70 ${handRx - 6} 84 M${handRx + 2} 98 C${handRx + 6} 112 ${handRx + 8} 124 ${handRx} 142`} fill="none" stroke="#a8763e" strokeWidth="3" opacity="0.8" strokeLinecap="round" />
+        <path d={`M${handRx - 3} 46 C${handRx - 12} 58 ${handRx - 12} 70 ${handRx - 6} 84 M${handRx + 1} 98 C${handRx + 4} 112 ${handRx + 5} 124 ${handRx + 2} 142`} fill="none" stroke="#a8763e" strokeWidth="3" opacity="0.8" strokeLinecap="round" />
         {/* Knots: LARGE dark blobs with a light centre dot, on the bends. */}
         <ellipse cx={handRx - 11} cy="62" rx="5.5" ry="6.5" fill={WOOD_DARK} opacity="0.9" />
         <circle cx={handRx - 11} cy="62" r="2.2" fill="#a8763e" opacity="0.9" />
-        <ellipse cx={handRx + 9} cy="124" rx="5.5" ry="6.5" fill={WOOD_DARK} opacity="0.9" />
-        <circle cx={handRx + 9} cy="124" r="2.2" fill="#a8763e" opacity="0.9" />
+        <ellipse cx={handRx + 5} cy="124" rx="5.5" ry="6.5" fill={WOOD_DARK} opacity="0.9" />
+        <circle cx={handRx + 5} cy="124" r="2.2" fill="#a8763e" opacity="0.9" />
         {/* Bark lines: thick dark diagonals across the shaft. */}
-        <path d={`M${handRx - 13} 48 L${handRx - 2} 55 M${handRx - 1} 104 L${handRx + 10} 111 M${handRx - 8} 134 L${handRx + 3} 141`} fill="none" stroke={WOOD_DARK} strokeWidth="4" opacity="0.75" strokeLinecap="round" />
+        <path d={`M${handRx - 13} 48 L${handRx - 2} 55 M${handRx - 1} 104 L${handRx + 10} 111 M${handRx - 4} 134 L${handRx + 7} 141`} fill="none" stroke={WOOD_DARK} strokeWidth="4" opacity="0.75" strokeLinecap="round" />
         {/* Carved gold rings: thick bands across the shaft. */}
-        <path d={`M${handRx - 17} 76 L${handRx - 5} 76 M${handRx + 2} 112 L${handRx + 14} 112`} stroke={GOLD} strokeWidth="5" strokeLinecap="round" />
+        <path d={`M${handRx - 17} 76 L${handRx - 5} 76 M${handRx - 1} 112 L${handRx + 13} 112`} stroke={GOLD} strokeWidth="5" strokeLinecap="round" />
         {/* Forked crook: big rounded knob, then a wide wood cup under
             the orb. The cup is drawn BEFORE the orb, so the orb sits
             in it. */}
@@ -431,17 +445,15 @@ export default function GuardianAvatar({
             isolated blobs: each arm starts at the knob (ox,42) and
             curves up and out, then slightly back in, ending in a
             fully rounded tip — a tree-branch cup, NOT horns or a
-            trident: no points, no spikes, no isolated eggs. The
-            previous version used two detached ellipses; at 100px
-            they read as two floating brown eggs beside the orb,
-            disconnected from the shaft. Left tip (ox-19,10), right
-            tip (ox+19,11); arm inner edges sit ~ox+/-15 at orb
-            height, so ~4-6 units of sky show between each arm and
-            the orb after strokes. */}
-        <path d={`M${ox} 42 Q${ox - 24} 30 ${ox - 19} 10`} fill="none" stroke={WOOD_DARK} strokeWidth="10" strokeLinecap="round" />
-        <path d={`M${ox} 42 Q${ox + 24} 31 ${ox + 19} 11`} fill="none" stroke={WOOD_DARK} strokeWidth="10" strokeLinecap="round" />
-        <path d={`M${ox} 42 Q${ox - 24} 30 ${ox - 19} 10`} fill="none" stroke={WOOD} strokeWidth="7" strokeLinecap="round" />
-        <path d={`M${ox} 42 Q${ox + 24} 31 ${ox + 19} 11`} fill="none" stroke={WOOD} strokeWidth="7" strokeLinecap="round" />
+            trident: no points, no spikes, no isolated eggs. V4
+            widens both arms (tips ox-23 / ox+22, controls ox-/+28)
+            so ~7-8 units of sky show between each arm and the orb
+            at orb height (v3 was ~4.5 units and read live as a
+            1-2px sliver on the left). */}
+        <path d={`M${ox} 42 Q${ox - 28} 30 ${ox - 23} 10`} fill="none" stroke={WOOD_DARK} strokeWidth="10" strokeLinecap="round" />
+        <path d={`M${ox} 42 Q${ox + 27} 31 ${ox + 22} 11`} fill="none" stroke={WOOD_DARK} strokeWidth="10" strokeLinecap="round" />
+        <path d={`M${ox} 42 Q${ox - 28} 30 ${ox - 23} 10`} fill="none" stroke={WOOD} strokeWidth="7" strokeLinecap="round" />
+        <path d={`M${ox} 42 Q${ox + 27} 31 ${ox + 22} 11`} fill="none" stroke={WOOD} strokeWidth="7" strokeLinecap="round" />
       </g>
     );
   };
@@ -1403,10 +1415,42 @@ export default function GuardianAvatar({
               hand (class Guardian shield, or an equipped shield),
               the hand is BEHIND the shield and must NOT show on the
               shield face, so it is omitted here — see
-              shieldCoversRightHand above. */}
-          <circle cx={handLx} cy="90" r={handR} fill={SKIN} stroke={dark} strokeWidth="1.5" />
-          {!shieldCoversRightHand && (
-            <circle cx={handRx} cy="90" r={handR} fill={SKIN} stroke={dark} strokeWidth="1.5" />
+              shieldCoversRightHand above.
+              STAFF GRIP (Derek, Nov 23 11:26 AM: fix the hand grip;
+              live Nov 23 10:09 AM: "3-4px gap between the pale hand
+              circle and the brown shaft, no fingers wrapping it",
+              other hand also detached): the generic hand sat at
+              (handRx,90) while the shaft centreline at the grip is
+              (handRx-2,90) and bends LEFT above it, so the hand's
+              right half hung in air and its thick dark ring read as
+              a separator. In staff mode the right hand is a FIST
+              centred ON the shaft centreline at the grip (handRx-2,
+              90), wider than the shaft (rx7.5 vs shaft half-width
+              ~7), thin outline (1, not 1.5), with three finger
+              lines across the shaft in darkened skin, so it reads
+              as fingers wrapping the wood. The left hand moves up
+              2 units onto the sleeve end (cy88, r+0.5) so it is not
+              detached at the waist either. Other classes keep the
+              generic hands exactly as before (they passed live). */}
+          {isStaffGrip ? (
+            <g>
+              <circle cx={handLx} cy="88" r={handR + 0.5} fill={SKIN} stroke={dark} strokeWidth="1.5" />
+              <ellipse cx={handRx - 2} cy="90" rx="7.5" ry="6" fill={SKIN} stroke={dark} strokeWidth="1" />
+              <path
+                d={`M${handRx - 9} 86.5 Q${handRx - 2} 88 ${handRx + 5} 86.5 M${handRx - 9} 90 Q${handRx - 2} 91.5 ${handRx + 5} 90 M${handRx - 9} 93.5 Q${handRx - 2} 95 ${handRx + 5} 93.5`}
+                fill="none"
+                stroke={shade(SKIN, -40)}
+                strokeWidth="2"
+                strokeLinecap="round"
+              />
+            </g>
+          ) : (
+            <g>
+              <circle cx={handLx} cy="90" r={handR} fill={SKIN} stroke={dark} strokeWidth="1.5" />
+              {!shieldCoversRightHand && (
+                <circle cx={handRx} cy="90" r={handR} fill={SKIN} stroke={dark} strokeWidth="1.5" />
+              )}
+            </g>
           )}
         </g>
         </g>
