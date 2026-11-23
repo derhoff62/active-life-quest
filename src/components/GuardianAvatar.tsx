@@ -117,6 +117,12 @@ const WOOD_DARK = '#5b3a1e';
 const BOOT = '#3a2410';
 const HAIR_C = '#5b3a1e';
 const HAIR_L = '#8a6238';
+// Beard fill: DARKER than the hair cap (#5b3a1e) so it reads at 56px.
+// Derek, Nov 22 7:58 PM: "I can't see the facial hair well" — the v64
+// chin crescent was 15 wide, ~3 units thick at the centre, in the same
+// medium brown as the hair, and it vanished at preview size. Still brown,
+// not black, and still chin-only (see the beard block below).
+const BEARD_C = '#40260f';
 
 export default function GuardianAvatar({
   guardian,
@@ -836,11 +842,23 @@ export default function GuardianAvatar({
               mouth would sit 2 units from it and merge into a band
               at preview size, and lenses under the mouth were the
               band. Two short LIGHT texture lines only. Female never
-              has a beard. */}
+              has a beard. MORE VISIBLE (Derek, Nov 22 7:58 PM: "I can't
+              see the facial hair well"): the v64 crescent was 15 wide,
+              ~3 units thick at the centre, medium brown, two faint light
+              lines — it vanished at 56px. Now 18 wide (x91-109, still
+              narrower than the face, skin shows at both jaw corners),
+              ~5 units thick at the centre (top edge sags to y39.5, 5
+              units below the mouth, so the mouth stays clear; bottom
+              y44.5, only 2.5 below the chin, so it sits ON the chin and
+              never hangs into the collar like the old bib), DARKER brown
+              fill (#40260f), thin dark outline, and FOUR texture lines
+              (was two light ones) so the beard reads as hair, not a
+              solid block. Still NO mustache, NO sideburns, NO jaw lines.
+              Female never has a beard. */}
           {hasBeard && (
-            <g fill={HAIR_C}>
-              <path d="M92.5 37.5 Q91 42.5 100 43.5 Q109 42.5 107.5 37.5 Q104 40.5 100 40.5 Q96 40.5 92.5 37.5 Z" />
-              <path d="M97.5 41 L97.5 42.8 M102.5 41 L102.5 42.8" stroke={HAIR_L} strokeWidth="1.2" opacity="0.7" strokeLinecap="round" />
+            <g fill={BEARD_C}>
+              <path d="M91 37 Q89.5 43 100 44.5 Q110.5 43 109 37 Q105 39.5 100 39.5 Q95 39.5 91 37 Z" stroke="#2e1a08" strokeWidth="0.8" />
+              <path d="M95 40.5 L95 43.2 M98.5 40.5 L98.5 43.5 M101.5 40.5 L101.5 43.5 M105 40.5 L105 43.2" fill="none" stroke={HAIR_L} strokeWidth="1.6" opacity="0.9" strokeLinecap="round" />
             </g>
           )}
           {/* Crown, Level 10+, Guardian only (the hat is the Spellweaver's
