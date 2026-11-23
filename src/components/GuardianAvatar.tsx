@@ -1,11 +1,17 @@
-// GuardianAvatar: an epic, fantastical inline SVG drawing of the client's
-// guardian. No external images, no AI images, no new dependencies.
-// Anatomy: neck connects head to shoulders, torso overlaps the head, so the
-// head never floats. Inspiration: Lord of the Rings (cloaked ranger, sturdy
-// armor, journey feel), Eragon (dragon-scale trim, glowing dragon-egg gem),
-// Harry Potter (wizard robe and staff for Spellweaver), Elden Ring (golden
-// light, big sky, epic scale). NOT Dark Souls: nothing dark, grim, or
-// punishing. Warm and beginner-friendly throughout.
+// GuardianAvatar: flat cartoon fantasy illustration, in the style of Derek's
+// reference sheets (Nov 22, 2026): full-body characters, clean flat colours
+// with one shade and one highlight, person-like proportions, simple faces.
+// Image 1 (12 flat characters) is the readability lead at 56px; image 2
+// (9 cartoon characters) adds shading detail, stronger poses and richer
+// outfits at large size; image 3 adds outfit/weapon variety; image 4 adds
+// fierce cartoon bosses (blue dragon model); image 5 adds creatures and
+// flat weapons/shields/gear. Common ground: full-body, clean illustrated
+// cartoon, simple faces, NO white sclera, NO realistic nose/ears, NO
+// photorealism, NO uncanny realistic eyes (that was the creepy v49 face).
+// Derek Nov 22: "Things don't have to look friendly" — the guardian is a
+// warrior: determined/serious face, strong brows, firm mouth, not a smile.
+// Male has a stronger jaw, Female is serious too, not just soft. No
+// external images, no AI images, no new dependencies.
 import { useId } from 'react';
 import type { GuardianState } from '../lib/store';
 import {
@@ -26,7 +32,7 @@ const SIZES = { large: 180, medium: 120, small: 72 } as const;
 export type GuardianAvatarSize = keyof typeof SIZES;
 
 // Custom backgrounds: one scene per class, plus one per Journey land.
-// All pure SVG/CSS shapes and gradients, no external images.
+// All pure SVG flat shapes, no external images.
 export type GuardianScene = 'guardian' | 'ranger' | 'spellweaver' | 'forest' | 'shores' | 'peaks';
 
 const SCENE_LABEL: Record<GuardianScene, string> = {
@@ -61,6 +67,16 @@ function shade(hex: string, amount: number): string {
   return `#${((r << 16) | (g << 8) | b).toString(16).padStart(6, '0')}`;
 }
 
+// Flat cartoon palette: solid skin, solid steel, solid gold, solid wood.
+const SKIN = '#f7d9ae';
+const STEEL = '#b9c9d8';
+const STEEL_DARK = '#7d93a8';
+const GOLD = '#c9a227';
+const GOLD_DARK = '#8a6d00';
+const WOOD = '#7a4a21';
+const WOOD_DARK = '#5b3a1e';
+const BOOT = '#3a2410';
+
 export default function GuardianAvatar({
   guardian,
   level,
@@ -90,9 +106,8 @@ export default function GuardianAvatar({
   const scene: GuardianScene = background ?? CLASS_SCENE[g.classId] ?? 'guardian';
   // Male vs Female: clearly different silhouettes, not just hair length.
   // Male: broader shoulders, thicker arms, wider neck, strong jaw + neat beard.
-  // Female: slimmer shoulders and waist, narrower neck, softer jaw, long
-  // hair that falls past the shoulders, lashes and lips. Both strong,
-  // heroic, friendly, and fully clothed. Never sexualized.
+  // Female: slimmer shoulders and waist, narrower neck, softer jaw. Both
+  // serious, battle-ready, fully clothed. Never sexualized.
   const isFemale = g.look === 'Female';
   // Hair style, per look, with a safe default for old profiles that never
   // picked one. Build changes torso width only, a little either way.
@@ -107,138 +122,140 @@ export default function GuardianAvatar({
   const legName = partName(g.legColor);
   const capeName = partName(g.capeColor);
   const armMain = COLOR_HEX[armName];
-  const armLight = shade(armMain, 55);
   const armDark = shade(armMain, -45);
   const legMain = COLOR_HEX[legName];
   const legDark = shade(legMain, -45);
   const capeMain = COLOR_HEX[capeName];
   const capeDark = shade(capeMain, -45);
   const f = (n: number) => Math.round(n * 100) / 100;
+  // Person-like proportions (reference sheets): head ~1/6 of body height.
+  // Head centre y36 r15, shoulders y56, waist/belt y108, boots y180.
   const torsoD = isFemale
-    ? `M100 58 L${f(100 + 14 * bw)} 62 L${f(100 + 16 * bw)} 96 L${f(100 + 10 * bw)} 122 L${f(100 - 10 * bw)} 122 L${f(100 - 16 * bw)} 96 L${f(100 - 14 * bw)} 62 Z`
-    : `M100 58 L${f(100 + 22 * bw)} 62 L${f(100 + 24 * bw)} 98 L${f(100 + 18 * bw)} 122 L${f(100 - 18 * bw)} 122 L${f(100 - 24 * bw)} 98 L${f(100 - 22 * bw)} 62 Z`;
-  const beltW = (isFemale ? 28 : 36) * bw;
+    ? `M100 54 L${f(100 + 13 * bw)} 58 L${f(100 + 15 * bw)} 92 L${f(100 + 10 * bw)} 118 L${f(100 - 10 * bw)} 118 L${f(100 - 15 * bw)} 92 L${f(100 - 13 * bw)} 58 Z`
+    : `M100 54 L${f(100 + 21 * bw)} 58 L${f(100 + 23 * bw)} 94 L${f(100 + 17 * bw)} 118 L${f(100 - 17 * bw)} 118 L${f(100 - 23 * bw)} 94 L${f(100 - 21 * bw)} 58 Z`;
+  const beltW = (isFemale ? 26 : 34) * bw;
   const pauldronRx = (isFemale ? 9 : 13) * bw;
-  const pauldronDx = (isFemale ? 14 : 22) * bw;
+  const pauldronDx = (isFemale ? 13 : 21) * bw;
 
-  // Hair, drawn as layered locks with strand highlights, not a flat cap.
-  // Each style has its own silhouette so it reads at 72px too. Hair colour
-  // is a warm brown for every style; the shape is what tells them apart.
+  // Hair, flat with strand lines, not a flat cap. Each style has its own
+  // silhouette so it reads at 72px too. Hair colour is a warm brown for
+  // every style; the shape is what tells them apart. Head: centre (100,36),
+  // r15, top y21, sides x85/115.
   const HAIR_C = '#5b3a1e';
   const HAIR_L = '#8a6238';
   const hairArt = isFemale ? (
     <g>
       {/* Top cap, shared by every Female style */}
-      <path d="M83 44 Q81 24 100 24 Q119 24 117 44 Q112 30 100 30 Q88 30 83 44 Z" fill={HAIR_C} />
-      <path d="M100 25 Q94 26 90 30" fill="none" stroke={HAIR_L} strokeWidth="2.5" opacity="0.9" strokeLinecap="round" />
-      <path d="M100 25 Q106 26 110 30" fill="none" stroke={HAIR_L} strokeWidth="2.5" opacity="0.9" strokeLinecap="round" />
+      <path d="M85 40 Q83 21 100 21 Q117 21 115 40 Q110 27 100 27 Q90 27 85 40 Z" fill={HAIR_C} />
+      <path d="M100 22 Q94 23 90 27" fill="none" stroke={HAIR_L} strokeWidth="2.5" opacity="0.9" strokeLinecap="round" />
+      <path d="M100 22 Q106 23 110 27" fill="none" stroke={HAIR_L} strokeWidth="2.5" opacity="0.9" strokeLinecap="round" />
       {hair === 'Long' && (
         <g>
-          <path d="M82 40 Q76 66 80 102 Q84 110 89 104 Q88 74 87 44 Z" fill={HAIR_C} />
-          <path d="M118 40 Q124 66 120 102 Q116 110 111 104 Q112 74 113 44 Z" fill={HAIR_C} />
-          <path d="M84 52 Q82 72 84 92 M116 52 Q118 72 116 92" fill="none" stroke={HAIR_L} strokeWidth="2" opacity="0.7" strokeLinecap="round" />
+          <path d="M84 38 Q78 64 82 100 Q86 108 91 102 Q90 72 89 42 Z" fill={HAIR_C} />
+          <path d="M116 38 Q122 64 118 100 Q114 108 109 102 Q110 72 111 42 Z" fill={HAIR_C} />
+          <path d="M86 50 Q84 70 86 90 M114 50 Q116 70 114 90" fill="none" stroke={HAIR_L} strokeWidth="2" opacity="0.7" strokeLinecap="round" />
         </g>
       )}
       {hair === 'Ponytail' && (
         <g>
-          <path d="M116 40 Q124 72 119 112 Q113 116 111 106 Q114 72 112 44 Z" fill={HAIR_C} />
-          <circle cx="116" cy="56" r="4.5" fill={gem} stroke="#fff" strokeWidth="1" />
-          <path d="M84 46 Q82 64 84 84 Q88 88 90 82 Q89 62 89 46 Z" fill={HAIR_C} />
+          <path d="M114 38 Q122 70 117 108 Q111 112 109 102 Q112 70 110 42 Z" fill={HAIR_C} />
+          <circle cx="114" cy="52" r="4.5" fill={gem} stroke="#fff" strokeWidth="1" />
+          <path d="M86 44 Q84 60 86 80 Q90 84 92 78 Q91 60 91 44 Z" fill={HAIR_C} />
         </g>
       )}
       {hair === 'Bun' && (
         <g>
-          <circle cx="100" cy="18" r="10" fill={HAIR_C} />
-          <path d="M92 12 Q100 8 108 12" fill="none" stroke={HAIR_L} strokeWidth="2" opacity="0.8" strokeLinecap="round" />
-          <path d="M84 46 Q82 64 84 84 Q88 88 90 82 Q89 62 89 46 Z" fill={HAIR_C} />
-          <path d="M116 46 Q118 64 116 84 Q112 88 110 82 Q111 62 111 46 Z" fill={HAIR_C} />
+          <circle cx="100" cy="15" r="9" fill={HAIR_C} />
+          <path d="M93 10 Q100 6 107 10" fill="none" stroke={HAIR_L} strokeWidth="2" opacity="0.8" strokeLinecap="round" />
+          <path d="M86 44 Q84 60 86 80 Q90 84 92 78 Q91 60 91 44 Z" fill={HAIR_C} />
+          <path d="M114 44 Q116 60 114 80 Q110 84 108 78 Q109 60 109 44 Z" fill={HAIR_C} />
         </g>
       )}
       {hair === 'Curly' && (
         <g fill={HAIR_C}>
-          <circle cx="86" cy="30" r="6" />
-          <circle cx="95" cy="25" r="6.5" />
-          <circle cx="105" cy="25" r="6.5" />
-          <circle cx="114" cy="30" r="6" />
-          <circle cx="82" cy="40" r="5.5" />
-          <circle cx="118" cy="40" r="5.5" />
-          <circle cx="82" cy="58" r="5" />
-          <circle cx="118" cy="58" r="5" />
-          <circle cx="84" cy="76" r="4.5" />
-          <circle cx="116" cy="76" r="4.5" />
-          <path d="M90 27 Q95 24 100 27 M104 27 Q109 24 113 27" fill="none" stroke={HAIR_L} strokeWidth="1.8" strokeLinecap="round" />
+          <circle cx="87" cy="28" r="6" />
+          <circle cx="95" cy="23" r="6.5" />
+          <circle cx="105" cy="23" r="6.5" />
+          <circle cx="113" cy="28" r="6" />
+          <circle cx="82" cy="38" r="5.5" />
+          <circle cx="118" cy="38" r="5.5" />
+          <circle cx="82" cy="56" r="5" />
+          <circle cx="118" cy="56" r="5" />
+          <circle cx="84" cy="74" r="4.5" />
+          <circle cx="116" cy="74" r="4.5" />
+          <path d="M90 25 Q95 22 100 25 M104 25 Q109 22 113 25" fill="none" stroke={HAIR_L} strokeWidth="1.8" strokeLinecap="round" />
         </g>
       )}
       {hair === 'Braided' && (
         <g fill={HAIR_C}>
-          <path d="M84 46 Q82 64 84 84 Q88 88 90 82 Q89 62 89 46 Z" />
-          <circle cx="116" cy="52" r="5.5" />
-          <circle cx="113" cy="62" r="5.5" />
-          <circle cx="117" cy="72" r="5.5" />
-          <circle cx="113" cy="82" r="5.5" />
-          <circle cx="117" cy="92" r="5.5" />
-          <circle cx="114" cy="102" r="5" />
-          <circle cx="116" cy="50" r="3" fill={gem} stroke="#fff" strokeWidth="1" />
-          <circle cx="114" cy="106" r="3" fill={gem} stroke="#fff" strokeWidth="1" />
+          <path d="M86 44 Q84 60 86 80 Q90 84 92 78 Q91 60 91 44 Z" />
+          <circle cx="114" cy="50" r="5.5" />
+          <circle cx="111" cy="60" r="5.5" />
+          <circle cx="115" cy="70" r="5.5" />
+          <circle cx="111" cy="80" r="5.5" />
+          <circle cx="115" cy="90" r="5.5" />
+          <circle cx="112" cy="100" r="5" />
+          <circle cx="114" cy="48" r="3" fill={gem} stroke="#fff" strokeWidth="1" />
+          <circle cx="112" cy="104" r="3" fill={gem} stroke="#fff" strokeWidth="1" />
         </g>
       )}
       {hair === 'ShortBob' && (
         <g fill={HAIR_C}>
-          <path d="M84 42 Q81 56 85 60 Q89 62 90 57 Q88 48 89 42 Z" />
-          <path d="M116 42 Q119 56 115 60 Q111 62 110 57 Q112 48 111 42 Z" />
-          <path d="M86 52 Q88 58 90 56 M114 52 Q112 58 110 56" fill="none" stroke={HAIR_L} strokeWidth="1.8" strokeLinecap="round" />
+          <path d="M85 40 Q82 52 86 56 Q90 58 91 53 Q89 46 90 40 Z" />
+          <path d="M115 40 Q118 52 114 56 Q110 58 109 53 Q111 46 110 40 Z" />
+          <path d="M87 48 Q89 54 91 52 M113 48 Q111 54 109 52" fill="none" stroke={HAIR_L} strokeWidth="1.8" strokeLinecap="round" />
         </g>
       )}
       {hair === 'Topknot' && (
         <g fill={HAIR_C}>
-          <circle cx="100" cy="13" r="10" />
-          <path d="M93 9 Q100 5 107 9" fill="none" stroke={HAIR_L} strokeWidth="2" strokeLinecap="round" />
-          <path d="M92 20 Q100 17 108 20" fill="none" stroke={gem} strokeWidth="3" strokeLinecap="round" />
-          <path d="M84 46 Q82 60 84 74 Q88 78 90 72 Q89 58 89 46 Z" />
-          <path d="M116 46 Q118 60 116 74 Q112 78 110 72 Q111 58 111 46 Z" />
+          <circle cx="100" cy="11" r="9" />
+          <path d="M94 7 Q100 4 106 7" fill="none" stroke={HAIR_L} strokeWidth="2" strokeLinecap="round" />
+          <path d="M93 18 Q100 15 107 18" fill="none" stroke={gem} strokeWidth="3" strokeLinecap="round" />
+          <path d="M86 44 Q84 58 86 72 Q90 76 92 70 Q91 56 91 44 Z" />
+          <path d="M114 44 Q116 58 114 72 Q110 76 108 70 Q109 56 109 44 Z" />
         </g>
       )}
     </g>
   ) : hair === 'Bald' ? (
     <g>
-      <ellipse cx="100" cy="30" rx="10" ry="3" fill="#fff" opacity="0.18" />
+      <ellipse cx="100" cy="27" rx="9" ry="2.5" fill="#fff" opacity="0.2" />
     </g>
   ) : (
     <g>
       {hair === 'Buzz' ? (
-        <path d="M84 42 Q84 28 100 27 Q116 28 116 42 Q110 32 100 32 Q90 32 84 42 Z" fill={HAIR_C} />
+        <path d="M85 39 Q85 25 100 24 Q115 25 115 39 Q109 29 100 29 Q91 29 85 39 Z" fill={HAIR_C} />
       ) : (
         <>
-          <path d="M83 44 Q81 24 100 24 Q119 24 117 44 Q112 30 100 30 Q88 30 83 44 Z" fill={HAIR_C} />
-          <path d="M88 30 Q94 25 100 25 Q106 25 112 30" fill="none" stroke={HAIR_L} strokeWidth="2.5" opacity="0.8" />
-          <path d="M83 42 L84 50 L86 50 L86 42 Z" fill={HAIR_C} />
-          <path d="M117 42 L116 50 L114 50 L114 42 Z" fill={HAIR_C} />
+          <path d="M85 40 Q83 21 100 21 Q117 21 115 40 Q110 27 100 27 Q90 27 85 40 Z" fill={HAIR_C} />
+          <path d="M89 27 Q94 23 100 23 Q106 23 111 27" fill="none" stroke={HAIR_L} strokeWidth="2.5" opacity="0.8" />
+          <path d="M85 38 L86 46 L88 46 L88 38 Z" fill={HAIR_C} />
+          <path d="M115 38 L114 46 L112 46 L112 38 Z" fill={HAIR_C} />
         </>
       )}
       {hair === 'Curly' && (
         <g fill={HAIR_C}>
-          <circle cx="87" cy="30" r="5.5" />
-          <circle cx="95" cy="25" r="6" />
-          <circle cx="105" cy="25" r="6" />
-          <circle cx="113" cy="30" r="5.5" />
-          <circle cx="83" cy="40" r="5" />
-          <circle cx="117" cy="40" r="5" />
+          <circle cx="87" cy="28" r="5.5" />
+          <circle cx="95" cy="23" r="6" />
+          <circle cx="105" cy="23" r="6" />
+          <circle cx="113" cy="28" r="5.5" />
+          <circle cx="83" cy="38" r="5" />
+          <circle cx="117" cy="38" r="5" />
         </g>
       )}
       {hair === 'Long' && (
         <g fill={HAIR_C}>
-          <path d="M82 40 Q76 66 80 102 Q84 110 89 104 Q88 74 87 44 Z" />
-          <path d="M118 40 Q124 66 120 102 Q116 110 111 104 Q112 74 113 44 Z" />
-          <path d="M84 52 Q82 72 84 92 M116 52 Q118 72 116 92" fill="none" stroke={HAIR_L} strokeWidth="2" opacity="0.7" strokeLinecap="round" />
+          <path d="M84 38 Q78 64 82 100 Q86 108 91 102 Q90 72 89 42 Z" />
+          <path d="M116 38 Q122 64 118 100 Q114 108 109 102 Q110 72 111 42 Z" />
+          <path d="M86 50 Q84 70 86 90 M114 50 Q116 70 114 90" fill="none" stroke={HAIR_L} strokeWidth="2" opacity="0.7" strokeLinecap="round" />
         </g>
       )}
       {hair === 'ManBun' && (
         <g fill={HAIR_C}>
-          <circle cx="100" cy="15" r="8" />
-          <path d="M94 11 Q100 8 106 11" fill="none" stroke={HAIR_L} strokeWidth="2" strokeLinecap="round" />
-          <path d="M93 21 Q100 18 107 21" fill="none" stroke={gem} strokeWidth="2.5" strokeLinecap="round" />
-          <path d="M84 44 Q82 56 84 66 Q88 70 90 64 Q89 52 89 44 Z" />
-          <path d="M116 44 Q118 56 116 66 Q112 70 110 64 Q111 52 111 44 Z" />
+          <circle cx="100" cy="13" r="7.5" />
+          <path d="M95 9 Q100 6 105 9" fill="none" stroke={HAIR_L} strokeWidth="2" strokeLinecap="round" />
+          <path d="M94 19 Q100 16 106 19" fill="none" stroke={gem} strokeWidth="2.5" strokeLinecap="round" />
+          <path d="M85 42 Q83 54 85 64 Q89 68 91 62 Q90 50 90 42 Z" />
+          <path d="M115 42 Q117 54 115 64 Q111 68 109 62 Q110 50 110 42 Z" />
         </g>
       )}
     </g>
@@ -249,80 +266,79 @@ export default function GuardianAvatar({
   // poking above the hood. Buzz / Short / Bald show nothing extra.
   const hoodHair = (
     <g>
-      <path d="M78 44 Q76 24 100 24 Q124 24 122 44 L115 38 Q111 28 100 28 Q89 28 85 38 Z" fill={`url(#${id('cape')})`} stroke={dark} strokeWidth="2.5" />
-      <path d="M88 30 Q94 25 100 25" fill="none" stroke={light} strokeWidth="2" opacity="0.6" />
-      <path d="M83 42 Q87 46 92 48" fill="none" stroke={dark} strokeWidth="1.5" opacity="0.4" />
+      <path d="M80 40 Q78 21 100 21 Q122 21 120 40 L113 34 Q109 25 100 25 Q91 25 87 34 Z" fill={capeMain} stroke={dark} strokeWidth="2.5" />
+      <path d="M89 27 Q94 23 100 23" fill="none" stroke={light} strokeWidth="2" opacity="0.6" />
       {isFemale && hair === 'Long' && (
         <g fill={HAIR_C}>
-          <path d="M84 44 Q80 72 83 104 Q88 108 90 100 Q90 70 89 46 Z" />
-          <path d="M116 44 Q120 72 117 104 Q112 108 110 100 Q110 70 111 46 Z" />
+          <path d="M85 42 Q81 70 84 100 Q89 104 91 96 Q91 68 90 44 Z" />
+          <path d="M115 42 Q119 70 116 100 Q111 104 109 96 Q109 68 110 44 Z" />
         </g>
       )}
       {isFemale && hair === 'Ponytail' && (
         <g fill={HAIR_C}>
-          <path d="M116 44 Q122 74 118 110 Q112 114 110 104 Q112 72 111 46 Z" />
-          <circle cx="115" cy="58" r="4" fill={gem} stroke="#fff" strokeWidth="1" />
+          <path d="M114 42 Q120 72 116 106 Q110 110 108 100 Q110 70 109 44 Z" />
+          <circle cx="113" cy="54" r="4" fill={gem} stroke="#fff" strokeWidth="1" />
         </g>
       )}
       {isFemale && hair === 'Bun' && (
         <g fill={HAIR_C}>
-          <circle cx="100" cy="16" r="9" />
-          <path d="M84 44 Q82 66 84 88 Q88 92 90 86 Q89 64 89 46 Z" />
-          <path d="M116 44 Q118 66 116 88 Q112 92 110 86 Q111 64 111 46 Z" />
+          <circle cx="100" cy="14" r="8" />
+          <path d="M85 42 Q83 62 85 84 Q89 88 91 82 Q90 60 90 44 Z" />
+          <path d="M115 42 Q117 62 115 84 Q111 88 109 82 Q110 60 110 44 Z" />
         </g>
       )}
       {isFemale && hair === 'Curly' && (
         <g fill={HAIR_C}>
-          <circle cx="82" cy="58" r="5" />
-          <circle cx="118" cy="58" r="5" />
-          <circle cx="84" cy="76" r="4.5" />
-          <circle cx="116" cy="76" r="4.5" />
+          <circle cx="82" cy="56" r="5" />
+          <circle cx="118" cy="56" r="5" />
+          <circle cx="84" cy="74" r="4.5" />
+          <circle cx="116" cy="74" r="4.5" />
         </g>
       )}
       {isFemale && hair === 'Braided' && (
         <g fill={HAIR_C}>
-          <circle cx="116" cy="56" r="5.5" />
-          <circle cx="113" cy="66" r="5.5" />
-          <circle cx="117" cy="76" r="5.5" />
-          <circle cx="113" cy="86" r="5.5" />
-          <circle cx="116" cy="96" r="5" />
-          <circle cx="114" cy="100" r="3" fill={gem} stroke="#fff" strokeWidth="1" />
+          <circle cx="114" cy="54" r="5.5" />
+          <circle cx="111" cy="64" r="5.5" />
+          <circle cx="115" cy="74" r="5.5" />
+          <circle cx="111" cy="84" r="5.5" />
+          <circle cx="114" cy="94" r="5" />
+          <circle cx="112" cy="98" r="3" fill={gem} stroke="#fff" strokeWidth="1" />
         </g>
       )}
       {isFemale && hair === 'ShortBob' && (
         <g fill={HAIR_C}>
-          <path d="M84 44 Q81 54 85 58 Q89 60 90 55 Q88 48 89 44 Z" />
-          <path d="M116 44 Q119 54 115 58 Q111 60 110 55 Q112 48 111 44 Z" />
+          <path d="M85 42 Q82 52 86 56 Q90 58 91 53 Q89 46 90 42 Z" />
+          <path d="M115 42 Q118 52 114 56 Q110 58 109 53 Q111 46 110 42 Z" />
         </g>
       )}
       {isFemale && hair === 'Topknot' && (
         <g fill={HAIR_C}>
-          <circle cx="100" cy="14" r="9" />
-          <path d="M93 20 Q100 17 107 20" fill="none" stroke={gem} strokeWidth="2.5" strokeLinecap="round" />
+          <circle cx="100" cy="12" r="8" />
+          <path d="M94 18 Q100 15 106 18" fill="none" stroke={gem} strokeWidth="2.5" strokeLinecap="round" />
         </g>
       )}
       {!isFemale && hair === 'Curly' && (
         <g fill={HAIR_C}>
-          <circle cx="84" cy="42" r="4" />
-          <circle cx="116" cy="42" r="4" />
+          <circle cx="84" cy="40" r="4" />
+          <circle cx="116" cy="40" r="4" />
         </g>
       )}
       {!isFemale && hair === 'Long' && (
         <g fill={HAIR_C}>
-          <path d="M82 44 Q76 66 80 100 Q84 108 89 102 Q88 72 87 46 Z" />
-          <path d="M118 44 Q124 66 120 100 Q116 108 111 102 Q112 72 113 46 Z" />
+          <path d="M83 42 Q77 64 81 98 Q85 106 90 100 Q89 70 88 44 Z" />
+          <path d="M117 42 Q123 64 119 98 Q115 106 110 100 Q111 70 112 44 Z" />
         </g>
       )}
       {!isFemale && hair === 'ManBun' && (
         <g fill={HAIR_C}>
-          <circle cx="100" cy="15" r="8" />
-          <path d="M93 21 Q100 18 107 21" fill="none" stroke={gem} strokeWidth="2.5" strokeLinecap="round" />
+          <circle cx="100" cy="13" r="7.5" />
+          <path d="M94 19 Q100 16 106 19" fill="none" stroke={gem} strokeWidth="2.5" strokeLinecap="round" />
         </g>
       )}
     </g>
   );
 
-  // Background scene shapes, drawn behind the figure.
+  // Background scene shapes, flat, drawn behind the figure.
   const sceneArt = (
     <>
       {scene === 'guardian' && (
@@ -333,9 +349,9 @@ export default function GuardianAvatar({
           <rect x="148" y="88" width="42" height="12" fill="#6d7d8c" />
           <rect x="20" y="112" width="10" height="14" fill="#124571" opacity="0.7" />
           <rect x="158" y="112" width="10" height="14" fill="#124571" opacity="0.7" />
-          <rect x="18" y="70" width="3" height="22" fill="#5b3a1e" />
+          <rect x="18" y="70" width="3" height="22" fill={WOOD} />
           <polygon points="21,70 36,76 21,82" fill={main} />
-          <rect x="179" y="70" width="3" height="22" fill="#5b3a1e" />
+          <rect x="179" y="70" width="3" height="22" fill={WOOD} />
           <polygon points="182,70 167,76 182,82" fill={main} />
           <circle cx="100" cy="34" r="13" fill="#f2d878" opacity="0.9" />
           <rect x="0" y="168" width="200" height="32" fill="#b9a06a" opacity="0.55" />
@@ -350,19 +366,16 @@ export default function GuardianAvatar({
           <polygon points="146,136 158,102 170,136" fill="#2a9e5f" />
           <circle cx="46" cy="100" r="4" fill={gem} opacity="0.8" />
           <circle cx="158" cy="104" r="4" fill={gem} opacity="0.8" />
-          <circle cx="86" cy="60" r="3" fill={gemLight} className="guardian-sparkle" />
-          <circle cx="120" cy="48" r="2.5" fill={gemLight} className="guardian-sparkle" style={{ animationDelay: '0.9s' }} />
           <rect x="0" y="168" width="200" height="32" fill="#1e7a46" opacity="0.4" />
         </g>
       )}
       {scene === 'spellweaver' && (
         <g>
-          <circle cx="100" cy="102" r="88" fill="none" />
           {[
             [24, 28], [52, 16], [86, 24], [120, 14], [152, 26], [176, 44],
             [34, 62], [64, 44], [140, 40], [168, 76], [20, 100], [180, 110],
           ].map(([x, y], i) => (
-            <circle key={i} cx={x} cy={y} r={i % 3 === 0 ? 2.6 : 1.8} fill="#fff" className="guardian-sparkle" style={{ animationDelay: `${(i % 5) * 0.45}s` }} />
+            <circle key={i} cx={x} cy={y} r={i % 3 === 0 ? 2.6 : 1.8} fill="#fff" />
           ))}
           <circle cx="164" cy="34" r="15" fill="#f2d878" />
           <circle cx="158" cy="30" r="13" fill="#0b1e3a" opacity="0.85" />
@@ -394,6 +407,14 @@ export default function GuardianAvatar({
     </>
   );
 
+  // Flat scene background colour (no gradient wash, like the reference sheets).
+  const sceneBg =
+    scene === 'spellweaver' ? '#124571'
+    : scene === 'peaks' ? '#eef5fb'
+    : scene === 'shores' ? '#eef5fb'
+    : scene === 'ranger' || scene === 'forest' ? '#eef5fb'
+    : '#f6ecd0';
+
   return (
     <div className="guardian-wrap">
       <svg
@@ -407,119 +428,28 @@ export default function GuardianAvatar({
           <clipPath id={id('frame')}>
             <rect x="0" y="0" width="200" height="200" rx="18" />
           </clipPath>
-          <linearGradient id={id('bg')} x1="0" y1="0" x2="0" y2="1">
-            {scene === 'spellweaver' ? (
-              <>
-                <stop offset="0%" stopColor="#0b1e3a" />
-                <stop offset="100%" stopColor="#124571" />
-              </>
-            ) : scene === 'peaks' ? (
-              <>
-                <stop offset="0%" stopColor="#bcd6ea" />
-                <stop offset="100%" stopColor="#eef5fb" />
-              </>
-            ) : scene === 'shores' ? (
-              <>
-                <stop offset="0%" stopColor="#bfe3f5" />
-                <stop offset="100%" stopColor="#eef5fb" />
-              </>
-            ) : scene === 'ranger' || scene === 'forest' ? (
-              <>
-                <stop offset="0%" stopColor="#cfeeda" />
-                <stop offset="100%" stopColor="#eef5fb" />
-              </>
-            ) : (
-              <>
-                <stop offset="0%" stopColor="#dbe9f5" />
-                <stop offset="100%" stopColor="#f6ecd0" />
-              </>
-            )}
-          </linearGradient>
-          <radialGradient id={id('goldlight')} cx="50%" cy="45%" r="55%">
-            <stop offset="0%" stopColor="#f2d878" stopOpacity="0.7" />
-            <stop offset="60%" stopColor="#f2d878" stopOpacity="0.3" />
-            <stop offset="100%" stopColor="#f2d878" stopOpacity="0" />
-          </radialGradient>
-          <radialGradient id={id('aura')} cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stopColor={gem} stopOpacity="0.85" />
-            <stop offset="55%" stopColor={gem} stopOpacity="0.45" />
-            <stop offset="100%" stopColor={gem} stopOpacity="0" />
-          </radialGradient>
-          <linearGradient id={id('tunic')} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor={light} />
-            <stop offset="45%" stopColor={main} />
-            <stop offset="100%" stopColor={dark} />
-          </linearGradient>
-          <linearGradient id={id('cape')} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor={capeMain} />
-            <stop offset="100%" stopColor={capeDark} />
-          </linearGradient>
-          <linearGradient id={id('arms')} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor={armLight} />
-            <stop offset="45%" stopColor={armMain} />
-            <stop offset="100%" stopColor={armDark} />
-          </linearGradient>
-          <linearGradient id={id('legs')} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor={legMain} />
-            <stop offset="100%" stopColor={legDark} />
-          </linearGradient>
-          <linearGradient id={id('skin')} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#f7d9ae" />
-            <stop offset="100%" stopColor="#e8b478" />
-          </linearGradient>
-          <linearGradient id={id('gold')} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#f2d878" />
-            <stop offset="100%" stopColor="#a8840a" />
-          </linearGradient>
-          <linearGradient id={id('steel')} x1="0" y1="0" x2="1" y2="0">
-            <stop offset="0%" stopColor="#f4f8fc" />
-            <stop offset="50%" stopColor="#b9c9d8" />
-            <stop offset="100%" stopColor="#7d93a8" />
-          </linearGradient>
-          <radialGradient id={id('gem')} cx="35%" cy="30%" r="75%">
-            <stop offset="0%" stopColor={gemLight} />
-            <stop offset="55%" stopColor={gem} />
-            <stop offset="100%" stopColor={shade(gem, -45)} />
-          </radialGradient>
-          <filter id={id('glow')} x="-80%" y="-80%" width="260%" height="260%">
-            <feGaussianBlur stdDeviation="3.5" result="blur" />
-            <feMerge>
-              <feMergeNode in="blur" />
-              <feMergeNode in="SourceGraphic" />
-            </feMerge>
-          </filter>
         </defs>
 
-        {/* Custom background scene, clipped to the rounded frame */}
+        {/* Flat background scene, clipped to the rounded frame */}
         <g clipPath={`url(#${id('frame')})`}>
-          <rect x="0" y="0" width="200" height="200" fill={`url(#${id('bg')})`} />
+          <rect x="0" y="0" width="200" height="200" fill={sceneBg} />
           {sceneArt}
         </g>
-        {/* Elden Ring style golden light: a soft golden glow behind the
-            figure, like a big sky at dawn. Warm, never dark. */}
-        <circle className="guardian-aura" cx="100" cy="100" r="95" fill={`url(#${id('goldlight')})`} />
-        {/* Glowing aura behind the figure, plus a visible halo ring in the gem color.
-            A soft solid gem-colored glow blob sits behind the figure too, so
-            the glow reads clearly even on a light card, not just as a thin ring. */}
-        <circle className="guardian-aura" cx="100" cy="105" r="92" fill={`url(#${id('aura')})`} />
-        <circle cx="100" cy="105" r="58" fill={gem} opacity="0.3" filter={`url(#${id('glow')})`} />
-        <circle className="guardian-halo" cx="100" cy="105" r="80" fill="none" stroke={gem} strokeWidth="5" />
-        <circle className="guardian-halo" cx="100" cy="105" r="70" fill="none" stroke={gemLight} strokeWidth="2.5" opacity="0.7" style={{ animationDelay: '1.2s' }} />
-        {/* Ground shadow, shrinks as the figure bobs up */}
+        {/* Thin gold frame, the one epic touch kept: flat, clean, reads at any size */}
+        <rect x="2" y="2" width="196" height="196" rx="16" fill="none" stroke={GOLD} strokeWidth="3" opacity="0.8" />
+        {/* Ground shadow */}
         <ellipse className="guardian-shadow" cx="100" cy="188" rx="44" ry="6" fill="#124571" opacity="0.18" />
 
         <g className="guardian-bob">
-          {/* Cape with folds */}
+          {/* Cape with folds, flat */}
           {g.cape && (
             <g>
-              <path d="M100 62 L128 72 L124 148 Q100 156 76 148 L72 72 Z" fill={`url(#${id('cape')})`} opacity="0.96" />
-              <path d="M86 76 Q84 110 86 144" fill="none" stroke={dark} strokeWidth="2" opacity="0.5" />
-              <path d="M100 78 Q100 112 100 150" fill="none" stroke={dark} strokeWidth="2" opacity="0.4" />
-              <path d="M114 76 Q116 110 114 144" fill="none" stroke={dark} strokeWidth="2" opacity="0.5" />
-              <path d="M76 148 Q100 156 124 148" fill="none" stroke="#fff" strokeWidth="1.5" opacity="0.25" />
+              <path d="M100 58 L126 66 L122 140 Q100 148 78 140 L74 66 Z" fill={capeMain} opacity="0.96" />
+              <path d="M86 72 Q84 106 86 136" fill="none" stroke={capeDark} strokeWidth="2" opacity="0.6" />
+              <path d="M114 72 Q116 106 114 136" fill="none" stroke={capeDark} strokeWidth="2" opacity="0.6" />
             </g>
           )}
-          {/* Wings, Level 8+ : layered feathers */}
+          {/* Wings, Level 8+ : flat white feathers */}
           {showWings && (
             <g>
               <g fill="#ffffff" stroke={main} strokeWidth="2.5" opacity="0.95">
@@ -530,193 +460,182 @@ export default function GuardianAvatar({
                 <ellipse cx="66" cy="98" rx="7" ry="18" transform="rotate(-25 66 98)" />
                 <ellipse cx="134" cy="98" rx="7" ry="18" transform="rotate(25 134 98)" />
               </g>
-              <path d="M60 82 Q66 98 62 118 M140 82 Q134 98 138 118" fill="none" stroke={main} strokeWidth="1.5" opacity="0.5" />
             </g>
           )}
           {/* Neck: connects the head to the shoulders, so the head never floats.
               Drawn before the torso and head, so it fills the seam.
               Male neck is wider and thicker; female neck is narrower. */}
-          <rect x={isFemale ? 95 : 92} y="48" width={isFemale ? 10 : 16} height="20" rx="4" fill={`url(#${id('skin')})`} stroke={dark} strokeWidth="2" />
-          {/* Very light shadow under the chin, just enough to read as a neck.
-              Kept faint on purpose — the v49 version was darker and read as
-              a shadow face. */}
-          <ellipse cx="100" cy="52" rx="7" ry="2.5" fill="#d89a5f" opacity="0.2" />
+          <rect x={isFemale ? 95 : 92} y="47" width={isFemale ? 10 : 16} height="14" rx="4" fill={SKIN} stroke={dark} strokeWidth="2" />
           {/* Arms: male arms are thicker and more muscular; female arms slimmer. */}
           {isFemale ? (
             <>
-              <path d="M84 70 Q77 88 79 106 L84 105 Q83 88 88 74 Z" fill={`url(#${id('arms')})`} stroke={armDark} strokeWidth="2" />
-              <path d="M116 70 Q123 88 121 106 L116 105 Q117 88 112 74 Z" fill={`url(#${id('arms')})`} stroke={armDark} strokeWidth="2" />
+              <path d="M86 64 Q79 82 81 100 L86 99 Q85 82 90 68 Z" fill={armMain} stroke={armDark} strokeWidth="2" />
+              <path d="M114 64 Q121 82 119 100 L114 99 Q115 82 110 68 Z" fill={armMain} stroke={armDark} strokeWidth="2" />
             </>
           ) : (
             <>
-              <path d="M80 68 Q70 88 73 108 L82 107 Q81 88 88 73 Z" fill={`url(#${id('arms')})`} stroke={armDark} strokeWidth="2" />
-              <path d="M120 68 Q130 88 127 108 L118 107 Q119 88 112 73 Z" fill={`url(#${id('arms')})`} stroke={armDark} strokeWidth="2" />
-              {/* Muscular forearms: thicker upper arm shading */}
-              <path d="M74 88 Q72 98 74 106" fill="none" stroke={dark} strokeWidth="3" opacity="0.35" strokeLinecap="round" />
-              <path d="M126 88 Q128 98 126 106" fill="none" stroke={dark} strokeWidth="3" opacity="0.35" strokeLinecap="round" />
+              <path d="M82 62 Q72 82 75 102 L84 101 Q83 82 90 67 Z" fill={armMain} stroke={armDark} strokeWidth="2" />
+              <path d="M118 62 Q128 82 125 102 L116 101 Q117 82 110 67 Z" fill={armMain} stroke={armDark} strokeWidth="2" />
+              <path d="M76 82 Q74 92 76 100" fill="none" stroke={dark} strokeWidth="3" opacity="0.35" strokeLinecap="round" />
+              <path d="M124 82 Q126 92 124 100" fill="none" stroke={dark} strokeWidth="3" opacity="0.35" strokeLinecap="round" />
             </>
           )}
-          {/* Body: male has broad shoulders and a straight, muscular torso;
-              female has narrower shoulders, a slimmer waist, and a fitted
-              tunic. Top edge (y58) overlaps the bottom of the head (y59). */}
-          {isFemale ? (
-            <path d={torsoD} fill={`url(#${id('tunic')})`} stroke={dark} strokeWidth="2.5" />
-          ) : (
-            <path d={torsoD} fill={`url(#${id('tunic')})`} stroke={dark} strokeWidth="2.5" />
-          )}
-          <path d="M86 72 Q84 96 86 118 Q92 120 94 118 Q90 96 92 74 Z" fill="#fff" opacity="0.22" />
-          <path d="M114 72 Q116 96 114 118 Q108 120 106 118 Q110 96 108 74 Z" fill="#000" opacity="0.14" />
+          {/* Body: flat tunic in the main colour, one light strip on the left,
+              one dark strip on the right (reference image 2 shading). Top
+              edge (y54) overlaps the bottom of the head (y51). */}
+          <path d={torsoD} fill={main} stroke={dark} strokeWidth="2.5" />
+          <path d="M88 66 Q86 90 88 112 Q93 114 95 112 Q91 90 93 68 Z" fill="#fff" opacity="0.22" />
+          <path d="M112 66 Q114 90 112 112 Q107 114 105 112 Q109 90 107 68 Z" fill="#000" opacity="0.14" />
           {/* Belt */}
-          <rect x={100 - beltW / 2} y="110" width={beltW} height="9" rx="4.5" fill={`url(#${id('gold')})`} stroke="#8a6d00" strokeWidth="1.5" />
-          <rect x="94" y="111" width="12" height="7" rx="2" fill="#fffdf4" stroke="#8a6d00" strokeWidth="1.5" />
-          {/* Glowing gem on chest */}
-          <g className="guardian-gem" filter={`url(#${id('glow')})`}>
-            <polygon points="100,80 109,89 100,100 91,89" fill={`url(#${id('gem')})`} stroke="#fff" strokeWidth="2" />
-            <polygon points="100,85 104,89 100,94 96,89" fill="#fff" opacity="0.55" />
+          <rect x={100 - beltW / 2} y="106" width={beltW} height="9" rx="4.5" fill={GOLD} stroke={GOLD_DARK} strokeWidth="1.5" />
+          <rect x="94" y="107" width="12" height="7" rx="2" fill="#fffdf4" stroke={GOLD_DARK} strokeWidth="1.5" />
+          {/* Glowing gem on chest: flat diamond with a white facet */}
+          <g className="guardian-gem">
+            <polygon points="100,76 109,85 100,96 91,85" fill={gem} stroke="#fff" strokeWidth="2" />
+            <polygon points="100,81 104,85 100,90 96,85" fill="#fff" opacity="0.55" />
           </g>
           {/* Hands */}
-          <circle cx={isFemale ? 79 : 73} cy="108" r={isFemale ? 4.5 : 5.5} fill={`url(#${id('skin')})`} stroke={dark} strokeWidth="1.5" />
-          <circle cx={isFemale ? 121 : 127} cy="108" r={isFemale ? 4.5 : 5.5} fill={`url(#${id('skin')})`} stroke={dark} strokeWidth="1.5" />
-          {/* LOTR style shoulder armor and a cloak clasp at the neck, so the
-              shoulders, neck, and head read as one connected figure.
-              Male pauldrons are bigger and broader; female are smaller. */}
-          <ellipse cx={100 - pauldronDx} cy="68" rx={pauldronRx} ry={isFemale ? 6 : 8} fill={`url(#${id('steel')})`} stroke={dark} strokeWidth="2" />
-          <ellipse cx={100 + pauldronDx} cy="68" rx={pauldronRx} ry={isFemale ? 6 : 8} fill={`url(#${id('steel')})`} stroke={dark} strokeWidth="2" />
-          <circle cx="100" cy="64" r="5" fill={`url(#${id('gold')})`} stroke="#8a6d00" strokeWidth="1.5" />
-          <circle cx="100" cy="64" r="2.5" fill={gem} stroke="#fff" strokeWidth="1" />
-          {/* Head: male has a squarer, stronger jaw; female a softer, rounder face.
-              Same size, different jaw shading so the difference reads at 72px too. */}
-          <circle cx="100" cy="42" r="17" fill={`url(#${id('skin')})`} stroke={dark} strokeWidth="2.5" />
-          {!isFemale && (
-            <g stroke={dark} strokeWidth="1.5" opacity="0.35" fill="none" strokeLinecap="round">
-              <path d="M86 48 L90 56" />
-              <path d="M114 48 L110 56" />
+          <circle cx={isFemale ? 81 : 75} cy="102" r={isFemale ? 4.5 : 5.5} fill={SKIN} stroke={dark} strokeWidth="1.5" />
+          <circle cx={isFemale ? 119 : 125} cy="102" r={isFemale ? 4.5 : 5.5} fill={SKIN} stroke={dark} strokeWidth="1.5" />
+          {/* Guardian shoulder armor: big steel pauldrons, Guardian only.
+              Ranger and Spellweaver get no pauldrons, so the classes read
+              apart at a glance. */}
+          {g.classId === 'Guardian' && (
+            <g>
+              <ellipse cx={100 - pauldronDx} cy="64" rx={pauldronRx} ry={isFemale ? 6 : 8} fill={STEEL} stroke={dark} strokeWidth="2" />
+              <ellipse cx={100 + pauldronDx} cy="64" rx={pauldronRx} ry={isFemale ? 6 : 8} fill={STEEL} stroke={dark} strokeWidth="2" />
+              <circle cx={100 - pauldronDx} cy="64" r="2.5" fill={gem} />
+              <circle cx={100 + pauldronDx} cy="64" r="2.5" fill={gem} />
             </g>
           )}
-          <ellipse cx="89" cy="50" rx="3.5" ry="2.2" fill="#e88a7a" opacity={isFemale ? 0.5 : 0.2} />
-          <ellipse cx="111" cy="50" rx="3.5" ry="2.2" fill="#e88a7a" opacity={isFemale ? 0.5 : 0.2} />
-          {/* Hair: Ranger hood for Ranger, else the picked hair style. */}
-          {g.classId === 'Ranger' ? hoodHair : hairArt}
+          {/* Cloak clasp at the neck, so shoulders, neck, and head read as
+              one connected figure. */}
+          <circle cx="100" cy="60" r="5" fill={GOLD} stroke={GOLD_DARK} strokeWidth="1.5" />
+          <circle cx="100" cy="60" r="2.5" fill={gem} stroke="#fff" strokeWidth="1" />
+          {/* Head: flat skin, r15 at (100,36). Male has a squarer, stronger
+              jaw (jaw lines); female a softer, rounder face. Same size, so
+              the difference reads at 72px too. */}
+          <circle cx="100" cy="36" r="15" fill={SKIN} stroke={dark} strokeWidth="2.5" />
+          {!isFemale && (
+            <g stroke={dark} strokeWidth="1.5" opacity="0.35" fill="none" strokeLinecap="round">
+              <path d="M87 42 L91 49" />
+              <path d="M113 42 L109 49" />
+            </g>
+          )}
+          {/* Hair: Ranger hood for Ranger, wizard hat for Spellweaver, else
+              the picked hair style. */}
+          {g.classId === 'Ranger' ? hoodHair : g.classId === 'Spellweaver' ? (
+            <g>
+              <ellipse cx="100" cy="24" rx="27" ry="5" fill={main} stroke={dark} strokeWidth="2" />
+              <path d="M78 24 Q100 -2 122 24 Z" fill={main} stroke={dark} strokeWidth="2" />
+              <path d="M84 18 Q100 8 116 18" fill="none" stroke={light} strokeWidth="2" opacity="0.7" />
+              <circle cx="100" cy="20" r="3" fill={gem} stroke="#fff" strokeWidth="1" />
+            </g>
+          ) : hairArt}
           {/* Beard: only when the picked hair style has one (Short + beard,
               Bald, or Long for Male). Short, Buzz, Curly, and Man bun are
-              clean-shaven. Female has no beard. */}
+              clean-shaven. Female has no beard. Drawn before the face, so
+              the firm mouth reads over it. */}
           {hasBeard && (
-            <g fill="#5b3a1e">
-              <path d="M85 46 Q84 60 100 62 Q116 60 115 46 L111 50 Q109 57 100 58 Q91 57 89 50 Z" />
-              <path d="M92 51 Q96 49 100 51 Q104 49 108 51 Q104 54 100 54 Q96 54 92 51 Z" />
+            <g fill={HAIR_C}>
+              <path d="M86 42 Q85 54 100 56 Q115 54 114 42 L110 46 Q108 52 100 53 Q92 52 90 46 Z" />
+              <path d="M92 46 Q96 44 100 46 Q104 44 108 46 Q104 49 100 49 Q96 49 92 46 Z" />
             </g>
           )}
           {/* Crown, Level 10+ */}
           {showCrown && (
             <g>
-              <polygon points="84,26 90,12 96,22 100,10 104,22 110,12 116,26 116,32 84,32" fill={`url(#${id('gold')})`} stroke="#8a6d00" strokeWidth="2" />
-              <circle cx="100" cy="26" r="2.6" fill={gem} stroke="#fff" strokeWidth="1.5" />
-              <circle cx="90" cy="26" r="2" fill={gem} stroke="#fff" strokeWidth="1" />
-              <circle cx="110" cy="26" r="2" fill={gem} stroke="#fff" strokeWidth="1" />
+              <polygon points="86,22 91,10 96,19 100,8 104,19 109,10 114,22 114,27 86,27" fill={GOLD} stroke={GOLD_DARK} strokeWidth="2" />
+              <circle cx="100" cy="22" r="2.6" fill={gem} stroke="#fff" strokeWidth="1.5" />
+              <circle cx="91" cy="22" r="2" fill={gem} stroke="#fff" strokeWidth="1" />
+              <circle cx="109" cy="22" r="2" fill={gem} stroke="#fff" strokeWidth="1" />
             </g>
           )}
-          {/* Face: middle ground between the v48 simple dots and the v49
-              realistic face, which read as creepy. Friendly and illustrated,
-              not realistic, not uncanny: soft brown iris ring + dark pupil +
-              one tiny highlight dot, NO white eyeball. A very soft, short
-              nose line, no nostril dots, no 3D nose. No ears. A soft, simple
-              smile. Female has arched brows, lashes, and pink lips; male has
-              thick straight brows. Brows match the hair colour. */}
+          {/* Face: determined warrior, like the reference sheets. Small dark
+              dot eyes (NO white sclera, NO iris ring, NO highlight — the
+              v49 realistic eyes were the creepy part). Strong brows angled
+              down toward the centre. A firm straight mouth, not a smile.
+              NO nose, NO ears, NO blush. Female is serious too, with
+              slimmer brows; male brows are thick. */}
           {isFemale ? (
             <g>
-              <path d="M87 37 Q91 34 95 37 M105 37 Q109 34 113 37" fill="none" stroke="#5b3a1e" strokeWidth="1.5" strokeLinecap="round" />
-              <circle cx="91" cy="44" r="2.8" fill="#4a3220" />
-              <circle cx="109" cy="44" r="2.8" fill="#4a3220" />
-              <circle cx="91" cy="44" r="1.4" fill="#1c2b3a" />
-              <circle cx="109" cy="44" r="1.4" fill="#1c2b3a" />
-              <circle cx="92" cy="43" r="0.6" fill="#fff" />
-              <circle cx="110" cy="43" r="0.6" fill="#fff" />
-              <path d="M88 42 L85 40 M112 42 L115 40" stroke="#1c2b3a" strokeWidth="1.2" strokeLinecap="round" />
-              <path d="M100 45 L100 49 Q100 50 99 50" fill="none" stroke="#c98a5a" strokeWidth="1.2" opacity="0.6" strokeLinecap="round" />
-              <path d="M94 54 Q100 57 106 54" fill="none" stroke="#c25a6b" strokeWidth="2" strokeLinecap="round" />
+              <path d="M87 32 L95 34 M105 34 L113 32" fill="none" stroke={HAIR_C} strokeWidth="1.8" strokeLinecap="round" />
+              <circle cx="91" cy="40" r="2.2" fill="#1c2b3a" />
+              <circle cx="109" cy="40" r="2.2" fill="#1c2b3a" />
+              <path d="M94 49 L106 49" fill="none" stroke="#1c2b3a" strokeWidth="2.2" strokeLinecap="round" />
             </g>
           ) : (
             <g>
-              <path d="M86 38 L95 37 M105 37 L114 38" fill="none" stroke="#5b3a1e" strokeWidth="2.5" strokeLinecap="round" />
-              <circle cx="91" cy="44" r="2.8" fill="#4a3220" />
-              <circle cx="109" cy="44" r="2.8" fill="#4a3220" />
-              <circle cx="91" cy="44" r="1.4" fill="#1c2b3a" />
-              <circle cx="109" cy="44" r="1.4" fill="#1c2b3a" />
-              <circle cx="92" cy="43" r="0.6" fill="#fff" />
-              <circle cx="110" cy="43" r="0.6" fill="#fff" />
-              <path d="M100 45 L100 49 Q100 50 99 50" fill="none" stroke="#c98a5a" strokeWidth="1.2" opacity="0.6" strokeLinecap="round" />
-              <path d="M94 54 Q100 57 106 54" fill="none" stroke="#1c2b3a" strokeWidth="2.5" strokeLinecap="round" />
+              <path d="M86 31 L95 34 M105 34 L114 31" fill="none" stroke={HAIR_C} strokeWidth="2.5" strokeLinecap="round" />
+              <circle cx="91" cy="40" r="2.2" fill="#1c2b3a" />
+              <circle cx="109" cy="40" r="2.2" fill="#1c2b3a" />
+              <path d="M94 49 L106 49" fill="none" stroke="#1c2b3a" strokeWidth="2.5" strokeLinecap="round" />
             </g>
           )}
-          {/* Class weapon */}
+          {/* Class weapon, flat like reference image 5: a distinct item at a glance */}
           {g.classId === 'Guardian' && (
             <g>
-              <path d="M36 84 L60 84 L60 106 Q48 118 36 106 Z" fill={`url(#${id('steel')})`} stroke={`url(#${id('gold')})`} strokeWidth="3" />
-              <path d="M41 89 L55 89 L55 104 Q48 112 41 104 Z" fill={main} opacity="0.85" />
-              <g className="guardian-gem" filter={`url(#${id('glow')})`}>
-                <circle cx="48" cy="97" r="5.5" fill={`url(#${id('gem')})`} stroke="#fff" strokeWidth="1.5" />
+              {/* Shield, left hand: flat, gold rim, main-colour panel, gem centre */}
+              <path d="M34 80 L62 80 L62 100 Q48 114 34 100 Z" fill={STEEL} stroke={GOLD} strokeWidth="3" />
+              <path d="M39 85 L57 85 L57 99 Q48 108 39 99 Z" fill={main} opacity="0.9" />
+              <circle cx="48" cy="95" r="5.5" fill={gem} stroke="#fff" strokeWidth="1.5" />
+              {/* Sword, right hand: flat blade, gold crossguard, brown grip */}
+              <g transform="rotate(18 152 82)">
+                <rect x="149" y="50" width="6" height="48" rx="3" fill={STEEL} stroke={STEEL_DARK} strokeWidth="1.5" />
+                <rect x="151" y="52" width="1.8" height="42" fill="#fff" opacity="0.7" />
+                <rect x="142" y="96" width="20" height="6" rx="3" fill={GOLD} stroke={GOLD_DARK} strokeWidth="1.5" />
+                <rect x="148" y="102" width="8" height="11" rx="3" fill={WOOD} />
               </g>
-              <g transform="rotate(18 150 84)">
-                <rect x="147" y="52" width="6" height="48" rx="3" fill={`url(#${id('steel')})`} stroke="#5b6b7a" strokeWidth="1.5" />
-                <rect x="149" y="54" width="1.8" height="42" fill="#fff" opacity="0.7" />
-                <rect x="140" y="98" width="20" height="6" rx="3" fill={`url(#${id('gold')})`} stroke="#8a6d00" strokeWidth="1.5" />
-                <rect x="146" y="104" width="8" height="11" rx="3" fill="#5b3a1e" />
-              </g>
+              {/* Steel chest plate over the tunic, gem trim */}
+              <path d="M86 60 L114 60 L117 88 L100 96 L83 88 Z" fill={STEEL} stroke={STEEL_DARK} strokeWidth="2" opacity="0.95" />
+              <path d="M86 60 L114 60 L116 74 L84 74 Z" fill={main} opacity="0.85" />
+              <circle cx="100" cy="84" r="4" fill={gem} stroke="#fff" strokeWidth="1.5" />
             </g>
           )}
           {g.classId === 'Ranger' && (
             <g>
-              <path d="M146 62 Q172 88 146 116" fill="none" stroke="#7a4a21" strokeWidth="4.5" strokeLinecap="round" />
-              <path d="M146 62 Q168 88 146 116" fill="none" stroke="#a8763e" strokeWidth="2" strokeLinecap="round" />
-              <line x1="146" y1="62" x2="146" y2="116" stroke="#e8e2d4" strokeWidth="1.5" />
-              <line x1="146" y1="88" x2="126" y2="88" stroke={gem} strokeWidth="2.5" strokeLinecap="round" />
-              <polygon points="126,88 133,85 133,91" fill="#5b6b7a" />
-              <rect x="40" y="84" width="15" height="36" rx="7.5" fill="#5b3a1e" stroke="#3a2410" strokeWidth="1.5" />
-              <line x1="45" y1="82" x2="45" y2="74" stroke="#e8e2d4" strokeWidth="2" />
-              <line x1="50" y1="82" x2="50" y2="72" stroke="#e8e2d4" strokeWidth="2" />
+              {/* Bow, right hand, flat brown arc with string and arrow */}
+              <path d="M146 60 Q172 84 146 112" fill="none" stroke={WOOD} strokeWidth="4.5" strokeLinecap="round" />
+              <path d="M146 60 Q168 84 146 112" fill="none" stroke="#a8763e" strokeWidth="2" strokeLinecap="round" />
+              <line x1="146" y1="60" x2="146" y2="112" stroke="#e8e2d4" strokeWidth="1.5" />
+              <line x1="146" y1="84" x2="126" y2="84" stroke={gem} strokeWidth="2.5" strokeLinecap="round" />
+              <polygon points="126,84 133,81 133,87" fill={STEEL_DARK} />
+              {/* Quiver on the back, left side */}
+              <rect x="40" y="82" width="15" height="36" rx="7.5" fill={WOOD} stroke={WOOD_DARK} strokeWidth="1.5" />
+              <line x1="45" y1="80" x2="45" y2="72" stroke="#e8e2d4" strokeWidth="2" />
+              <line x1="50" y1="80" x2="50" y2="70" stroke="#e8e2d4" strokeWidth="2" />
             </g>
           )}
           {g.classId === 'Spellweaver' && (
             <g>
-              <rect x="148" y="44" width="6" height="118" rx="3" fill="#5b3a1e" stroke="#3a2410" strokeWidth="1.5" />
-              <rect x="150" y="46" width="2" height="112" fill="#a8763e" opacity="0.7" />
-              <g className="guardian-gem" filter={`url(#${id('glow')})`}>
-                <polygon
-                  points="151,20 155,32 167,32 158,40 162,52 151,45 140,52 144,40 135,32 147,32"
-                  fill={`url(#${id('gem')})`}
-                  stroke="#fff"
-                  strokeWidth="2"
-                />
-              </g>
-              <circle className="guardian-sparkle" cx="132" cy="58" r="3" fill={gemLight} />
-              <circle className="guardian-sparkle" style={{ animationDelay: '0.7s' }} cx="126" cy="76" r="2.2" fill={gem} />
-              <circle className="guardian-sparkle" style={{ animationDelay: '1.3s' }} cx="136" cy="90" r="1.8" fill={gemLight} />
+              {/* Staff, right hand: flat brown shaft, star gem on top */}
+              <rect x="148" y="42" width="6" height="116" rx="3" fill={WOOD} stroke={WOOD_DARK} strokeWidth="1.5" />
+              <rect x="150" y="44" width="2" height="110" fill="#a8763e" opacity="0.7" />
+              <polygon
+                points="151,18 155,30 167,30 158,38 162,50 151,43 140,50 144,38 135,30 147,30"
+                fill={gem} stroke="#fff" strokeWidth="2"
+              />
+              <polygon points="151,26 154,32 151,38 148,32" fill="#fff" opacity="0.5" />
+              <circle cx="132" cy="56" r="3" fill={gemLight} />
+              <circle cx="126" cy="74" r="2.2" fill={gem} />
+              <circle cx="136" cy="88" r="1.8" fill={gemLight} />
             </g>
           )}
           {/* Legs: male legs thicker, female slimmer, both with boots */}
-          <path d={isFemale ? "M89 122 L88 178 L95 178 L95 122 Z" : "M87 122 L86 178 L97 178 L97 122 Z"} fill={`url(#${id('legs')})`} />
-          <path d={isFemale ? "M105 122 L105 178 L112 178 L111 122 Z" : "M103 122 L103 178 L114 178 L113 122 Z"} fill={`url(#${id('legs')})`} />
-          <ellipse cx="91" cy="182" rx="9" ry="4.5" fill="#3a2410" />
-          <ellipse cx="109" cy="182" rx="9" ry="4.5" fill="#3a2410" />
-          <ellipse cx="88" cy="180" rx="4" ry="1.6" fill="#a8763e" opacity="0.6" />
-          <ellipse cx="106" cy="180" rx="4" ry="1.6" fill="#a8763e" opacity="0.6" />
-          {/* Spellweaver wizard robe (Harry Potter / Eragon): flows from the
-              waist to the ankles over the legs, boots peeking out below. */}
+          <path d={isFemale ? "M89 118 L88 174 L95 174 L95 118 Z" : "M87 118 L86 174 L97 174 L97 118 Z"} fill={legMain} stroke={legDark} strokeWidth="1.5" />
+          <path d={isFemale ? "M105 118 L105 174 L112 174 L111 118 Z" : "M103 118 L103 174 L114 174 L113 118 Z"} fill={legMain} stroke={legDark} strokeWidth="1.5" />
+          <ellipse cx="91" cy="178" rx="9" ry="4.5" fill={BOOT} />
+          <ellipse cx="109" cy="178" rx="9" ry="4.5" fill={BOOT} />
+          <ellipse cx="88" cy="176" rx="4" ry="1.6" fill="#a8763e" opacity="0.6" />
+          <ellipse cx="106" cy="176" rx="4" ry="1.6" fill="#a8763e" opacity="0.6" />
+          {/* Spellweaver wizard robe: flows from the waist to the ankles over
+              the legs, boots peeking out below. Flat, with fold lines. */}
           {g.classId === 'Spellweaver' && (
             <g>
-              <path d="M84 118 L116 118 L128 166 Q100 176 72 166 Z" fill={`url(#${id('tunic')})`} stroke={dark} strokeWidth="2.5" />
-              <path d="M92 124 Q90 146 92 164 M100 126 Q100 146 100 168 M108 124 Q110 146 108 164" fill="none" stroke={dark} strokeWidth="1.5" opacity="0.4" />
-              <path d="M88 130 Q86 148 88 162" fill="#fff" opacity="0.18" />
-              <circle cx="100" cy="140" r="4" fill={`url(#${id('gem')})`} stroke="#fff" strokeWidth="1.5" />
-            </g>
-          )}
-          {/* Guardian dragon-scale trim (Eragon): small scale marks on the
-              chest and shoulders, in the gem color. Friendly, not scary. */}
-          {g.classId === 'Guardian' && (
-            <g fill={gem} opacity="0.5">
-              <path d="M90 76 q4 5 8 0 q-4 5 -8 0 Z" />
-              <path d="M102 76 q4 5 8 0 q-4 5 -8 0 Z" />
-              <path d="M96 84 q4 5 8 0 q-4 5 -8 0 Z" />
+              <path d="M84 114 L116 114 L128 164 Q100 172 72 164 Z" fill={main} stroke={dark} strokeWidth="2.5" />
+              <path d="M92 120 Q90 142 92 160 M100 122 Q100 142 100 164 M108 120 Q110 142 108 160" fill="none" stroke={dark} strokeWidth="1.5" opacity="0.4" />
+              <path d="M88 126 Q86 144 88 158" fill="#fff" opacity="0.18" />
+              <circle cx="100" cy="136" r="4" fill={gem} stroke="#fff" strokeWidth="1.5" />
             </g>
           )}
         </g>

@@ -1,9 +1,13 @@
-// Small pure-SVG portraits for companions and bosses, in the same epic
-// style as the guardian avatar: gradients, shading, highlights, a glowing
-// aura and halo ring in each character's color, and a neck that connects
-// the head to the shoulders, so no head floats. LOTR / Eragon / Harry
-// Potter / Elden Ring warmth: friendly, never grim. No external images,
-// no AI images. Bosses stay enemies: sterner faces and a red ring.
+// Small pure-SVG portraits for companions and bosses, in the same flat
+// cartoon style as the guardian avatar (Derek's reference sheets, Nov 22,
+// 2026): flat colours, one shade, simple faces, no white sclera, no
+// realistic nose/ears, no photorealism. Image 5 (wolves, griffin, orcs,
+// horse, flat weapons/shields) is the model for creatures and gear; image 4
+// (blue dragon, orcs, lich) is the model for bosses: big, distinct,
+// fierce in a cartoon way, not scary-realistic. Derek Nov 22: "Things don't
+// have to look friendly" — companions have personality, bosses look stern
+// or fierce, nobody is soft/cute by default. Bosses stay enemies: sterner
+// faces and a red ring. No external images, no AI images.
 import { useId } from 'react';
 import type { ReactNode } from 'react';
 
@@ -71,7 +75,6 @@ function Portrait({
 }) {
   const uid = useId().replace(/[^a-zA-Z0-9]/g, '');
   const gid = (n: string) => `${n}-${uid}`;
-  const light = shade(pal.cloth, 45);
   const dark = pal.clothDark;
   return (
     <svg width="56" height="56" viewBox="0 0 64 64" role="img" style={{ display: 'block' }}>
@@ -81,14 +84,16 @@ function Portrait({
           <stop offset="60%" stopColor={pal.glow} stopOpacity="0.35" />
           <stop offset="100%" stopColor={pal.glow} stopOpacity="0" />
         </radialGradient>
+        {/* Flat fills: both gradient stops the same colour, so the figure
+            reads as one flat colour with a dark outline, like the refs */}
         <linearGradient id={gid('skin')} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor={shade(pal.skin, 35)} />
-          <stop offset="100%" stopColor={shade(pal.skin, -25)} />
+          <stop offset="0%" stopColor={pal.skin} />
+          <stop offset="100%" stopColor={pal.skin} />
         </linearGradient>
         <linearGradient id={gid('cloth')} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor={light} />
+          <stop offset="0%" stopColor={pal.cloth} />
           <stop offset="55%" stopColor={pal.cloth} />
-          <stop offset="100%" stopColor={dark} />
+          <stop offset="100%" stopColor={pal.cloth} />
         </linearGradient>
         <linearGradient id={gid('gold')} x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stopColor="#f2d878" />
@@ -102,9 +107,9 @@ function Portrait({
           </feMerge>
         </filter>
       </defs>
-      {/* Glowing aura and halo ring, in the character's color */}
-      <circle className="guardian-aura" cx="32" cy="30" r="30" fill={`url(#${gid('aura')})`} />
-      <circle className="guardian-halo" cx="32" cy="30" r="27" fill="none" stroke={pal.glow} strokeWidth="2.5" />
+      {/* Flat colour disc behind the figure, in the character's color —
+          no halo ring, no glow filter, like the reference sheets */}
+      <circle cx="32" cy="30" r="30" fill={pal.glow} opacity="0.22" />
       {enemy && <circle cx="32" cy="30" r="30" fill="none" stroke="#a83232" strokeWidth="2" opacity="0.75" />}
       {behind}
       {/* Neck: connects the head to the shoulders, so the head never floats */}
@@ -135,26 +140,26 @@ function Portrait({
   );
 }
 
+// Determined face, not a smile: strong brows angled down toward the
+// centre, small dark dot eyes (no white sclera, no highlight), a firm
+// straight mouth. Stern (bosses) is the same face, brows harder and mouth
+// flat. Nobody is soft/cute by default.
 function FriendlyFace({ stern }: { stern?: boolean }) {
   return (
     <g>
       {stern ? (
         <>
-          <path d="M22 21 L28 24 M42 21 L36 24" stroke="#1c2b3a" strokeWidth="2" strokeLinecap="round" />
-          <path d="M26 34 Q32 31 38 34" stroke="#1c2b3a" strokeWidth="1.8" fill="none" strokeLinecap="round" />
+          <path d="M22 20 L28 24 M42 20 L36 24" stroke="#1c2b3a" strokeWidth="2.2" strokeLinecap="round" />
+          <path d="M26 34 L38 34" stroke="#1c2b3a" strokeWidth="2" fill="none" strokeLinecap="round" />
         </>
       ) : (
         <>
-          <path d="M23 22 Q26 20 29 22 M35 22 Q38 20 41 22" stroke="#5b3a1e" strokeWidth="1.8" fill="none" strokeLinecap="round" />
-          <path d="M27 32 Q32 36 37 32" stroke="#1c2b3a" strokeWidth="1.8" fill="none" strokeLinecap="round" />
+          <path d="M23 21 L29 23 M35 23 L41 21" stroke="#5b3a1e" strokeWidth="2" fill="none" strokeLinecap="round" />
+          <path d="M27 33 L37 33" stroke="#1c2b3a" strokeWidth="2" fill="none" strokeLinecap="round" />
         </>
       )}
       <circle cx="27" cy="26" r="2" fill="#1c2b3a" />
       <circle cx="37" cy="26" r="2" fill="#1c2b3a" />
-      <circle cx="27.8" cy="25.2" r="0.7" fill="#fff" />
-      <circle cx="37.8" cy="25.2" r="0.7" fill="#fff" />
-      <ellipse cx="23" cy="30" rx="2.5" ry="1.6" fill="#e88a7a" opacity="0.35" />
-      <ellipse cx="41" cy="30" rx="2.5" ry="1.6" fill="#e88a7a" opacity="0.35" />
     </g>
   );
 }
@@ -232,11 +237,9 @@ export default function CompanionAvatar({ id }: { id: string }) {
         }
         face={
           <g>
-            <circle cx="26" cy="25" r="2.4" fill="#fff" />
-            <circle cx="38" cy="25" r="2.4" fill="#fff" />
-            <circle cx="26" cy="25" r="1.2" fill="#1c2b3a" />
-            <circle cx="38" cy="25" r="1.2" fill="#1c2b3a" />
-            <path d="M27 36 Q32 39 37 36" stroke="#fff" strokeWidth="1.6" fill="none" strokeLinecap="round" />
+            <circle cx="26" cy="25" r="2" fill="#1c2b3a" />
+            <circle cx="38" cy="25" r="2" fill="#1c2b3a" />
+            <path d="M27 36 L37 36" stroke="#fff" strokeWidth="1.6" fill="none" strokeLinecap="round" />
           </g>
         }
       />
@@ -321,10 +324,8 @@ export default function CompanionAvatar({ id }: { id: string }) {
         face={
           <g>
             <ellipse cx="32" cy="33" rx="8" ry="6" fill={pal.skin} />
-            <circle cx="24" cy="24" r="2.4" fill={pal.accent} />
-            <circle cx="40" cy="24" r="2.4" fill={pal.accent} />
-            <circle cx="24" cy="24" r="1.2" fill="#1c2b3a" />
-            <circle cx="40" cy="24" r="1.2" fill="#1c2b3a" />
+            <circle cx="24" cy="24" r="2" fill="#1c2b3a" />
+            <circle cx="40" cy="24" r="2" fill="#1c2b3a" />
             <ellipse cx="32" cy="32" rx="3.5" ry="2.5" fill="#1c2b3a" />
             <path d="M32 34 L32 37 M28 37 Q32 40 36 37" stroke="#1c2b3a" strokeWidth="1.5" fill="none" strokeLinecap="round" />
           </g>
@@ -353,11 +354,9 @@ export default function CompanionAvatar({ id }: { id: string }) {
         }
         face={
           <g>
-            <circle cx="26" cy="25" r="2.2" fill="#fff" />
-            <circle cx="38" cy="25" r="2.2" fill="#fff" />
-            <circle cx="26" cy="25" r="1.1" fill="#1c2b3a" />
-            <circle cx="38" cy="25" r="1.1" fill="#1c2b3a" />
-            <path d="M27 36 Q32 39 37 36" stroke="#fff" strokeWidth="1.6" fill="none" strokeLinecap="round" />
+            <circle cx="26" cy="25" r="2" fill="#1c2b3a" />
+            <circle cx="38" cy="25" r="2" fill="#1c2b3a" />
+            <path d="M27 36 L37 36" stroke="#fff" strokeWidth="1.6" fill="none" strokeLinecap="round" />
           </g>
         }
       />
@@ -406,10 +405,8 @@ export default function CompanionAvatar({ id }: { id: string }) {
         animal
         face={
           <g>
-            <circle cx="25" cy="25" r="2.6" fill="#fff" />
-            <circle cx="39" cy="25" r="2.6" fill="#fff" />
-            <circle cx="25" cy="25" r="1.3" fill="#1c2b3a" />
-            <circle cx="39" cy="25" r="1.3" fill="#1c2b3a" />
+            <circle cx="25" cy="25" r="2" fill="#1c2b3a" />
+            <circle cx="39" cy="25" r="2" fill="#1c2b3a" />
             <polygon points="32,28 24,32 32,38" fill={pal.accent} />
             <path d="M20 18 Q32 12 44 18" fill="none" stroke={pal.glowLight} strokeWidth="1.5" opacity="0.7" />
           </g>
@@ -441,7 +438,7 @@ export default function CompanionAvatar({ id }: { id: string }) {
           <circle cx="39" cy="25" r="2.2" fill="#1c2b3a" />
           <circle cx="25.8" cy="24.2" r="0.7" fill="#fff" />
           <circle cx="39.8" cy="24.2" r="0.7" fill="#fff" />
-          <path d="M32 35 L32 37 M28 37 Q32 40 36 37" stroke="#1c2b3a" strokeWidth="1.4" fill="none" strokeLinecap="round" />
+          <path d="M28 37 L36 37" stroke="#1c2b3a" strokeWidth="1.4" fill="none" strokeLinecap="round" />
           <path d="M12 26 L21 28 M12 32 L21 31 M52 26 L43 28 M52 32 L43 31" stroke="#8a6238" strokeWidth="1.2" strokeLinecap="round" />
         </g>
       }
@@ -521,7 +518,7 @@ export function BossAvatar({ id }: { id: string }) {
             <circle cx="25.8" cy="24.2" r="0.8" fill="#fff" />
             <circle cx="39.8" cy="24.2" r="0.8" fill="#fff" />
             <polygon points="32,29 28,33 36,33" fill={pal.accent} />
-            <path d="M27 32 Q32 36 37 32" stroke="#1c2b3a" strokeWidth="1.8" fill="none" strokeLinecap="round" />
+            <path d="M27 33 L37 33" stroke="#1c2b3a" strokeWidth="1.8" fill="none" strokeLinecap="round" />
           </g>
         }
       />
@@ -610,7 +607,7 @@ export function BossAvatar({ id }: { id: string }) {
             <path d="M20 22 Q24 20 28 22 M36 22 Q40 20 44 22" stroke="#1c2b3a" strokeWidth="2" strokeLinecap="round" />
             <path d="M22 27 Q25 28 28 27 M36 27 Q39 28 42 27" stroke="#1c2b3a" strokeWidth="1.6" fill="none" strokeLinecap="round" />
             <ellipse cx="32" cy="33" rx="5" ry="3.5" fill={pal.clothDark} />
-            <path d="M27 39 Q32 37 37 39" stroke="#1c2b3a" strokeWidth="1.6" fill="none" strokeLinecap="round" />
+            <path d="M27 39 L37 39" stroke="#1c2b3a" strokeWidth="1.6" fill="none" strokeLinecap="round" />
           </g>
         }
       />
@@ -638,7 +635,7 @@ export function BossAvatar({ id }: { id: string }) {
         <g>
           <circle cx="27" cy="26" r="2" fill="#1c2b3a" />
           <circle cx="37" cy="26" r="2" fill="#1c2b3a" />
-          <path d="M24 31 Q32 37 40 31" stroke="#1c2b3a" strokeWidth="1.8" fill="none" strokeLinecap="round" />
+          <path d="M26 33 L38 33" stroke="#1c2b3a" strokeWidth="1.8" fill="none" strokeLinecap="round" />
           <path d="M28 34 L30 32 M36 34 L34 32" stroke="#fff" strokeWidth="1.2" strokeLinecap="round" />
         </g>
       }
