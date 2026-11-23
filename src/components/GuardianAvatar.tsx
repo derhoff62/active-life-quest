@@ -296,15 +296,13 @@ export default function GuardianAvatar({
         <g>
           <path d="M88 37 Q88 15 100 13.5 Q112 15 112 37 Q107 24 100 24 Q93 24 88 37 Z" fill={HAIR_C} />
           <path d="M91 23 Q95 21 100 21 Q105 21 109 23" fill="none" stroke={HAIR_L} strokeWidth="2.5" opacity="0.8" strokeLinecap="round" />
-          {/* Sideburns: short tabs ending AT the chin (y41), never
-              dangling past it like ribbons. Hidden for Curly — the
-              side curls already cover the sides. */}
-          {hair !== 'Curly' && (
-            <g fill={HAIR_C}>
-              <path d="M87.5 35 L88.5 41 L90.5 41 L90.5 35 Z" />
-              <path d="M112.5 35 L111.5 41 L109.5 41 L109.5 35 Z" />
-            </g>
-          )}
+          {/* NO sideburns: the old short tabs (x87.5-90.5 / 109.5-112.5,
+              y35-41) ran down both sides of the face and, with the hair
+              cap sides and the beard, framed the whole lower face in
+              brown like a mask — that was the "facial hair needs fixed"
+              look in Derek's Nov 22 7:24 PM screenshot. A short beard
+              does not need to touch the hair; skin shows at the jaw
+              corners, like the reference paladins. */}
         </g>
       )}
       {hair === 'Curly' && (
@@ -798,12 +796,12 @@ export default function GuardianAvatar({
               and the thin light mouth line at y34.5 are exactly as
               they were. */}
           <circle cx="100" cy="29" r="13" fill={SKIN} stroke={headStroke} strokeWidth="1.2" />
-          {!isFemale && (
-            <g stroke={dark} strokeWidth="1.4" opacity="0.35" fill="none" strokeLinecap="round">
-              <path d="M90 31.5 L92 37" />
-              <path d="M110 31.5 L108 37" />
-            </g>
-          )}
+          {/* NO jaw lines: the old dark strokes down the face sides
+              (M90 31.5 L92 37) read at preview size as grey streaks
+              running down the cheeks — they looked like stubble/tears
+              on clean-shaven faces, and on bearded faces they added
+              to the brown frame. The beard (or a clean jaw) defines
+              the jaw on its own. */}
           {/* Hair, hood, or wizard hat — all in the same coordinates as
               the head, sitting ON it. */}
           {g.classId === 'Ranger' ? hoodHair : g.classId === 'Spellweaver' ? null : hairArt}
@@ -820,19 +818,29 @@ export default function GuardianAvatar({
             </g>
           )}
           {/* Beard: only when the picked hair style has one (Male Short +
-              beard, Bald, or Long). SMALL and CHIN-ONLY — Derek's
-              screenshot shows the old beard as a big brown U/bib from
-              y37 to y51.5 that covers the jaw and neck and dominates
-              the head. The new beard starts below the mouth (y38),
-              ends just below the chin (y46.5), and is narrower than
-              the face, with texture lines. Mustache: small corner
-              tufts only. Female never has a beard. */}
+              beard, Bald, or Long). A SHORT NEAT CHIN BEARD that
+              follows the jawline — Derek, Nov 22 7:54 PM: "the facial
+              hair needs fixed". What was wrong (his Nov 22 7:24 PM
+              screenshot): the old beard was a wide solid crescent
+              (x90-110, y38-46.5) hanging 4.5 units BELOW the chin,
+              plus filled mustache lenses sitting right under the mouth
+              (y36.5-38.5, reading as a dark band under the mouth),
+              plus sideburn tabs down both face sides — together the
+              whole lower face was framed in brown like a mask/bib.
+              The new beard is NARROWER (x92.5-107.5, 15 wide, not
+              20), so skin shows at both jaw corners; it ends at
+              y43.5, only 1.5 below the chin, so it sits ON the chin
+              and never hangs into the collar; its top edge sags to
+              y~39.5 at the centre, 5 units below the mouth, so the
+              mouth stays clear. NO mustache: a mustache above the
+              mouth would sit 2 units from it and merge into a band
+              at preview size, and lenses under the mouth were the
+              band. Two short LIGHT texture lines only. Female never
+              has a beard. */}
           {hasBeard && (
             <g fill={HAIR_C}>
-              <path d="M91 36.5 Q93.5 35 96 36.5 Q93.5 38.5 91 38.5 Z" />
-              <path d="M109 36.5 Q106.5 35 104 36.5 Q106.5 38.5 109 38.5 Z" />
-              <path d="M91 38 Q90 46 100 46.5 Q110 46 109 38 L105.5 41 Q103 44 100 44 Q97 44 94.5 41 Z" />
-              <path d="M94.5 42.5 L94.5 45 M100 43.5 L100 46 M105.5 42.5 L105.5 45" stroke={HAIR_L} strokeWidth="1.2" opacity="0.7" strokeLinecap="round" />
+              <path d="M92.5 37.5 Q91 42.5 100 43.5 Q109 42.5 107.5 37.5 Q104 40.5 100 40.5 Q96 40.5 92.5 37.5 Z" />
+              <path d="M97.5 41 L97.5 42.8 M102.5 41 L102.5 42.8" stroke={HAIR_L} strokeWidth="1.2" opacity="0.7" strokeLinecap="round" />
             </g>
           )}
           {/* Crown, Level 10+, Guardian only (the hat is the Spellweaver's
