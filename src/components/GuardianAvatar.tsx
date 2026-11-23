@@ -128,14 +128,18 @@ export default function GuardianAvatar({
   const capeMain = COLOR_HEX[capeName];
   const capeDark = shade(capeMain, -45);
   const f = (n: number) => Math.round(n * 100) / 100;
-  // Person-like proportions (reference sheets): head ~1/6 of body height.
-  // Head centre y36 r15, shoulders y56, waist/belt y108, boots y180.
+  // Person-like proportions (reference sheets): head ~1/6-1/7 of body height.
+  // Head centre y31 r13 (26px of ~176px total = ~1/6.8), shoulders y56,
+  // waist/belt y108, boots y180.
+  // Head/hair/face art is drawn at the old (100,36) centre and scaled 0.8
+  // about (100,30) in the render, so the head shrinks without redrawing
+  // every hair style. Neck top sits just below the chin, never over the mouth.
   const torsoD = isFemale
     ? `M100 54 L${f(100 + 13 * bw)} 58 L${f(100 + 15 * bw)} 92 L${f(100 + 10 * bw)} 118 L${f(100 - 10 * bw)} 118 L${f(100 - 15 * bw)} 92 L${f(100 - 13 * bw)} 58 Z`
     : `M100 54 L${f(100 + 21 * bw)} 58 L${f(100 + 23 * bw)} 94 L${f(100 + 17 * bw)} 118 L${f(100 - 17 * bw)} 118 L${f(100 - 23 * bw)} 94 L${f(100 - 21 * bw)} 58 Z`;
   const beltW = (isFemale ? 26 : 34) * bw;
-  const pauldronRx = (isFemale ? 9 : 13) * bw;
-  const pauldronDx = (isFemale ? 13 : 21) * bw;
+  const pauldronRx = (isFemale ? 11 : 13) * bw;
+  const pauldronDx = (isFemale ? 14 : 21) * bw;
 
   // Hair, flat with strand lines, not a flat cap. Each style has its own
   // silhouette so it reads at 72px too. Hair colour is a warm brown for
@@ -465,7 +469,7 @@ export default function GuardianAvatar({
           {/* Neck: connects the head to the shoulders, so the head never floats.
               Drawn before the torso and head, so it fills the seam.
               Male neck is wider and thicker; female neck is narrower. */}
-          <rect x={isFemale ? 95 : 92} y="47" width={isFemale ? 10 : 16} height="14" rx="4" fill={SKIN} stroke={dark} strokeWidth="2" />
+          <rect x={isFemale ? 96 : 93} y="43" width={isFemale ? 8 : 14} height="12" rx="3" fill={SKIN} stroke={dark} strokeWidth="1.5" />
           {/* Arms: male arms are thicker and more muscular; female arms slimmer. */}
           {isFemale ? (
             <>
@@ -497,17 +501,8 @@ export default function GuardianAvatar({
           {/* Hands */}
           <circle cx={isFemale ? 81 : 75} cy="102" r={isFemale ? 4.5 : 5.5} fill={SKIN} stroke={dark} strokeWidth="1.5" />
           <circle cx={isFemale ? 119 : 125} cy="102" r={isFemale ? 4.5 : 5.5} fill={SKIN} stroke={dark} strokeWidth="1.5" />
-          {/* Guardian shoulder armor: big steel pauldrons, Guardian only.
-              Ranger and Spellweaver get no pauldrons, so the classes read
-              apart at a glance. */}
-          {g.classId === 'Guardian' && (
-            <g>
-              <ellipse cx={100 - pauldronDx} cy="64" rx={pauldronRx} ry={isFemale ? 6 : 8} fill={STEEL} stroke={dark} strokeWidth="2" />
-              <ellipse cx={100 + pauldronDx} cy="64" rx={pauldronRx} ry={isFemale ? 6 : 8} fill={STEEL} stroke={dark} strokeWidth="2" />
-              <circle cx={100 - pauldronDx} cy="64" r="2.5" fill={gem} />
-              <circle cx={100 + pauldronDx} cy="64" r="2.5" fill={gem} />
-            </g>
-          )}
+          {/* Pauldrons are drawn after the hair/face below, so long hair
+              never covers them (Female/Long bug in v51). */}
           {/* Cloak clasp at the neck, so shoulders, neck, and head read as
               one connected figure. */}
           <circle cx="100" cy="60" r="5" fill={GOLD} stroke={GOLD_DARK} strokeWidth="1.5" />
@@ -515,36 +510,42 @@ export default function GuardianAvatar({
           {/* Head: flat skin, r15 at (100,36). Male has a squarer, stronger
               jaw (jaw lines); female a softer, rounder face. Same size, so
               the difference reads at 72px too. */}
-          <circle cx="100" cy="36" r="15" fill={SKIN} stroke={dark} strokeWidth="2.5" />
+          <circle cx="100" cy="31" r="13" fill={SKIN} stroke={dark} strokeWidth="2" />
           {!isFemale && (
             <g stroke={dark} strokeWidth="1.5" opacity="0.35" fill="none" strokeLinecap="round">
-              <path d="M87 42 L91 49" />
-              <path d="M113 42 L109 49" />
+              <path d="M89 35 L92 40" />
+              <path d="M111 35 L108 40" />
             </g>
           )}
           {/* Hair: Ranger hood for Ranger, wizard hat for Spellweaver, else
               the picked hair style. */}
-          {g.classId === 'Ranger' ? hoodHair : g.classId === 'Spellweaver' ? (
+          <g transform="translate(100 30) scale(0.8) translate(-100 -36)">
+            {g.classId === 'Ranger' ? hoodHair : g.classId === 'Spellweaver' ? null : hairArt}
+          </g>
+          {/* Spellweaver hat: a pointed wizard hat, NOT the flat wide-brimmed
+              hat from v51. Tall cone with a bent tip, gem band at the base. */}
+          {g.classId === 'Spellweaver' && (
             <g>
-              <ellipse cx="100" cy="24" rx="27" ry="5" fill={main} stroke={dark} strokeWidth="2" />
-              <path d="M78 24 Q100 -2 122 24 Z" fill={main} stroke={dark} strokeWidth="2" />
-              <path d="M84 18 Q100 8 116 18" fill="none" stroke={light} strokeWidth="2" opacity="0.7" />
-              <circle cx="100" cy="20" r="3" fill={gem} stroke="#fff" strokeWidth="1" />
+              <path d="M75 21 Q82 4 100 1 Q105 1 107 5 Q109 9 105 12 Q101 15 103 21 Z" fill={main} stroke={dark} strokeWidth="2" />
+              <path d="M82 10 Q90 4 100 3" fill="none" stroke={light} strokeWidth="2" opacity="0.7" strokeLinecap="round" />
+              <ellipse cx="100" cy="21" rx="26" ry="5" fill={main} stroke={dark} strokeWidth="2" />
+              <path d="M78 19 Q100 15 122 19" fill="none" stroke={dark} strokeWidth="1.5" opacity="0.5" />
+              <circle cx="100" cy="17" r="3.5" fill={gem} stroke="#fff" strokeWidth="1" />
             </g>
-          ) : hairArt}
+          )}
           {/* Beard: only when the picked hair style has one (Short + beard,
               Bald, or Long for Male). Short, Buzz, Curly, and Man bun are
               clean-shaven. Female has no beard. Drawn before the face, so
               the firm mouth reads over it. */}
           {hasBeard && (
-            <g fill={HAIR_C}>
+            <g transform="translate(100 30) scale(0.8) translate(-100 -36)" fill={HAIR_C}>
               <path d="M86 42 Q85 54 100 56 Q115 54 114 42 L110 46 Q108 52 100 53 Q92 52 90 46 Z" />
               <path d="M92 46 Q96 44 100 46 Q104 44 108 46 Q104 49 100 49 Q96 49 92 46 Z" />
             </g>
           )}
           {/* Crown, Level 10+ */}
           {showCrown && (
-            <g>
+            <g transform="translate(100 30) scale(0.8) translate(-100 -36)">
               <polygon points="86,22 91,10 96,19 100,8 104,19 109,10 114,22 114,27 86,27" fill={GOLD} stroke={GOLD_DARK} strokeWidth="2" />
               <circle cx="100" cy="22" r="2.6" fill={gem} stroke="#fff" strokeWidth="1.5" />
               <circle cx="91" cy="22" r="2" fill={gem} stroke="#fff" strokeWidth="1" />
@@ -558,34 +559,50 @@ export default function GuardianAvatar({
               NO nose, NO ears, NO blush. Female is serious too, with
               slimmer brows; male brows are thick. */}
           {isFemale ? (
-            <g>
+            <g transform="translate(100 30) scale(0.8) translate(-100 -36)">
               <path d="M87 32 L95 34 M105 34 L113 32" fill="none" stroke={HAIR_C} strokeWidth="1.8" strokeLinecap="round" />
               <circle cx="91" cy="40" r="2.2" fill="#1c2b3a" />
               <circle cx="109" cy="40" r="2.2" fill="#1c2b3a" />
               <path d="M94 49 L106 49" fill="none" stroke="#1c2b3a" strokeWidth="2.2" strokeLinecap="round" />
             </g>
           ) : (
-            <g>
+            <g transform="translate(100 30) scale(0.8) translate(-100 -36)">
               <path d="M86 31 L95 34 M105 34 L114 31" fill="none" stroke={HAIR_C} strokeWidth="2.5" strokeLinecap="round" />
               <circle cx="91" cy="40" r="2.2" fill="#1c2b3a" />
               <circle cx="109" cy="40" r="2.2" fill="#1c2b3a" />
               <path d="M94 49 L106 49" fill="none" stroke="#1c2b3a" strokeWidth="2.5" strokeLinecap="round" />
             </g>
           )}
+          {/* Guardian pauldrons, drawn AFTER hair/face so long hair can
+              never hide them. Big steel, both looks, all hairstyles. */}
+          {g.classId === 'Guardian' && (
+            <g>
+              <ellipse cx={100 - pauldronDx} cy="64" rx={pauldronRx} ry={isFemale ? 7.5 : 8} fill={STEEL} stroke={dark} strokeWidth="2" />
+              <ellipse cx={100 + pauldronDx} cy="64" rx={pauldronRx} ry={isFemale ? 7.5 : 8} fill={STEEL} stroke={dark} strokeWidth="2" />
+              <circle cx={100 - pauldronDx} cy="64" r="2.5" fill={gem} />
+              <circle cx={100 + pauldronDx} cy="64" r="2.5" fill={gem} />
+            </g>
+          )}
+          {/* Class weapon, flat like reference image 5: HELD in the hands,
+              not standing on the scenery. Hand circles are redrawn on top
+              of each grip, so the hand reads as holding the weapon. */}
+          <circle cx={isFemale ? 81 : 75} cy="102" r="0" fill="none" />
           {/* Class weapon, flat like reference image 5: a distinct item at a glance */}
           {g.classId === 'Guardian' && (
             <g>
               {/* Shield, left hand: flat, gold rim, main-colour panel, gem centre */}
-              <path d="M34 80 L62 80 L62 100 Q48 114 34 100 Z" fill={STEEL} stroke={GOLD} strokeWidth="3" />
-              <path d="M39 85 L57 85 L57 99 Q48 108 39 99 Z" fill={main} opacity="0.9" />
-              <circle cx="48" cy="95" r="5.5" fill={gem} stroke="#fff" strokeWidth="1.5" />
+              <path d="M48 80 L76 80 L76 100 Q62 114 48 100 Z" fill={STEEL} stroke={GOLD} strokeWidth="3" />
+              <path d="M53 85 L71 85 L71 99 Q62 108 53 99 Z" fill={main} opacity="0.9" />
+              <circle cx="62" cy="95" r="5.5" fill={gem} stroke="#fff" strokeWidth="1.5" />
+              <circle cx={isFemale ? 81 : 75} cy="102" r={isFemale ? 4.5 : 5.5} fill={SKIN} stroke={dark} strokeWidth="1.5" />
               {/* Sword, right hand: flat blade, gold crossguard, brown grip */}
-              <g transform="rotate(18 152 82)">
-                <rect x="149" y="50" width="6" height="48" rx="3" fill={STEEL} stroke={STEEL_DARK} strokeWidth="1.5" />
-                <rect x="151" y="52" width="1.8" height="42" fill="#fff" opacity="0.7" />
-                <rect x="142" y="96" width="20" height="6" rx="3" fill={GOLD} stroke={GOLD_DARK} strokeWidth="1.5" />
-                <rect x="148" y="102" width="8" height="11" rx="3" fill={WOOD} />
+              <g transform="rotate(12 122 80)">
+                <rect x="119" y="48" width="6" height="50" rx="3" fill={STEEL} stroke={STEEL_DARK} strokeWidth="1.5" />
+                <rect x="121" y="50" width="1.8" height="44" fill="#fff" opacity="0.7" />
+                <rect x="112" y="96" width="20" height="6" rx="3" fill={GOLD} stroke={GOLD_DARK} strokeWidth="1.5" />
+                <rect x="118" y="102" width="8" height="12" rx="3" fill={WOOD} />
               </g>
+              <circle cx={isFemale ? 119 : 125} cy="102" r={isFemale ? 4.5 : 5.5} fill={SKIN} stroke={dark} strokeWidth="1.5" />
               {/* Steel chest plate over the tunic, gem trim */}
               <path d="M86 60 L114 60 L117 88 L100 96 L83 88 Z" fill={STEEL} stroke={STEEL_DARK} strokeWidth="2" opacity="0.95" />
               <path d="M86 60 L114 60 L116 74 L84 74 Z" fill={main} opacity="0.85" />
@@ -595,30 +612,37 @@ export default function GuardianAvatar({
           {g.classId === 'Ranger' && (
             <g>
               {/* Bow, right hand, flat brown arc with string and arrow */}
-              <path d="M146 60 Q172 84 146 112" fill="none" stroke={WOOD} strokeWidth="4.5" strokeLinecap="round" />
-              <path d="M146 60 Q168 84 146 112" fill="none" stroke="#a8763e" strokeWidth="2" strokeLinecap="round" />
-              <line x1="146" y1="60" x2="146" y2="112" stroke="#e8e2d4" strokeWidth="1.5" />
-              <line x1="146" y1="84" x2="126" y2="84" stroke={gem} strokeWidth="2.5" strokeLinecap="round" />
-              <polygon points="126,84 133,81 133,87" fill={STEEL_DARK} />
-              {/* Quiver on the back, left side */}
-              <rect x="40" y="82" width="15" height="36" rx="7.5" fill={WOOD} stroke={WOOD_DARK} strokeWidth="1.5" />
-              <line x1="45" y1="80" x2="45" y2="72" stroke="#e8e2d4" strokeWidth="2" />
-              <line x1="50" y1="80" x2="50" y2="70" stroke="#e8e2d4" strokeWidth="2" />
+              <path d="M128 68 Q152 102 128 136" fill="none" stroke={WOOD} strokeWidth="4.5" strokeLinecap="round" />
+              <path d="M128 68 Q148 102 128 136" fill="none" stroke="#a8763e" strokeWidth="2" strokeLinecap="round" />
+              <line x1="128" y1="68" x2="128" y2="136" stroke="#e8e2d4" strokeWidth="1.5" />
+              <line x1="128" y1="102" x2="152" y2="102" stroke={gem} strokeWidth="2.5" strokeLinecap="round" />
+              <polygon points="152,102 145,99 145,105" fill={STEEL_DARK} />
+              <circle cx={isFemale ? 119 : 125} cy="102" r={isFemale ? 4.5 : 5.5} fill={SKIN} stroke={dark} strokeWidth="1.5" />
+              {/* Quiver worn on the back: peeks over the left shoulder with
+                  arrows sticking up, strap diagonal across the chest. */}
+              <g transform="rotate(-18 78 72)">
+                <rect x="71" y="60" width="14" height="30" rx="7" fill={WOOD} stroke={WOOD_DARK} strokeWidth="1.5" />
+              </g>
+              <line x1="74" y1="62" x2="70" y2="52" stroke="#e8e2d4" strokeWidth="2" strokeLinecap="round" />
+              <line x1="79" y1="60" x2="78" y2="50" stroke="#e8e2d4" strokeWidth="2" strokeLinecap="round" />
+              <line x1="84" y1="62" x2="86" y2="52" stroke="#e8e2d4" strokeWidth="2" strokeLinecap="round" />
+              <path d="M84 62 L116 108" fill="none" stroke={WOOD_DARK} strokeWidth="4" opacity="0.7" strokeLinecap="round" />
             </g>
           )}
           {g.classId === 'Spellweaver' && (
             <g>
               {/* Staff, right hand: flat brown shaft, star gem on top */}
-              <rect x="148" y="42" width="6" height="116" rx="3" fill={WOOD} stroke={WOOD_DARK} strokeWidth="1.5" />
-              <rect x="150" y="44" width="2" height="110" fill="#a8763e" opacity="0.7" />
+              <rect x="122" y="42" width="6" height="116" rx="3" fill={WOOD} stroke={WOOD_DARK} strokeWidth="1.5" />
+              <rect x="124" y="44" width="2" height="110" fill="#a8763e" opacity="0.7" />
+              <circle cx={isFemale ? 119 : 125} cy="102" r={isFemale ? 4.5 : 5.5} fill={SKIN} stroke={dark} strokeWidth="1.5" />
               <polygon
-                points="151,18 155,30 167,30 158,38 162,50 151,43 140,50 144,38 135,30 147,30"
+                points="125,18 129,30 141,30 132,38 136,50 125,43 114,50 118,38 109,30 121,30"
                 fill={gem} stroke="#fff" strokeWidth="2"
               />
-              <polygon points="151,26 154,32 151,38 148,32" fill="#fff" opacity="0.5" />
-              <circle cx="132" cy="56" r="3" fill={gemLight} />
-              <circle cx="126" cy="74" r="2.2" fill={gem} />
-              <circle cx="136" cy="88" r="1.8" fill={gemLight} />
+              <polygon points="125,26 128,32 125,38 122,32" fill="#fff" opacity="0.5" />
+              <circle cx="106" cy="56" r="3" fill={gemLight} />
+              <circle cx="100" cy="74" r="2.2" fill={gem} />
+              <circle cx="110" cy="88" r="1.8" fill={gemLight} />
             </g>
           )}
           {/* Legs: male legs thicker, female slimmer, both with boots */}
