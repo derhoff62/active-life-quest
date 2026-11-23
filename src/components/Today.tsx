@@ -7,8 +7,6 @@ import { phaseForDoc, recoveryScore, levelForXp, titleForLevel, metCompanionIds,
 import { cycleForWeek, nextRetestWeek, nextBossWeek, nextRetestLabel, nextBossLabel, isDeloadWeek, challengeForWeek } from '../lib/yearPlan';
 import type { AssessmentVideo } from '../lib/store';
 import GuardianAvatar from './GuardianAvatar';
-import GeneratedGuardian from './GeneratedGuardian';
-import { generatedImageFor } from '../lib/generatedGuardians';
 import GuardianEmote, { EMOTES } from './GuardianEmote';
 
 export default function Today({ ctx }: { ctx: Ctx }) {
@@ -204,11 +202,7 @@ export default function Today({ ctx }: { ctx: Ctx }) {
   return (
     <div>
       <div className="card gold-frame guardian-hero">
-        {doc.guardian?.avatarStyle === 'generated' && generatedImageFor(doc.guardian) ? (
-          <GeneratedGuardian guardian={doc.guardian} />
-        ) : (
-          <GuardianAvatar guardian={doc.guardian} level={level} size="large" />
-        )}
+        <GuardianAvatar guardian={doc.guardian} level={level} size="large" />
         <p className="small muted" style={{ textAlign: 'center' }}>
           {doc.guardian ? `${doc.guardian.name} the ${doc.guardian.classId}` : 'Your guardian'} · Level {level} {titleForLevel(level)} · {doc.xp} XP
         </p>

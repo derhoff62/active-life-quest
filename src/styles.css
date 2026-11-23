@@ -242,30 +242,6 @@ details summary { cursor: pointer; font-weight: 600; color: var(--navy); padding
 @media (prefers-reduced-motion: reduce) {
   .guardian-bob, .guardian-aura, .guardian-halo, .guardian-gem, .guardian-shadow, .guardian-sparkle, .xp-glow > div { animation: none; }
 }
-/* Generated guardians (ALL 18 COMBOS, Nov 22, 2026): layered — a detailed
-   class background with the cut-out figure on top. The figure is 88% of
-   the wrap height, feet near the bottom, with a soft ground shadow that
-   stays put while the figure bobs. The glow is a whole-image shimmer,
-   not a masked gem glow. Both honour reduced motion, same as the SVG. */
-.gen-guardian-wrap { position: relative; display: flex; justify-content: center; align-items: flex-end; overflow: hidden; border-radius: 12px; line-height: 0; }
-.gen-guardian-bg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
-.gen-guardian-shadow { position: absolute; bottom: 3%; left: 50%; transform: translateX(-50%); width: 38%; height: 14px; background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0.35), rgba(0, 0, 0, 0) 70%); border-radius: 50%; }
-.gen-guardian-figure { position: relative; z-index: 1; height: 88%; }
-.gen-guardian-figure img { display: block; height: 100%; width: auto; max-width: none; }
-.gen-guardian-bob { animation: gen-guardian-bob 2s ease-in-out infinite; will-change: transform; }
-@keyframes gen-guardian-bob {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-8px); }
-}
-.gen-glow-pulse-single { animation: gen-glow-pulse-single 2s ease-in-out infinite; will-change: filter; }
-@keyframes gen-glow-pulse-single {
-  0%, 100% { filter: brightness(1) drop-shadow(0 0 0 rgba(201, 162, 39, 0)); }
-  50% { filter: brightness(1.08) drop-shadow(0 0 14px rgba(201, 162, 39, 0.55)); }
-}
-@media (prefers-reduced-motion: reduce) {
-  .gen-guardian-bob, .gen-glow-pulse-single { animation: none; }
-}
-.reduced-motion .gen-guardian-bob, .reduced-motion .gen-glow-pulse-single { animation: none; }
 /* Modern hero card on Today: soft gradient, glowing gold border. */
 .guardian-hero {
   background: linear-gradient(160deg, #fffdf4 0%, #eef5fb 55%, #dbe9f5 100%);

@@ -4,8 +4,6 @@ import { CLASSES, CLASS_GOOD_FOR, CLASS_SUGGESTED_GOALS, DEFAULT_EQUIPMENT, EQUI
 import { checkinFrequenciesForMode, normalizeCheckinFrequency } from '../lib/store';
 import type { ClassId } from '../lib/types';
 import GuardianAvatar from './GuardianAvatar';
-import GeneratedGuardian from './GeneratedGuardian';
-import { GENERATED_COMBOS, generatedImageFor } from '../lib/generatedGuardians';
 import {
   BUILD_OPTIONS,
   DEFAULT_HAIR,
@@ -32,7 +30,6 @@ export default function Onboarding({ ctx }: { ctx: Ctx }) {
   const [hair, setHair] = useState('Long');
   const [build, setBuild] = useState<'Slim' | 'Athletic' | 'Strong'>('Athletic');
   const [skinColor, setSkinColor] = useState('Light');
-  const [avatarStyle, setAvatarStyle] = useState<'svg' | 'generated'>('svg');
   const [bodyColor, setBodyColor] = useState('Navy');
   const [armColor, setArmColor] = useState('Navy');
   const [legColor, setLegColor] = useState('Navy');
@@ -60,7 +57,7 @@ export default function Onboarding({ ctx }: { ctx: Ctx }) {
         <p className="small muted">Nothing here is a test you can fail. The assessment finds where to start, so the plan fits you.</p>
         <button className="primary" onClick={() => setStep(1)} style={{ width: '100%' }}>Pick my guardian</button>
         <p style={{ marginTop: 10 }}>
-          <button onClick={() => update((d) => { d.tutorialDone = true; d.guardianPicked = true; d.guardian = { name: 'Brave Beginner', classId: 'Guardian', color: 'Navy', gem: 'Sapphire', cape: true, look: 'Female', hair: 'Long', build: 'Athletic', skinColor: 'Light', bodyColor: 'Navy', armColor: 'Navy', legColor: 'Navy', capeColor: 'Navy', avatarStyle: 'svg' }; })}>Skip for now</button>
+          <button onClick={() => update((d) => { d.tutorialDone = true; d.guardianPicked = true; d.guardian = { name: 'Brave Beginner', classId: 'Guardian', color: 'Navy', gem: 'Sapphire', cape: true, look: 'Female', hair: 'Long', build: 'Athletic', skinColor: 'Light', bodyColor: 'Navy', armColor: 'Navy', legColor: 'Navy', capeColor: 'Navy' }; })}>Skip for now</button>
         </p>
       </div>
     );
@@ -83,36 +80,7 @@ export default function Onboarding({ ctx }: { ctx: Ctx }) {
             </label>
           </div>
         ))}
-        {avatarStyle === 'generated' && generatedImageFor({ name: name.trim() || 'Your guardian', classId, color, gem, cape, look, hair, build, skinColor, bodyColor, armColor, legColor, capeColor, avatarStyle }) ? (
-          <GeneratedGuardian guardian={{ name: name.trim() || 'Your guardian', classId, color, gem, cape, look, hair, build, skinColor, bodyColor, armColor, legColor, capeColor, avatarStyle }} />
-        ) : (
-          <GuardianAvatar guardian={{ name: name.trim() || 'Your guardian', classId, color, gem, cape, look, hair, build, skinColor, bodyColor, armColor, legColor, capeColor, avatarStyle }} level={1} size="medium" label={`${name.trim() || 'Your guardian'} the ${classId} · Level 1`} />
-        )}
-        {avatarStyle === 'generated' && !generatedImageFor({ name: name.trim() || 'Your guardian', classId, color, gem, cape, look, hair, build, skinColor, bodyColor, armColor, legColor, capeColor, avatarStyle }) && (
-          <p className="small">This hairstyle has no generated picture yet, so the classic guardian shows instead. Pick one of the 18 generated combos below.</p>
-        )}
-        <label>Guardian style</label>
-        <div className="row">
-          <button type="button" onClick={() => setAvatarStyle('svg')} style={avatarStyle !== 'generated' ? { background: '#124571', color: '#fff' } : {}}>
-            Classic (full customisation)
-          </button>
-          <button type="button" onClick={() => setAvatarStyle('generated')} style={avatarStyle === 'generated' ? { background: '#124571', color: '#fff' } : {}}>
-            Generated art (try-out)
-          </button>
-        </div>
-        {avatarStyle === 'generated' && (
-          <>
-            <p className="small muted">Generated art is a finished picture with its own background. All 18 combos are ready — tap one. Skin color works on the generated picture too (it recolors the face and hands). Build, colors, gem and cape are baked into the picture and do not change it.</p>
-            <label>Generated combos</label>
-            <div className="row">
-              {GENERATED_COMBOS.map((c) => (
-                <button key={c.label} type="button" onClick={() => { setClassId(c.classId); setLook(c.look); setHair(c.hair); }} style={classId === c.classId && look === c.look && hair === c.hair ? { background: '#124571', color: '#fff' } : {}}>
-                  {c.label}
-                </button>
-              ))}
-            </div>
-          </>
-        )}
+        <GuardianAvatar guardian={{ name: name.trim() || 'Your guardian', classId, color, gem, cape, look, hair, build, skinColor, bodyColor, armColor, legColor, capeColor }} level={1} size="medium" label={`${name.trim() || 'Your guardian'} the ${classId} · Level 1`} />
         <label>Guardian look</label>
         <div className="row">
           {(['Female', 'Male'] as const).map((l) => (
@@ -144,8 +112,6 @@ export default function Onboarding({ ctx }: { ctx: Ctx }) {
             </button>
           ))}
         </div>
-        {avatarStyle !== 'generated' && (
-          <>
         <label>Build</label>
         <div className="row">
           {BUILD_OPTIONS.map((b) => (
@@ -154,12 +120,8 @@ export default function Onboarding({ ctx }: { ctx: Ctx }) {
             </button>
           ))}
         </div>
-          </>
-        )}
         <label htmlFor="g-name">Guardian name</label>
         <input id="g-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Brave Beginner" />
-        {avatarStyle !== 'generated' && (
-          <>
         <div className="grid2">
           <div>
             <label htmlFor="g-color">Overall color</label>
@@ -197,11 +159,6 @@ export default function Onboarding({ ctx }: { ctx: Ctx }) {
         <label style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
           <input type="checkbox" checked={cape} onChange={(e) => setCape(e.target.checked)} style={{ width: 'auto', minHeight: 0 }} /> Cape
         </label>
-          </>
-        )}
-        {avatarStyle === 'generated' && (
-          <p className="small muted">Build, colors, gem and cape only change the classic guardian. Skin color works on the generated picture too. Switch back to Classic to change the rest.</p>
-        )}
         <div className="row" style={{ marginTop: 12 }}>
           <button className="primary" disabled={!name.trim()} onClick={() => { setGoal(CLASS_SUGGESTED_GOALS[classId]?.[0] || 'weight-loss'); setStep(2); }}>Next: my goal</button>
           <button onClick={() => setStep(0)}>Back</button>
@@ -277,7 +234,7 @@ export default function Onboarding({ ctx }: { ctx: Ctx }) {
           className="primary"
           onClick={() => {
             update((d) => {
-              d.guardian = { name: name.trim(), classId, color, gem, cape, look, hair, build, skinColor, bodyColor, armColor, legColor, capeColor, avatarStyle };
+              d.guardian = { name: name.trim(), classId, color, gem, cape, look, hair, build, skinColor, bodyColor, armColor, legColor, capeColor };
               d.guardianPicked = true;
               d.tutorialDone = true;
               d.equipment = equipment;

@@ -3,11 +3,11 @@ import type { Ctx } from '../App';
 import { ARMOR, CLASSES, CLASS_GOOD_FOR, CLASS_WORKOUT_FOCUS, SPELLS } from '../lib/data';
 import type { ArmorPiece } from '../lib/types';
 import { earnedArmorIds, levelForXp } from '../lib/store';
+import { equipSlot, equippedArmorName, equippedWeaponName } from '../lib/equip';
+import { showToast } from '../lib/toast';
 import type { GuardianState } from '../lib/store';
 import type { ClassId } from '../lib/types';
 import GuardianAvatar from './GuardianAvatar';
-import GeneratedGuardian from './GeneratedGuardian';
-import { GENERATED_COMBOS, generatedImageFor } from '../lib/generatedGuardians';
 
 // Same color, gem, hair, and build options as onboarding, so a client can
 // change after signup what they picked (or skipped) at signup.
@@ -40,7 +40,6 @@ const DEFAULT_DRAFT: GuardianState = {
   armColor: 'Navy',
   legColor: 'Navy',
   capeColor: 'Navy',
-  avatarStyle: 'svg',
 };
 
 // Small SVG emblem per piece, picked by name. No external images.
@@ -93,7 +92,7 @@ function GearIcon({ piece }: { piece: ArmorPiece }) {
   );
 }
 
-function GearCard({ piece, earned }: { piece: ArmorPiece; earned: boolean }) {
+function GearCard({ piece, earned, equipped, onToggleEquip }: { piece: ArmorPiece; earned: boolean; equipped?: boolean; onToggleEquip?: () => void }) {
   // Legendary and Mythical stay hidden until earned: only the tier and the
   // way to unlock show. No name, no effect, no emblem detail.
   if (!earned && (piece.tier === 'Legendary' || piece.tier === 'Mythical')) {
@@ -127,9 +126,15 @@ function GearCard({ piece, earned }: { piece: ArmorPiece; earned: boolean }) {
           <strong>{piece.name}</strong>
           <span className={`tier-pill tier-${piece.tier.toLowerCase()}`}>{piece.tier}</span>
           {earned && <span className="tier-pill tier-earned">Earned</span>}
+          {equipped && <span className="tier-pill">Equipped</span>}
         </div>
         <p className="small" style={{ margin: '2px 0' }}>{piece.how}</p>
         <p className="small muted" style={{ margin: 0 }}>Effect: {piece.effect}</p>
+        {earned && onToggleEquip && (
+          <button type="button" onClick={onToggleEquip} style={{ marginTop: 6 }}>
+            {equipped ? 'Unequip' : `Equip ${equipSlot(piece) === 'weapon' ? 'weapon' : 'armor'}`}
+          </button>
+        )}
       </div>
     </div>
   );
@@ -184,7 +189,8 @@ export default function Armor({ ctx }: { ctx: Ctx }) {
       armColor: g?.armColor || color,
       legColor: g?.legColor || color,
       capeColor: g?.capeColor || color,
-      avatarStyle: g?.avatarStyle || 'svg',
+      equippedWeaponId: g?.equippedWeaponId,
+      equippedArmorId: g?.equippedArmorId,
     });
     setCustomizeMsg('');
     setShowCustomize(true);
@@ -193,14 +199,28 @@ export default function Armor({ ctx }: { ctx: Ctx }) {
   const byTier = (tier: string) => ARMOR.filter((a) => a.tier === tier && !a.set);
   const bySet = (set: string) => ARMOR.filter((a) => a.set === set);
 
+  // Equip (Derek, Nov 22 8:53 PM): one weapon slot + one armor slot.
+  // Only earned pieces get a button (GearCard hides it otherwise), so
+  // this never equips a locked piece. Tapping an equipped piece unequips
+  // it; tapping another piece in the same slot swaps it. The guardian
+  // (Classic SVG) changes at once — Today and the Armor preview both
+  // render from doc.guardian.
+  const toggleEquip = (piece: ArmorPiece) => {
+    if (!doc.guardian) return;
+    const slot = equipSlot(piece);
+    const field = slot === 'weapon' ? 'equippedWeaponId' : 'equippedArmorId';
+    const isEquipped = doc.guardian[field] === piece.id;
+    update((d) => {
+      if (!d.guardian) return;
+      d.guardian[field] = isEquipped ? undefined : piece.id;
+    });
+    showToast(isEquipped ? `Unequipped ${piece.name}.` : `Equipped ${piece.name}.`);
+  };
+
   return (
     <div>
       <div className="card gold-frame">
-        {doc.guardian?.avatarStyle === 'generated' && generatedImageFor(doc.guardian) ? (
-          <GeneratedGuardian guardian={doc.guardian} />
-        ) : (
-          <GuardianAvatar guardian={doc.guardian} level={levelForXp(doc.xp)} size="large" />
-        )}
+        <GuardianAvatar guardian={doc.guardian} level={levelForXp(doc.xp)} size="large" />
         <div className="creature">
           <div>
             <h2>Armor vault</h2>
@@ -209,6 +229,11 @@ export default function Armor({ ctx }: { ctx: Ctx }) {
               {next ? ` · Next: ${nextHidden ? '??? (hidden until earned)' : next.name}` : ''}
             </p>
             <p className="small muted">Armor and weapons never block a workout, quest, check-in, or retest. They are earned, one at a time, from real milestones.</p>
+            <p className="small">
+              {equippedWeaponName(doc.guardian) || equippedArmorName(doc.guardian)
+                ? `Equipped: ${[equippedWeaponName(doc.guardian), equippedArmorName(doc.guardian)].filter(Boolean).join(' · ')}`
+                : 'Nothing equipped yet. Equip earned gear below and your guardian changes.'}
+            </p>
             {doc.guardian && <p className="small">{CLASS_GOOD_FOR[doc.guardian.classId] || ''}</p>}
             {doc.guardian && CLASS_WORKOUT_FOCUS[doc.guardian.classId] && (
               <p className="small"><strong>{CLASS_WORKOUT_FOCUS[doc.guardian.classId].line}</strong></p>
@@ -228,36 +253,7 @@ export default function Armor({ ctx }: { ctx: Ctx }) {
         <div className="card">
           <h3>Customize guardian</h3>
           <p className="small muted">Change how your guardian looks, any time. Your XP, level, armor, workouts, and progress stay the same. Changing class also changes spells, weapon, and workout focus.</p>
-          {draft.avatarStyle === 'generated' && generatedImageFor(draft) ? (
-            <GeneratedGuardian guardian={draft} label={`${draft.name.trim() || 'Your guardian'} the ${draft.classId} · Level ${levelForXp(doc.xp)}`} />
-          ) : (
-            <GuardianAvatar guardian={draft} level={levelForXp(doc.xp)} size="medium" label={`${draft.name.trim() || 'Your guardian'} the ${draft.classId} · Level ${levelForXp(doc.xp)}`} />
-          )}
-          {draft.avatarStyle === 'generated' && !generatedImageFor(draft) && (
-            <p className="small">This hairstyle has no generated picture yet, so the classic guardian shows instead. Pick one of the 18 generated combos below.</p>
-          )}
-          <label>Guardian style</label>
-          <div className="row">
-            <button type="button" onClick={() => setDraft((d) => ({ ...d, avatarStyle: 'svg' }))} style={draft.avatarStyle !== 'generated' ? { background: '#124571', color: '#fff' } : {}}>
-              Classic (full customisation)
-            </button>
-            <button type="button" onClick={() => setDraft((d) => ({ ...d, avatarStyle: 'generated' }))} style={draft.avatarStyle === 'generated' ? { background: '#124571', color: '#fff' } : {}}>
-              Generated art (try-out)
-            </button>
-          </div>
-          {draft.avatarStyle === 'generated' && (
-            <>
-              <p className="small muted">Generated art is a finished picture with its own background. All 18 combos are ready — tap one. Skin color works on the generated picture too (it recolors the face and hands). Build, colors, gem and cape are baked into the picture and do not change it.</p>
-              <label>Generated combos</label>
-              <div className="row">
-                {GENERATED_COMBOS.map((c) => (
-                  <button key={c.label} type="button" onClick={() => setDraft((d) => ({ ...d, classId: c.classId, look: c.look, hair: c.hair }))} style={draft.classId === c.classId && draft.look === c.look && draft.hair === c.hair ? { background: '#124571', color: '#fff' } : {}}>
-                    {c.label}
-                  </button>
-                ))}
-              </div>
-            </>
-          )}
+          <GuardianAvatar guardian={draft} level={levelForXp(doc.xp)} size="medium" label={`${draft.name.trim() || 'Your guardian'} the ${draft.classId} · Level ${levelForXp(doc.xp)}`} />
           <label htmlFor="g-custom-name">Guardian name</label>
           <input
             id="g-custom-name"
@@ -305,9 +301,7 @@ export default function Armor({ ctx }: { ctx: Ctx }) {
               </button>
             ))}
           </div>
-          {draft.avatarStyle !== 'generated' && (
-            <>
-          <label>Build</label>
+                    <label>Build</label>
           <div className="row">
             {BUILD_OPTIONS.map((b) => (
               <button key={b} type="button" onClick={() => setDraft((d) => ({ ...d, build: b }))} style={draft.build === b ? { background: '#124571', color: '#fff' } : {}}>
@@ -382,11 +376,6 @@ export default function Armor({ ctx }: { ctx: Ctx }) {
           <label style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
             <input type="checkbox" checked={draft.cape} onChange={(e) => setDraft((d) => ({ ...d, cape: e.target.checked }))} style={{ width: 'auto', minHeight: 0 }} /> Cape
           </label>
-            </>
-          )}
-          {draft.avatarStyle === 'generated' && (
-            <p className="small muted">Build, colors, gem and cape only change the classic guardian. Skin color works on the generated picture too. Switch back to Classic to change the rest.</p>
-          )}
           {doc.guardian && draft.classId !== doc.guardian.classId && (
             <p className="small">Switching to {draft.classId} changes your spells, class weapon, and workout focus. Your XP, level, and armor stay.</p>
           )}
@@ -434,7 +423,7 @@ export default function Armor({ ctx }: { ctx: Ctx }) {
             {tier === 'Mythical' && 'Very challenging to get.'}
           </p>
           {byTier(tier).map((a) => (
-            <GearCard key={a.id} piece={a} earned={earned.has(a.id) || rarityEarned.has(a.id)} />
+            <GearCard key={a.id} piece={a} earned={earned.has(a.id) || rarityEarned.has(a.id)} equipped={doc.guardian?.equippedWeaponId === a.id || doc.guardian?.equippedArmorId === a.id} onToggleEquip={() => toggleEquip(a)} />
           ))}
         </div>
       ))}
@@ -442,26 +431,26 @@ export default function Armor({ ctx }: { ctx: Ctx }) {
       <div className="card">
         <h3>Peakforged set (Phase 4)</h3>
         {bySet('Peakforged').map((a) => (
-          <GearCard key={a.id} piece={a} earned={earned.has(a.id) || rarityEarned.has(a.id)} />
+          <GearCard key={a.id} piece={a} earned={earned.has(a.id) || rarityEarned.has(a.id)} equipped={doc.guardian?.equippedWeaponId === a.id || doc.guardian?.equippedArmorId === a.id} onToggleEquip={() => toggleEquip(a)} />
         ))}
       </div>
       <div className="card">
         <h3>Stormforged set (Phase 5)</h3>
         {bySet('Stormforged').map((a) => (
-          <GearCard key={a.id} piece={a} earned={earned.has(a.id) || rarityEarned.has(a.id)} />
+          <GearCard key={a.id} piece={a} earned={earned.has(a.id) || rarityEarned.has(a.id)} equipped={doc.guardian?.equippedWeaponId === a.id || doc.guardian?.equippedArmorId === a.id} onToggleEquip={() => toggleEquip(a)} />
         ))}
       </div>
       <div className="card">
         <h3>Class weapons</h3>
         {bySet('Class weapon').map((a) => (
-          <GearCard key={a.id} piece={a} earned={earned.has(a.id) || rarityEarned.has(a.id)} />
+          <GearCard key={a.id} piece={a} earned={earned.has(a.id) || rarityEarned.has(a.id)} equipped={doc.guardian?.equippedWeaponId === a.id || doc.guardian?.equippedArmorId === a.id} onToggleEquip={() => toggleEquip(a)} />
         ))}
       </div>
       <div className="card">
         <h3>Epic weapons</h3>
         <p className="small muted">Famous weapons, retold. Earned from real milestones, never bought. Legendary and Mythical pieces stay hidden until earned.</p>
         {bySet('Epic weapons').map((a) => (
-          <GearCard key={a.id} piece={a} earned={earned.has(a.id) || rarityEarned.has(a.id)} />
+          <GearCard key={a.id} piece={a} earned={earned.has(a.id) || rarityEarned.has(a.id)} equipped={doc.guardian?.equippedWeaponId === a.id || doc.guardian?.equippedArmorId === a.id} onToggleEquip={() => toggleEquip(a)} />
         ))}
       </div>
     </div>

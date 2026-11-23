@@ -42,6 +42,8 @@
 // that turns to muddle at 56px.
 import { useId } from 'react';
 import type { GuardianState } from '../lib/store';
+import { ARMOR } from '../lib/data';
+import { armorKind, tierColor, weaponKind } from '../lib/equip';
 import {
   COLOR_HEX,
   GEM_HEX,
@@ -188,6 +190,17 @@ export default function GuardianAvatar({
   // edge gets a light-tan rim on dark tones instead.
   const beardStroke = skinIsDark ? '#e5b183' : '#2e1a08';
   const gem = GEM_MAP[g.gem] ?? GEM_MAP.Sapphire;
+  // Equipped gear (Derek, Nov 22 8:53 PM): an equipped weapon replaces
+  // the class weapon in the hand, an equipped armor piece adds a
+  // tier-coloured trim + kind-specific piece (helm band, crown, chest
+  // plate tint, boot bands, cape edge). No equipped gear = class weapon
+  // and no trim, exactly as before, so old profiles look unchanged.
+  const equippedWeapon = ARMOR.find((a) => a.id === g.equippedWeaponId);
+  const equippedArmor = ARMOR.find((a) => a.id === g.equippedArmorId);
+  const equippedWeaponKind = equippedWeapon ? weaponKind(equippedWeapon) : null;
+  const equippedArmorKind = equippedArmor ? armorKind(equippedArmor) : null;
+  const equipTier = equippedArmor ? tierColor(equippedArmor.tier) : null;
+  const weaponTier = equippedWeapon ? tierColor(equippedWeapon.tier) : null;
   const px = SIZES[size];
   const showWings = level >= 8;
   const showCrown = level >= 10 && g.classId === 'Guardian';
@@ -262,74 +275,129 @@ export default function GuardianAvatar({
   const pauldronDx = isFemale ? 13 : 18;
 
   // --- Hair, flat with strand lines, in the SAME coordinates as the head.
-  // Head: centre (100,29), r13, top y16, sides x87/113, chin y42.
-  // Every style sits ON the head; locks hug the head sides and end ON
-  // the shoulders (y57), aligned with the arms, never hanging in
-  // mid-air beside the neck, never past the shoulders, never
-  // covering the face or the pauldrons. Hair colour is warm brown for
-  // every style; the silhouette is what tells them apart.
+  // Head: centre (100,29), r13, top y16, sides x87/113, chin y42, brows
+  // y22.5-25, eyes cy27.5. ONE anchored system for all 3 classes:
+  // every hair piece starts ON the head (cap side point, or under the
+  // hood / hat brim) and ends ON the shoulders — never floating, never
+  // past the shoulders, never covering the face or the brows.
+  // The old cap was the root bug (Derek, Nov 22 7:02 PM: "I can see the
+  // arms the hair doesn't line up"): its sides ran down to y37-38 as
+  // cheek tabs and its forehead arc sat at y21-24, right on the brows,
+  // so short hair read as a headband/helmet and the brows vanished.
+  // The new hairline ends at the temples (y31), above the eyes, and the
+  // strand line sits near the crown, so the brows stay visible.
   const hairCap = (
     <g>
-      {/* Cap top at y16, ABOVE the head circle's top (y17), and wider
-          than the circle (x86/114 vs x87/113), so it covers the circle's
-          top arc — the old cap left the dark arc peeking above the hair
-          like a headband. */}
-      <path d="M87 38 Q85.5 15 100 13.5 Q114.5 15 113 38 Q110 24 100 24 Q90 24 87 38 Z" fill={HAIR_C} />
-      <path d="M100 16 Q94.5 17 91 22.5 M100 16 Q105.5 17 109 22.5" fill="none" stroke={HAIR_L} strokeWidth="2.5" opacity="0.9" strokeLinecap="round" />
+      <path d="M86 32 Q84 14 100 13 Q116 14 114 32 Q112 21 100 20 Q88 21 86 32 Z" fill={HAIR_C} />
+      <path d="M94 17 Q100 15.5 106 17" fill="none" stroke={HAIR_L} strokeWidth="2" opacity="0.8" strokeLinecap="round" />
     </g>
   );
-  const longLocks = (wide: boolean) => (
-    <g fill={HAIR_C}>
-      {/* Locks hug the head: inner edge touching the face sides,
-          outer edge just past them, ending ON the shoulders (y57),
-          aligned with the arms — never hanging in mid-air beside
-          the neck, never past the shoulders. */}
-      <path d={wide ? 'M87.5 34 Q81.5 45 82.5 57 Q85.5 60 89 54 Q88 45 89 35 Z' : 'M88.5 34 Q82.5 45 83.5 57 Q86 60 89 54 Q88 45 89 35 Z'} />
-      <path d={wide ? 'M112.5 34 Q118.5 45 117.5 57 Q114.5 60 111 54 Q112 45 111 35 Z' : 'M111.5 34 Q117.5 45 116.5 57 Q114 60 111 54 Q112 45 111 35 Z'} />
-      <path d="M86 43 Q85 50 86 55 M114 43 Q115 50 114 55" fill="none" stroke={HAIR_L} strokeWidth="2" opacity="0.7" strokeLinecap="round" />
+  // One side lock: starts ON the cap side point (86,31)/(114,31), hugs
+  // the face side, ends rounded ON the shoulder. Top overlaps the cap
+  // by 2 units, so there is never a gap between hair and head.
+  const sideLock = (left: boolean, endY = 57, topY = 30) => {
+    const d = left
+      ? `M86 ${topY} Q81 ${topY + 14} 82 ${endY} Q85 ${endY + 3} 89 ${endY - 2} Q88 ${topY + 13} 89 ${topY + 1} Z`
+      : `M114 ${topY} Q119 ${topY + 14} 118 ${endY} Q115 ${endY + 3} 111 ${endY - 2} Q112 ${topY + 13} 111 ${topY + 1} Z`;
+    const strand = left
+      ? `M85 ${topY + 12} Q84 ${topY + 20} 85 ${endY - 2}`
+      : `M115 ${topY + 12} Q116 ${topY + 20} 115 ${endY - 2}`;
+    return (
+      <g fill={HAIR_C}>
+        <path d={d} />
+        <path d={strand} fill="none" stroke={HAIR_L} strokeWidth="2" opacity="0.7" strokeLinecap="round" />
+      </g>
+    );
+  };
+  const longLocks = () => (
+    <g>
+      {sideLock(true)}
+      {sideLock(false)}
     </g>
   );
+  // Short side locks (Bun / Topknot / ManBun / ShortBob): same anchored
+  // shape, ending a little higher (y54) so they read as short, not long.
   const shortLocks = (
+    <g>
+      {sideLock(true, 52)}
+      {sideLock(false, 52)}
+    </g>
+  );
+  // ONE ponytail tail, on the right side only: thick (9-10 wide),
+  // starting under the cap at (108,26), sweeping out to x121 and down
+  // to y58 with a rounded end. Gem ties are SMALL (r3) so they read as
+  // ties on the tail, not balls hiding it — the old r4.5-5 ties dwarfed
+  // the thin tail and read as two blue earrings.
+  const ponytailTail = (
+    <g>
+      <path d="M113 25 Q121 31 121 46 Q121 56 116 58 Q111 57 112 47 Q113 34 111 28 Z" fill={HAIR_C} />
+      <path d="M117 36 Q118 46 117 54" fill="none" stroke={HAIR_L} strokeWidth="2" opacity="0.7" strokeLinecap="round" />
+      <circle cx="117" cy="34" r="3" fill={gem} stroke="#fff" strokeWidth="1.2" />
+      <circle cx="117" cy="55" r="3" fill={gem} stroke="#fff" strokeWidth="1.2" />
+    </g>
+  );
+  // ONE braid, on the right side only: a solid spine from the cap side
+  // (y30) to the shoulder (y57), overlapping segment circles, and
+  // SMALL gem ties (r3) at the top and the end. The old braid was
+  // loose circles hidden behind two big gem ties, plus a stray thin
+  // lock on the left that did not match — both are gone.
+  const braid = (
     <g fill={HAIR_C}>
-      <path d="M88.5 35.5 Q86.5 45 88.5 55 Q90.5 57 92.5 51 Q91.5 43 91.5 35.5 Z" />
-      <path d="M111.5 35.5 Q113.5 45 111.5 55 Q109.5 57 107.5 51 Q108.5 43 108.5 35.5 Z" />
+      <path d="M112 32 Q116 44 113 57 L110 57 Q108 44 110 32 Z" />
+      <circle cx="113" cy="37" r="3.8" />
+      <circle cx="112" cy="43" r="3.8" />
+      <circle cx="113" cy="50" r="3.8" />
+      <circle cx="113" cy="56" r="3.5" />
+      <path d="M109 41 L116 41 M109 48 L116 48 M109 55 L116 55" fill="none" stroke={HAIR_L} strokeWidth="1.6" opacity="0.8" strokeLinecap="round" />
+      <circle cx="113" cy="58" r="3" fill={gem} stroke="#fff" strokeWidth="1.2" />
+    </g>
+  );
+  // Curly: one connected cloud, not detached balls. Top circles overlap
+  // the head by 3-4 units and each other; side curls overlap the face
+  // side; bridge curls join the top to the lower curls, which rest ON
+  // the pauldrons. The old side balls at (85,35)/(115,35) and chest
+  // balls at (86,50)/(114,50) floated with visible gaps.
+  const curlyTop = (
+    <g fill={HAIR_C}>
+      <circle cx="90" cy="20" r="6" />
+      <circle cx="100" cy="17" r="6.5" />
+      <circle cx="110" cy="20" r="6" />
+      <circle cx="86" cy="27" r="5" />
+      <circle cx="114" cy="27" r="5" />
+      <path d="M91 23 Q95 20 100 23 M104 23 Q109 20 113 23" fill="none" stroke={HAIR_L} strokeWidth="1.8" strokeLinecap="round" />
+    </g>
+  );
+  const curlySides = (
+    <g fill={HAIR_C}>
+      <circle cx="86" cy="36" r="5.5" />
+      <circle cx="114" cy="36" r="5.5" />
+      <circle cx="85" cy="44" r="4.5" />
+      <circle cx="115" cy="44" r="4.5" />
+      <circle cx="87" cy="52" r="4.5" />
+      <circle cx="113" cy="52" r="4.5" />
+    </g>
+  );
+  // A knot that sits INTO what is below it (cap top y13, hood top y15,
+  // hat cone): centre y11, r7.5, so its bottom overlaps by ~4 units
+  // instead of balancing on top like a pom-pom.
+  const knot = (withGemBand: boolean) => (
+    <g fill={HAIR_C}>
+      <circle cx="100" cy="11" r="7.5" />
+      <path d="M94 8 Q100 5 106 8" fill="none" stroke={HAIR_L} strokeWidth="2" opacity="0.8" strokeLinecap="round" />
+      {withGemBand && <path d="M93 14 Q100 11 107 14" fill="none" stroke={gem} strokeWidth="3" strokeLinecap="round" />}
+    </g>
+  );
+  const buzzCap = (
+    <g>
+      <path d="M86 30 Q85 15 100 14 Q115 15 114 30 Q112 23 100 22 Q88 23 86 30 Z" fill={HAIR_C} />
+      <path d="M95 17 Q100 16 105 17" fill="none" stroke={HAIR_L} strokeWidth="2" opacity="0.8" strokeLinecap="round" />
     </g>
   );
   const hairArt = isFemale ? (
     <g>
-      {hairCap}
-      {/* Long locks hang in front of the pauldrons — see hangingHair. */}
-      {/* Ponytail tail hangs in front of the pauldrons — see hangingHair. */}
-      {hair === 'Bun' && (
-        <g>
-          <circle cx="100" cy="10" r="8" fill={HAIR_C} />
-          <path d="M94 7 Q100 4 106 7" fill="none" stroke={HAIR_L} strokeWidth="2" opacity="0.8" strokeLinecap="round" />
-          <path d="M93 12 Q100 9 107 12" fill="none" stroke={HAIR_L} strokeWidth="1.8" opacity="0.6" strokeLinecap="round" />
-          {/* Bun side locks hang in front of the pauldrons — hangingHair. */}
-        </g>
-      )}
-      {hair === 'Curly' && (
-        <g fill={HAIR_C}>
-          <circle cx="89" cy="26" r="5.5" />
-          <circle cx="95" cy="19.5" r="6" />
-          <circle cx="105" cy="19.5" r="6" />
-          <circle cx="111" cy="26" r="5.5" />
-          <circle cx="85" cy="35" r="5" />
-          <circle cx="115" cy="35" r="5" />
-          {/* Lower side curls hang in front of the pauldrons — hangingHair. */}
-          <path d="M91 23 Q95 20 100 23 M104 23 Q109 20 113 23" fill="none" stroke={HAIR_L} strokeWidth="1.8" strokeLinecap="round" />
-        </g>
-      )}
-      {/* Braid hangs in front of the pauldrons — see hangingHair. */}
-      {/* Short bob locks hang in front of the pauldrons — see hangingHair. */}
-      {hair === 'Topknot' && (
-        <g fill={HAIR_C}>
-          <circle cx="100" cy="9" r="8" />
-          <path d="M94 6 Q100 3 106 6" fill="none" stroke={HAIR_L} strokeWidth="2" strokeLinecap="round" />
-          <path d="M93 14 Q100 11 107 14" fill="none" stroke={gem} strokeWidth="3" strokeLinecap="round" />
-          {/* Topknot side locks hang in front of the pauldrons — hangingHair. */}
-        </g>
-      )}
+      {hair === 'Curly' ? curlyTop : hairCap}
+      {hair === 'Bun' && knot(false)}
+      {hair === 'Topknot' && knot(true)}
     </g>
   ) : hair === 'Bald' ? (
     <g>
@@ -337,101 +405,32 @@ export default function GuardianAvatar({
     </g>
   ) : (
     <g>
-      {hair === 'Buzz' ? (
-        <path d="M88.5 36 Q88.5 14.5 100 13.5 Q111.5 14.5 111.5 36 Q106 25 100 25 Q94 25 88.5 36 Z" fill={HAIR_C} />
-      ) : (
-        <g>
-          <path d="M88 37 Q88 15 100 13.5 Q112 15 112 37 Q107 24 100 24 Q93 24 88 37 Z" fill={HAIR_C} />
-          <path d="M91 23 Q95 21 100 21 Q105 21 109 23" fill="none" stroke={HAIR_L} strokeWidth="2.5" opacity="0.8" strokeLinecap="round" />
-          {/* NO sideburns: the old short tabs (x87.5-90.5 / 109.5-112.5,
-              y35-41) ran down both sides of the face and, with the hair
-              cap sides and the beard, framed the whole lower face in
-              brown like a mask — that was the "facial hair needs fixed"
-              look in Derek's Nov 22 7:24 PM screenshot. A short beard
-              does not need to touch the hair; skin shows at the jaw
-              corners, like the reference paladins. */}
-        </g>
-      )}
-      {hair === 'Curly' && (
-        <g fill={HAIR_C}>
-          <circle cx="89" cy="25" r="4.5" />
-          <circle cx="95" cy="19.5" r="5" />
-          <circle cx="105" cy="19.5" r="5" />
-          <circle cx="111" cy="25" r="4.5" />
-          <circle cx="85" cy="34" r="4" />
-          <circle cx="115" cy="34" r="4" />
-        </g>
-      )}
-      {/* Long locks hang in front of the pauldrons — see hangingHair. */}
-      {hair === 'ManBun' && (
-        <g fill={HAIR_C}>
-          <circle cx="100" cy="10" r="7" />
-          <path d="M95 7 Q100 4 105 7" fill="none" stroke={HAIR_L} strokeWidth="2" strokeLinecap="round" />
-          <path d="M94 14 Q100 11 106 14" fill="none" stroke={gem} strokeWidth="2.5" strokeLinecap="round" />
-          {/* Man bun side locks hang in front of the pauldrons — hangingHair. */}
-        </g>
-      )}
+      {/* Short / Long / ManBun share the new cap: sides end at the
+          temples, brows stay visible. Buzz gets its own tighter cap —
+          higher hairline, shorter sides — so it reads as a buzz cut
+          next to Short instead of being identical to it. */}
+      {hair === 'Curly' ? curlyTop : hair === 'Buzz' ? buzzCap : hairCap}
+      {hair === 'ManBun' && knot(true)}
     </g>
   );
 
   // Hanging hair, drawn AFTER the pauldrons (in front of the armour),
   // so long hair falls over the shoulders like the reference sheets.
-  // The pauldrons now sit up at chin height (tops y44), so hair drawn
-  // before them would be swallowed — only the cap and on-head styles
-  // are drawn early, in hairArt above. Gem ties are BIG (r4.5-5) so
-  // they read at preview size.
   const hangingHair = isFemale ? (
     <g>
-      {hair === 'Long' && longLocks(false)}
-      {hair === 'Ponytail' && (
-        <g>
-          {/* ONE tail on the right side only, THICKER — the old version
-              had this tail PLUS a short lock on the left, which read
-              live as two thin symmetric strands / pigtails. Gem ties
-              at the top AND at the end, both big enough to see. */}
-          <path d="M111 30 Q121 44 119 58 Q114 61 111 55 Q113 42 109 34 Z" fill={HAIR_C} />
-          <path d="M116 42 Q117 50 116 56" fill="none" stroke={HAIR_L} strokeWidth="2" opacity="0.7" strokeLinecap="round" />
-          <circle cx="115" cy="44" r="5" fill={gem} stroke="#fff" strokeWidth="1.5" />
-          <circle cx="116" cy="56" r="4.5" fill={gem} stroke="#fff" strokeWidth="1.5" />
-        </g>
-      )}
+      {hair === 'Long' && longLocks()}
+      {hair === 'Ponytail' && ponytailTail}
       {hair === 'Bun' && shortLocks}
-      {hair === 'Curly' && (
-        <g fill={HAIR_C}>
-          <circle cx="86" cy="50" r="4.5" />
-          <circle cx="114" cy="50" r="4.5" />
-        </g>
-      )}
-      {hair === 'Braided' && (
-        <g fill={HAIR_C}>
-          {/* Braid hangs to the SHOULDER (y60), aligned with the right
-              arm — the old braid ran to y80, mid-torso, floating. */}
-          <path d="M88.5 35.5 Q86.5 45 88.5 55 Q90.5 57 92.5 51 Q91.5 43 91.5 35.5 Z" />
-          <circle cx="114" cy="42" r="5" />
-          <circle cx="112" cy="49" r="5" />
-          <circle cx="114" cy="55" r="4.5" />
-          <circle cx="114" cy="40" r="4.5" fill={gem} stroke="#fff" strokeWidth="1.5" />
-          <circle cx="114" cy="56" r="4.5" fill={gem} stroke="#fff" strokeWidth="1.5" />
-        </g>
-      )}
-      {hair === 'ShortBob' && (
-        <g fill={HAIR_C}>
-          <path d="M86 36 Q83 46 86 52 Q89 54 91 49 Q90 42 90 36 Z" />
-          <path d="M114 36 Q117 46 114 52 Q111 54 109 49 Q110 42 110 36 Z" />
-          <path d="M88 44 Q90 50 92 48 M112 44 Q110 50 108 48" fill="none" stroke={HAIR_L} strokeWidth="1.8" strokeLinecap="round" />
-        </g>
-      )}
+      {hair === 'Curly' && curlySides}
+      {hair === 'Braided' && braid}
+      {hair === 'ShortBob' && (<g>{sideLock(true, 48)}{sideLock(false, 48)}</g>)}
       {hair === 'Topknot' && shortLocks}
     </g>
   ) : (
     <g>
-      {hair === 'Long' && longLocks(true)}
-      {hair === 'ManBun' && (
-        <g fill={HAIR_C}>
-          <path d="M87 38 Q85 47 87 55 Q90 57 92 52 Q91 44 91 38 Z" />
-          <path d="M113 38 Q115 47 113 55 Q110 57 108 52 Q109 44 109 38 Z" />
-        </g>
-      )}
+      {hair === 'Long' && longLocks()}
+      {hair === 'Curly' && curlySides}
+      {hair === 'ManBun' && shortLocks}
     </g>
   );
 
@@ -442,65 +441,74 @@ export default function GuardianAvatar({
     <g>
       <path d="M85 46 Q80 15 100 15 Q120 15 115 46 L110 36 Q108 21 100 21 Q92 21 90 36 Z" fill={capeMain} stroke={dark} strokeWidth="2.5" />
       <path d="M91 23 Q95 20 100 20" fill="none" stroke={light} strokeWidth="2" opacity="0.6" strokeLinecap="round" />
-      {isFemale && hair === 'Long' && longLocks(false)}
-      {isFemale && hair === 'Ponytail' && (
-        <g>
-          {/* ONE tail only, with big gem ties top and end — same fix
-              as the non-hood Ponytail (two-strand read live). The tail
-              ends at y58, above the pauldron top, so the end tie shows. */}
-          <path d="M111 30 Q121 44 119 58 Q114 61 111 55 Q113 42 109 34 Z" fill={HAIR_C} />
-          <circle cx="115" cy="44" r="5" fill={gem} stroke="#fff" strokeWidth="1.5" />
-          <circle cx="116" cy="56" r="4.5" fill={gem} stroke="#fff" strokeWidth="1.5" />
-        </g>
-      )}
+      {isFemale && hair === 'Long' && longLocks()}
+      {isFemale && hair === 'Ponytail' && ponytailTail}
       {isFemale && hair === 'Bun' && (
-        <g fill={HAIR_C}>
-          <circle cx="100" cy="10" r="7.5" />
+        <g>
+          {knot(false)}
           {shortLocks}
         </g>
       )}
-      {isFemale && hair === 'Curly' && (
-        <g fill={HAIR_C}>
-          <circle cx="84" cy="48" r="5" />
-          <circle cx="116" cy="48" r="5" />
-          <circle cx="86" cy="58" r="4.5" />
-          <circle cx="114" cy="58" r="4.5" />
-        </g>
-      )}
-      {isFemale && hair === 'Braided' && (
-        <g fill={HAIR_C}>
-          <circle cx="114" cy="42" r="5" />
-          <circle cx="112" cy="49" r="5" />
-          <circle cx="114" cy="55" r="4.5" />
-          <circle cx="114" cy="40" r="4.5" fill={gem} stroke="#fff" strokeWidth="1.5" />
-          <circle cx="114" cy="56" r="4.5" fill={gem} stroke="#fff" strokeWidth="1.5" />
-        </g>
-      )}
-      {isFemale && hair === 'ShortBob' && (
-        <g fill={HAIR_C}>
-          <path d="M86 36 Q83 46 86 52 Q89 54 91 49 Q90 42 90 36 Z" />
-          <path d="M114 36 Q117 46 114 52 Q111 54 109 49 Q110 42 110 36 Z" />
-        </g>
-      )}
+      {isFemale && hair === 'Curly' && curlySides}
+      {isFemale && hair === 'Braided' && braid}
+      {isFemale && hair === 'ShortBob' && (<g>{sideLock(true, 48)}{sideLock(false, 48)}</g>)}
       {isFemale && hair === 'Topknot' && (
-        <g fill={HAIR_C}>
-          <circle cx="100" cy="9" r="7.5" />
-          <path d="M93 13 Q100 10 107 13" fill="none" stroke={gem} strokeWidth="2.5" strokeLinecap="round" />
+        <g>
+          {knot(true)}
+          {shortLocks}
         </g>
       )}
-      {!isFemale && hair === 'Curly' && (
-        <g fill={HAIR_C}>
-          <circle cx="85" cy="47" r="4" />
-          <circle cx="115" cy="47" r="4" />
-        </g>
-      )}
-      {!isFemale && hair === 'Long' && longLocks(true)}
+      {!isFemale && hair === 'Curly' && curlySides}
+      {!isFemale && hair === 'Long' && longLocks()}
       {!isFemale && hair === 'ManBun' && (
-        <g fill={HAIR_C}>
-          <circle cx="100" cy="10" r="7" />
-          <path d="M94 14 Q100 11 106 14" fill="none" stroke={gem} strokeWidth="2.5" strokeLinecap="round" />
+        <g>
+          {knot(true)}
+          {shortLocks}
         </g>
       )}
+    </g>
+  );
+
+  // Spellweaver hair: the old code drew hairArt as null for this class,
+  // so EVERY Spellweaver hairstyle rendered the same bald face under
+  // the hat (Long, Braided and Bun shared one image hash). Hair is
+  // drawn BEFORE the hat, so the locks start tucked under the brim
+  // (topY 22, on the brim edge). The knot is NOT drawn here: a knot
+  // behind the cone would only peek out as two bumps flanking it — it
+  // is drawn after the hat instead (knotOnHat, below), perched on the
+  // cone tip where it reads as one bun.
+  const spellweaverHair = (
+    <g>
+      {hair === 'Long' && (
+        <g>
+          {sideLock(true, 57, 22)}
+          {sideLock(false, 57, 22)}
+        </g>
+      )}
+      {hair === 'Ponytail' && ponytailTail}
+      {hair === 'Braided' && braid}
+      {hair === 'Curly' && curlySides}
+      {hair === 'ShortBob' && (
+        <g>
+          {sideLock(true, 48, 22)}
+          {sideLock(false, 48, 22)}
+        </g>
+      )}
+      {(hair === 'Bun' || hair === 'Topknot' || hair === 'ManBun') && (
+        <g>
+          {sideLock(true, 48, 22)}
+          {sideLock(false, 48, 22)}
+        </g>
+      )}
+    </g>
+  );
+  // Bun / Topknot / ManBun under a wizard hat: one knot perched on the
+  // cone tip (drawn AFTER the hat), overlapping it by ~4 units.
+  const knotOnHat = (
+    <g fill={HAIR_C}>
+      <circle cx="100" cy="5" r="5.5" />
+      <path d="M96 3 Q100 1 104 3" fill="none" stroke={HAIR_L} strokeWidth="1.8" opacity="0.8" strokeLinecap="round" />
+      {(hair === 'Topknot' || hair === 'ManBun') && <path d="M95 7 Q100 5 105 7" fill="none" stroke={gem} strokeWidth="2.5" strokeLinecap="round" />}
     </g>
   );
 
@@ -851,7 +859,7 @@ export default function GuardianAvatar({
               the jaw on its own. */}
           {/* Hair, hood, or wizard hat — all in the same coordinates as
               the head, sitting ON it. */}
-          {g.classId === 'Ranger' ? hoodHair : g.classId === 'Spellweaver' ? null : hairArt}
+          {g.classId === 'Ranger' ? hoodHair : g.classId === 'Spellweaver' ? spellweaverHair : hairArt}
           {/* Spellweaver hat: a tall pointed wizard hat in a LIGHT fill
               (shade +100), so it reads against the steel-blue night sky.
               Brim at y18, cone rising to a bent tip at y0, gem band. */}
@@ -864,6 +872,7 @@ export default function GuardianAvatar({
               <circle cx="100" cy="16" r="3.5" fill={gem} stroke="#fff" strokeWidth="1" />
             </g>
           )}
+        {g.classId === 'Spellweaver' && (hair === 'Bun' || hair === 'Topknot' || hair === 'ManBun') && knotOnHat}
           {/* Beard: only when the picked hair style has one (Male Short +
               beard, Bald, or Long). A SHORT NEAT CHIN BEARD that
               follows the jawline — Derek, Nov 22 7:54 PM: "the facial
@@ -981,8 +990,8 @@ export default function GuardianAvatar({
               with rivets and a gem stud each. */}
           {g.classId === 'Guardian' && (
             <g>
-              <ellipse cx={100 - pauldronDx} cy="52" rx={pauldronRx} ry={isFemale ? 7.5 : 8} fill={STEEL} stroke={dark} strokeWidth="2" />
-              <ellipse cx={100 + pauldronDx} cy="52" rx={pauldronRx} ry={isFemale ? 7.5 : 8} fill={STEEL} stroke={dark} strokeWidth="2" />
+              <ellipse cx={100 - pauldronDx} cy="52" rx={pauldronRx} ry={isFemale ? 7.5 : 8} fill={equipTier ?? STEEL} stroke={dark} strokeWidth="2" />
+              <ellipse cx={100 + pauldronDx} cy="52" rx={pauldronRx} ry={isFemale ? 7.5 : 8} fill={equipTier ?? STEEL} stroke={dark} strokeWidth="2" />
               <circle cx={100 - pauldronDx} cy="52" r="2.5" fill={gem} />
               <circle cx={100 + pauldronDx} cy="52" r="2.5" fill={gem} />
               <circle cx={100 - pauldronDx - 5} cy="49" r="1.2" fill={STEEL_DARK} />
@@ -1016,11 +1025,133 @@ export default function GuardianAvatar({
           {g.classId === 'Ranger' && (
             <path d="M84 58 L116 88" fill="none" stroke={WOOD_DARK} strokeWidth="4" opacity="0.7" strokeLinecap="round" />
           )}
+          {/* Equipped armor: a tier-coloured trim band across the chest
+              (always, so any equipped piece reads at 56px), a tier glow
+              behind the chest gem for Legendary/Mythical, and one
+              kind-specific piece — helm band, crown points, chest tint,
+              boot bands, or cape edge. Drawn before the weapons so the
+              hands and weapons stay on top. */}
+          {equippedArmor && equipTier && (
+            <g>
+              <path d="M88 58 L112 58 L112 64 L88 64 Z" fill={equipTier} stroke="#fff" strokeWidth="1" opacity="0.95" />
+              <circle cx="100" cy="61" r="3" fill="#fff" stroke={equipTier} strokeWidth="1.5" />
+              {(equippedArmor.tier === 'Legendary' || equippedArmor.tier === 'Mythical') && (
+                <g className="guardian-gem">
+                  <circle cx="100" cy="70" r="12" fill={equipTier} opacity="0.35" />
+                </g>
+              )}
+              {equippedArmorKind === 'helm' && (
+                <path d="M88 20 Q100 10 112 20 L112 15 Q100 7 88 15 Z" fill={equipTier} stroke="#fff" strokeWidth="1.5" />
+              )}
+              {equippedArmorKind === 'crown' && (
+                <g fill={equipTier} stroke="#fff" strokeWidth="1">
+                  <polygon points="88,16 92,6 96,16" />
+                  <polygon points="96,16 100,4 104,16" />
+                  <polygon points="104,16 108,6 112,16" />
+                </g>
+              )}
+              {equippedArmorKind === 'chest' && (
+                <path d="M90 50 L110 50 L112 68 L100 78 L88 68 Z" fill={equipTier} stroke="#fff" strokeWidth="1.5" opacity="0.4" />
+              )}
+              {equippedArmorKind === 'boots' && (
+                <g fill={equipTier} stroke="#fff" strokeWidth="1">
+                  <rect x="86" y="136" width="12" height="6" rx="2" />
+                  <rect x="102" y="136" width="12" height="6" rx="2" />
+                </g>
+              )}
+              {equippedArmorKind === 'cloak' && g.cape && (
+                <path d="M100 48 L124 58 L121 122 Q100 130 79 122 L76 58 Z" fill="none" stroke={equipTier} strokeWidth="3" opacity="0.9" />
+              )}
+              {equippedArmorKind === 'belt' && (
+                <rect x="86" y="88" width="28" height="6" rx="3" fill={equipTier} stroke="#fff" strokeWidth="1" />
+              )}
+            </g>
+          )}
           {/* Weapons, flat like reference image 5: a distinct item at a
               glance, HELD in the hand — the hand circle is drawn over the
               grip, so the grip reads. Shield in the figure's LEFT hand
               (image-right), sword in the figure's RIGHT hand (image-left). */}
-          {g.classId === 'Guardian' && (
+          {/* Equipped weapon: replaces the class weapon entirely, in
+              the same hand positions, with a tier-coloured accent so
+              the change reads at preview size. Legendary/Mythical
+              weapons get a soft glow disc behind the blade/star. */}
+          {equippedWeapon && equippedWeaponKind && (
+            <g>
+              {(equippedWeapon.tier === 'Legendary' || equippedWeapon.tier === 'Mythical') && (
+                <g className="guardian-gem">
+                  <circle cx={equippedWeaponKind === 'bow' || equippedWeaponKind === 'staff' || equippedWeaponKind === 'shield' || equippedWeaponKind === 'lasso' ? handRx + 12 : handLx} cy="70" r="14" fill={weaponTier ?? GOLD} opacity="0.3" />
+                </g>
+              )}
+              {equippedWeaponKind === 'sword' && (
+                <g transform={`rotate(-12 ${handLx} 68)`}>
+                  <rect x={handLx - 3} y="40" width="6" height="44" rx="3" fill={equippedWeapon.id === 'epic-excalibur' ? GOLD : STEEL} stroke={weaponTier ?? STEEL_DARK} strokeWidth="2" />
+                  <rect x={handLx - 1} y="42" width="1.8" height="38" fill="#fff" opacity="0.7" />
+                  <rect x={handLx - 10} y="82" width="20" height="6" rx="3" fill={weaponTier ?? GOLD} stroke={GOLD_DARK} strokeWidth="1.5" />
+                  <rect x={handLx - 4.5} y="88" width="9" height="13" rx="3" fill={WOOD} />
+                  <circle cx={handLx} cy="101" r="6" fill={weaponTier ?? gem} opacity="0.4" />
+                  <circle cx={handLx} cy="101" r="3.5" fill={weaponTier ?? gem} stroke="#fff" strokeWidth="1.5" />
+                </g>
+              )}
+              {equippedWeaponKind === 'dagger' && (
+                <g transform={`rotate(-12 ${handLx} 72)`}>
+                  <path d={`M${handLx} 52 L${handLx + 4} 62 L${handLx} 84 L${handLx - 4} 62 Z`} fill={STEEL} stroke={weaponTier ?? STEEL_DARK} strokeWidth="2" />
+                  <rect x={handLx - 8} y="84" width="16" height="5" rx="2.5" fill={weaponTier ?? GOLD} />
+                  <rect x={handLx - 3.5} y="89" width="7" height="10" rx="3" fill={WOOD} />
+                </g>
+              )}
+              {equippedWeaponKind === 'hammer' && (
+                <g>
+                  <rect x={handLx - 13} y="38" width="26" height="13" rx="3" fill={weaponTier ?? STEEL} stroke={GOLD_DARK} strokeWidth="2" />
+                  <circle cx={handLx} cy="44" r="3" fill="#fff" />
+                  <rect x={handLx - 3} y="51" width="6" height="42" rx="3" fill={WOOD} stroke={WOOD_DARK} strokeWidth="1.5" />
+                </g>
+              )}
+              {equippedWeaponKind === 'claws' && (
+                <g fill={STEEL} stroke={weaponTier ?? STEEL_DARK} strokeWidth="2">
+                  <path d={`M${handLx - 8} 92 L${handLx - 14} 62 L${handLx - 6} 64 Z`} />
+                  <path d={`M${handLx} 92 L${handLx} 58 L${handLx + 6} 64 Z`} />
+                  <path d={`M${handLx + 8} 92 L${handLx + 14} 62 L${handLx + 6} 64 Z`} />
+                  <rect x={handLx - 10} y="88" width="20" height="7" rx="3.5" fill={weaponTier ?? GOLD} stroke="none" />
+                </g>
+              )}
+              {equippedWeaponKind === 'bow' && (
+                <g>
+                  <path d={`M${handRx} 66 Q${handRx + 24} 90 ${handRx} 126`} fill="none" stroke={WOOD} strokeWidth="4.5" strokeLinecap="round" />
+                  <line x1={handRx} y1="66" x2={handRx} y2="126" stroke={weaponTier ?? '#e8e2d4'} strokeWidth="2" />
+                  <line x1={handRx} y1="90" x2={handRx + 24} y2="90" stroke={weaponTier ?? gem} strokeWidth="3.5" strokeLinecap="round" />
+                  <polygon points={`${handRx + 24},90 ${handRx + 17},87 ${handRx + 17},93`} fill={STEEL_DARK} />
+                  <circle cx={handRx + 24} cy="90" r="6" fill={weaponTier ?? gem} opacity="0.45" />
+                  <polygon points={`${handRx + 2},90 ${handRx - 13},84 ${handRx - 13},96`} fill="#fff" opacity="0.9" />
+                </g>
+              )}
+              {equippedWeaponKind === 'staff' && (
+                <g transform={`rotate(7 ${handRx} 90)`}>
+                  <rect x={handRx - 3} y="27" width="6" height="57" rx="3" fill={WOOD} stroke={WOOD_DARK} strokeWidth="1.5" />
+                  <rect x={handRx - 3} y="96" width="6" height="50" rx="3" fill={WOOD} stroke={WOOD_DARK} strokeWidth="1.5" />
+                  <path d={`M${handRx - 3} 44 L${handRx + 3} 44 M${handRx - 3} 58 L${handRx + 3} 58 M${handRx - 3} 72 L${handRx + 3} 72`} stroke={weaponTier ?? GOLD} strokeWidth="3.5" />
+                  <g className="guardian-gem">
+                    <circle cx={handRx + 10} cy="18" r="16" fill={weaponTier ?? gem} opacity="0.45" />
+                    <polygon points={starPoints(handRx + 10, 18, 9)} fill={weaponTier ?? gem} stroke="#fff" strokeWidth="2" />
+                  </g>
+                </g>
+              )}
+              {equippedWeaponKind === 'shield' && (
+                <g>
+                  <path d={`M${handRx - 2} 66 L${handRx + 28} 66 L${handRx + 28} 86 Q${handRx + 13} 102 ${handRx - 2} 86 Z`} fill={STEEL} stroke={weaponTier ?? GOLD} strokeWidth="3" />
+                  <path d={`M${handRx + 3} 71 L${handRx + 23} 71 L${handRx + 23} 85 Q${handRx + 13} 96 ${handRx + 3} 85 Z`} fill={main} opacity="0.9" />
+                  <circle cx={handRx + 13} cy="81" r="5.5" fill={weaponTier ?? gem} stroke="#fff" strokeWidth="1.5" />
+                </g>
+              )}
+              {equippedWeaponKind === 'lasso' && (
+                <g>
+                  <circle cx={handRx + 12} cy="78" r="11" fill="none" stroke={weaponTier ?? GOLD} strokeWidth="3.5" />
+                  <circle cx={handRx + 12} cy="78" r="4" fill={weaponTier ?? gem} />
+                  <path d={`M${handRx} 90 L${handRx + 8} 82`} stroke={weaponTier ?? GOLD} strokeWidth="3" strokeLinecap="round" />
+                </g>
+              )}
+            </g>
+          )}
+          {!equippedWeapon && g.classId === 'Guardian' && (
             <g>
               {/* Shield, image-right */}
               <path d={`M${handRx - 2} 66 L${handRx + 28} 66 L${handRx + 28} 86 Q${handRx + 13} 102 ${handRx - 2} 86 Z`} fill={STEEL} stroke={GOLD} strokeWidth="3" />
@@ -1042,7 +1173,7 @@ export default function GuardianAvatar({
               </g>
             </g>
           )}
-          {g.classId === 'Ranger' && (
+          {!equippedWeapon && g.classId === 'Ranger' && (
             <g>
               {/* Bow, image-right hand: flat brown arc, string, arrow with
                   fletching and a GLOWING tip (gem glow — a spell-like
@@ -1061,7 +1192,7 @@ export default function GuardianAvatar({
               <polygon points={`${handRx + 2},90 ${handRx - 9},92 ${handRx - 9},98`} fill="#dfe8f0" opacity="0.9" />
             </g>
           )}
-          {g.classId === 'Spellweaver' && (
+          {!equippedWeapon && g.classId === 'Spellweaver' && (
             <g>
               {/* Staff: held in the image-right hand, shaft split at the
                   grip so the hand reads as holding it. The star sits
@@ -1100,6 +1231,13 @@ export default function GuardianAvatar({
         {showWings && ' · Wings'}
         {showCrown && ' · Crown'}
       </p>
+      {(equippedWeapon || equippedArmor) && (
+        <p className="small" style={{ margin: '2px 0 0' }}>
+          {equippedWeapon ? `Wielding ${equippedWeapon.name}` : ''}
+          {equippedWeapon && equippedArmor ? ' · ' : ''}
+          {equippedArmor ? `Wearing ${equippedArmor.name}` : ''}
+        </p>
+      )}
       <p className="small muted" style={{ margin: '2px 0 0' }}>{SCENE_LABEL[scene]}</p>
     </div>
   );

@@ -2,7 +2,7 @@
 // It is saved to the server (Neon profiles.data) when the API is available,
 // and always to localStorage so the app works offline and before deploy.
 import type { AssessmentResult, FindingId, GoalType } from './types';
-import { CREATURES } from './data';
+import { ARMOR, CREATURES } from './data';
 import type { TrainingStyle } from './data';
 import { HAIR_OPTIONS, SKIN_TONES } from './guardianOptions';
 
@@ -23,12 +23,12 @@ export interface GuardianState {
   armColor?: string;
   legColor?: string;
   capeColor?: string;
-  // Guardian art style. 'svg' is the classic GuardianAvatar: full
-  // customisation (skin, hair, per-part colours, builds). 'generated' is
-  // the TRY-OUT generated art: only 3 combos exist as pictures, skin and
-  // part colours are baked in and do nothing. Default 'svg'; old profiles
-  // fill in 'svg' so nothing changes for existing guardians.
-  avatarStyle?: 'svg' | 'generated';
+  // Equipped gear (Derek, Nov 22 8:53 PM: armor and weapons change the
+  // avatar when equipped). One weapon slot + one armor slot, ARMOR ids.
+  // Optional on old profiles: no equipped gear, so the guardian looks
+  // exactly as before (class weapon, no trim) until something is equipped.
+  equippedWeaponId?: string;
+  equippedArmorId?: string;
 }
 
 export interface ProgressPhoto {
@@ -285,10 +285,11 @@ export function normalizeProfile(raw: unknown): ProfileDoc {
     if (!out.guardian.skinColor || !(SKIN_TONES as readonly string[]).includes(out.guardian.skinColor)) {
       out.guardian.skinColor = 'Light';
     }
-    // Guardian art style: only 'svg' or 'generated' are valid. Old
-    // profiles have none, so fill in 'svg', the classic avatar.
-    if (out.guardian.avatarStyle !== 'svg' && out.guardian.avatarStyle !== 'generated') {
-      out.guardian.avatarStyle = 'svg';
+    // Equipped gear: an unknown id (a piece that no longer exists) is
+    // cleared, so the avatar falls back to the class weapon / no trim.
+    for (const f of ['equippedWeaponId', 'equippedArmorId'] as const) {
+      const v = out.guardian[f];
+      if (v && !ARMOR.some((a) => a.id === v)) out.guardian[f] = undefined;
     }
     // Per-part colors default to the overall color, so old profiles and a
     // single overall pick still look the same.
