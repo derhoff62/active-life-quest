@@ -12,6 +12,7 @@ import {
   COLOR_HEX,
   GEM_HEX,
   GEM_LIGHT_HEX,
+  HAIR_WITH_BEARD,
   buildWidth,
   hairForLook,
 } from '../lib/guardianOptions';
@@ -96,7 +97,7 @@ export default function GuardianAvatar({
   // Hair style, per look, with a safe default for old profiles that never
   // picked one. Build changes torso width only, a little either way.
   const hair = hairForLook(g.look, g.hair);
-  const hasBeard = !isFemale && (hair === 'ShortBeard' || hair === 'Bald');
+  const hasBeard = !isFemale && HAIR_WITH_BEARD.includes(hair);
   const bw = buildWidth(g.build);
   // Per-part colors: each part defaults to the overall color, so old
   // profiles and a single overall pick still look the same, and each part
@@ -119,6 +120,207 @@ export default function GuardianAvatar({
   const beltW = (isFemale ? 28 : 36) * bw;
   const pauldronRx = (isFemale ? 9 : 13) * bw;
   const pauldronDx = (isFemale ? 14 : 22) * bw;
+
+  // Hair, drawn as layered locks with strand highlights, not a flat cap.
+  // Each style has its own silhouette so it reads at 72px too. Hair colour
+  // is a warm brown for every style; the shape is what tells them apart.
+  const HAIR_C = '#5b3a1e';
+  const HAIR_L = '#8a6238';
+  const hairArt = isFemale ? (
+    <g>
+      {/* Top cap, shared by every Female style */}
+      <path d="M83 44 Q81 24 100 24 Q119 24 117 44 Q112 30 100 30 Q88 30 83 44 Z" fill={HAIR_C} />
+      <path d="M100 25 Q94 26 90 30" fill="none" stroke={HAIR_L} strokeWidth="2.5" opacity="0.9" strokeLinecap="round" />
+      <path d="M100 25 Q106 26 110 30" fill="none" stroke={HAIR_L} strokeWidth="2.5" opacity="0.9" strokeLinecap="round" />
+      {hair === 'Long' && (
+        <g>
+          <path d="M82 40 Q76 66 80 102 Q84 110 89 104 Q88 74 87 44 Z" fill={HAIR_C} />
+          <path d="M118 40 Q124 66 120 102 Q116 110 111 104 Q112 74 113 44 Z" fill={HAIR_C} />
+          <path d="M84 52 Q82 72 84 92 M116 52 Q118 72 116 92" fill="none" stroke={HAIR_L} strokeWidth="2" opacity="0.7" strokeLinecap="round" />
+        </g>
+      )}
+      {hair === 'Ponytail' && (
+        <g>
+          <path d="M116 40 Q124 72 119 112 Q113 116 111 106 Q114 72 112 44 Z" fill={HAIR_C} />
+          <circle cx="116" cy="56" r="4.5" fill={gem} stroke="#fff" strokeWidth="1" />
+          <path d="M84 46 Q82 64 84 84 Q88 88 90 82 Q89 62 89 46 Z" fill={HAIR_C} />
+        </g>
+      )}
+      {hair === 'Bun' && (
+        <g>
+          <circle cx="100" cy="18" r="10" fill={HAIR_C} />
+          <path d="M92 12 Q100 8 108 12" fill="none" stroke={HAIR_L} strokeWidth="2" opacity="0.8" strokeLinecap="round" />
+          <path d="M84 46 Q82 64 84 84 Q88 88 90 82 Q89 62 89 46 Z" fill={HAIR_C} />
+          <path d="M116 46 Q118 64 116 84 Q112 88 110 82 Q111 62 111 46 Z" fill={HAIR_C} />
+        </g>
+      )}
+      {hair === 'Curly' && (
+        <g fill={HAIR_C}>
+          <circle cx="86" cy="30" r="6" />
+          <circle cx="95" cy="25" r="6.5" />
+          <circle cx="105" cy="25" r="6.5" />
+          <circle cx="114" cy="30" r="6" />
+          <circle cx="82" cy="40" r="5.5" />
+          <circle cx="118" cy="40" r="5.5" />
+          <circle cx="82" cy="58" r="5" />
+          <circle cx="118" cy="58" r="5" />
+          <circle cx="84" cy="76" r="4.5" />
+          <circle cx="116" cy="76" r="4.5" />
+          <path d="M90 27 Q95 24 100 27 M104 27 Q109 24 113 27" fill="none" stroke={HAIR_L} strokeWidth="1.8" strokeLinecap="round" />
+        </g>
+      )}
+      {hair === 'Braided' && (
+        <g fill={HAIR_C}>
+          <path d="M84 46 Q82 64 84 84 Q88 88 90 82 Q89 62 89 46 Z" />
+          <circle cx="116" cy="52" r="5.5" />
+          <circle cx="113" cy="62" r="5.5" />
+          <circle cx="117" cy="72" r="5.5" />
+          <circle cx="113" cy="82" r="5.5" />
+          <circle cx="117" cy="92" r="5.5" />
+          <circle cx="114" cy="102" r="5" />
+          <circle cx="116" cy="50" r="3" fill={gem} stroke="#fff" strokeWidth="1" />
+          <circle cx="114" cy="106" r="3" fill={gem} stroke="#fff" strokeWidth="1" />
+        </g>
+      )}
+      {hair === 'ShortBob' && (
+        <g fill={HAIR_C}>
+          <path d="M84 42 Q81 56 85 60 Q89 62 90 57 Q88 48 89 42 Z" />
+          <path d="M116 42 Q119 56 115 60 Q111 62 110 57 Q112 48 111 42 Z" />
+          <path d="M86 52 Q88 58 90 56 M114 52 Q112 58 110 56" fill="none" stroke={HAIR_L} strokeWidth="1.8" strokeLinecap="round" />
+        </g>
+      )}
+      {hair === 'Topknot' && (
+        <g fill={HAIR_C}>
+          <circle cx="100" cy="13" r="10" />
+          <path d="M93 9 Q100 5 107 9" fill="none" stroke={HAIR_L} strokeWidth="2" strokeLinecap="round" />
+          <path d="M92 20 Q100 17 108 20" fill="none" stroke={gem} strokeWidth="3" strokeLinecap="round" />
+          <path d="M84 46 Q82 60 84 74 Q88 78 90 72 Q89 58 89 46 Z" />
+          <path d="M116 46 Q118 60 116 74 Q112 78 110 72 Q111 58 111 46 Z" />
+        </g>
+      )}
+    </g>
+  ) : hair === 'Bald' ? (
+    <g>
+      <ellipse cx="100" cy="30" rx="10" ry="3" fill="#fff" opacity="0.18" />
+    </g>
+  ) : (
+    <g>
+      {hair === 'Buzz' ? (
+        <path d="M84 42 Q84 28 100 27 Q116 28 116 42 Q110 32 100 32 Q90 32 84 42 Z" fill={HAIR_C} />
+      ) : (
+        <>
+          <path d="M83 44 Q81 24 100 24 Q119 24 117 44 Q112 30 100 30 Q88 30 83 44 Z" fill={HAIR_C} />
+          <path d="M88 30 Q94 25 100 25 Q106 25 112 30" fill="none" stroke={HAIR_L} strokeWidth="2.5" opacity="0.8" />
+          <path d="M83 42 L84 50 L86 50 L86 42 Z" fill={HAIR_C} />
+          <path d="M117 42 L116 50 L114 50 L114 42 Z" fill={HAIR_C} />
+        </>
+      )}
+      {hair === 'Curly' && (
+        <g fill={HAIR_C}>
+          <circle cx="87" cy="30" r="5.5" />
+          <circle cx="95" cy="25" r="6" />
+          <circle cx="105" cy="25" r="6" />
+          <circle cx="113" cy="30" r="5.5" />
+          <circle cx="83" cy="40" r="5" />
+          <circle cx="117" cy="40" r="5" />
+        </g>
+      )}
+      {hair === 'Long' && (
+        <g fill={HAIR_C}>
+          <path d="M82 40 Q76 66 80 102 Q84 110 89 104 Q88 74 87 44 Z" />
+          <path d="M118 40 Q124 66 120 102 Q116 110 111 104 Q112 74 113 44 Z" />
+          <path d="M84 52 Q82 72 84 92 M116 52 Q118 72 116 92" fill="none" stroke={HAIR_L} strokeWidth="2" opacity="0.7" strokeLinecap="round" />
+        </g>
+      )}
+      {hair === 'ManBun' && (
+        <g fill={HAIR_C}>
+          <circle cx="100" cy="15" r="8" />
+          <path d="M94 11 Q100 8 106 11" fill="none" stroke={HAIR_L} strokeWidth="2" strokeLinecap="round" />
+          <path d="M93 21 Q100 18 107 21" fill="none" stroke={gem} strokeWidth="2.5" strokeLinecap="round" />
+          <path d="M84 44 Q82 56 84 66 Q88 70 90 64 Q89 52 89 44 Z" />
+          <path d="M116 44 Q118 56 116 66 Q112 70 110 64 Q111 52 111 44 Z" />
+        </g>
+      )}
+    </g>
+  );
+
+  // Ranger hood: the hood covers most of the hair, so only the bits that
+  // peek out are drawn — side locks, a braid, a bob, curls, or a topknot
+  // poking above the hood. Buzz / Short / Bald show nothing extra.
+  const hoodHair = (
+    <g>
+      <path d="M78 44 Q76 24 100 24 Q124 24 122 44 L115 38 Q111 28 100 28 Q89 28 85 38 Z" fill={`url(#${id('cape')})`} stroke={dark} strokeWidth="2.5" />
+      <path d="M88 30 Q94 25 100 25" fill="none" stroke={light} strokeWidth="2" opacity="0.6" />
+      <path d="M83 42 Q87 46 92 48" fill="none" stroke={dark} strokeWidth="1.5" opacity="0.4" />
+      {isFemale && hair === 'Long' && (
+        <g fill={HAIR_C}>
+          <path d="M84 44 Q80 72 83 104 Q88 108 90 100 Q90 70 89 46 Z" />
+          <path d="M116 44 Q120 72 117 104 Q112 108 110 100 Q110 70 111 46 Z" />
+        </g>
+      )}
+      {isFemale && hair === 'Ponytail' && (
+        <g fill={HAIR_C}>
+          <path d="M116 44 Q122 74 118 110 Q112 114 110 104 Q112 72 111 46 Z" />
+          <circle cx="115" cy="58" r="4" fill={gem} stroke="#fff" strokeWidth="1" />
+        </g>
+      )}
+      {isFemale && hair === 'Bun' && (
+        <g fill={HAIR_C}>
+          <circle cx="100" cy="16" r="9" />
+          <path d="M84 44 Q82 66 84 88 Q88 92 90 86 Q89 64 89 46 Z" />
+          <path d="M116 44 Q118 66 116 88 Q112 92 110 86 Q111 64 111 46 Z" />
+        </g>
+      )}
+      {isFemale && hair === 'Curly' && (
+        <g fill={HAIR_C}>
+          <circle cx="82" cy="58" r="5" />
+          <circle cx="118" cy="58" r="5" />
+          <circle cx="84" cy="76" r="4.5" />
+          <circle cx="116" cy="76" r="4.5" />
+        </g>
+      )}
+      {isFemale && hair === 'Braided' && (
+        <g fill={HAIR_C}>
+          <circle cx="116" cy="56" r="5.5" />
+          <circle cx="113" cy="66" r="5.5" />
+          <circle cx="117" cy="76" r="5.5" />
+          <circle cx="113" cy="86" r="5.5" />
+          <circle cx="116" cy="96" r="5" />
+          <circle cx="114" cy="100" r="3" fill={gem} stroke="#fff" strokeWidth="1" />
+        </g>
+      )}
+      {isFemale && hair === 'ShortBob' && (
+        <g fill={HAIR_C}>
+          <path d="M84 44 Q81 54 85 58 Q89 60 90 55 Q88 48 89 44 Z" />
+          <path d="M116 44 Q119 54 115 58 Q111 60 110 55 Q112 48 111 44 Z" />
+        </g>
+      )}
+      {isFemale && hair === 'Topknot' && (
+        <g fill={HAIR_C}>
+          <circle cx="100" cy="14" r="9" />
+          <path d="M93 20 Q100 17 107 20" fill="none" stroke={gem} strokeWidth="2.5" strokeLinecap="round" />
+        </g>
+      )}
+      {!isFemale && hair === 'Curly' && (
+        <g fill={HAIR_C}>
+          <circle cx="84" cy="42" r="4" />
+          <circle cx="116" cy="42" r="4" />
+        </g>
+      )}
+      {!isFemale && hair === 'Long' && (
+        <g fill={HAIR_C}>
+          <path d="M82 44 Q76 66 80 100 Q84 108 89 102 Q88 72 87 46 Z" />
+          <path d="M118 44 Q124 66 120 100 Q116 108 111 102 Q112 72 113 46 Z" />
+        </g>
+      )}
+      {!isFemale && hair === 'ManBun' && (
+        <g fill={HAIR_C}>
+          <circle cx="100" cy="15" r="8" />
+          <path d="M93 21 Q100 18 107 21" fill="none" stroke={gem} strokeWidth="2.5" strokeLinecap="round" />
+        </g>
+      )}
+    </g>
+  );
 
   // Background scene shapes, drawn behind the figure.
   const sceneArt = (
@@ -335,6 +537,8 @@ export default function GuardianAvatar({
               Drawn before the torso and head, so it fills the seam.
               Male neck is wider and thicker; female neck is narrower. */}
           <rect x={isFemale ? 95 : 92} y="48" width={isFemale ? 10 : 16} height="20" rx="4" fill={`url(#${id('skin')})`} stroke={dark} strokeWidth="2" />
+          {/* Shadow under the chin, so the neck reads as a neck, not a block. */}
+          <ellipse cx="100" cy="52" rx="8" ry="3" fill="#d89a5f" opacity="0.45" />
           {/* Arms: male arms are thicker and more muscular; female arms slimmer. */}
           {isFemale ? (
             <>
@@ -381,6 +585,11 @@ export default function GuardianAvatar({
           {/* Head: male has a squarer, stronger jaw; female a softer, rounder face.
               Same size, different jaw shading so the difference reads at 72px too. */}
           <circle cx="100" cy="42" r="17" fill={`url(#${id('skin')})`} stroke={dark} strokeWidth="2.5" />
+          {/* Ears, so the head reads as a head, not a ball. Drawn before the
+              hair, so long hair covers the tops of them. */}
+          <ellipse cx="83" cy="44" rx="3.5" ry="5" fill={`url(#${id('skin')})`} stroke={dark} strokeWidth="1.5" />
+          <ellipse cx="117" cy="44" rx="3.5" ry="5" fill={`url(#${id('skin')})`} stroke={dark} strokeWidth="1.5" />
+          <path d="M84 42 Q86 44 84 46 M116 42 Q114 44 116 46" fill="none" stroke={dark} strokeWidth="1" opacity="0.5" strokeLinecap="round" />
           {!isFemale && (
             <g stroke={dark} strokeWidth="1.5" opacity="0.35" fill="none" strokeLinecap="round">
               <path d="M86 48 L90 56" />
@@ -389,79 +598,11 @@ export default function GuardianAvatar({
           )}
           <ellipse cx="89" cy="50" rx="3.5" ry="2.2" fill="#e88a7a" opacity={isFemale ? 0.5 : 0.2} />
           <ellipse cx="111" cy="50" rx="3.5" ry="2.2" fill="#e88a7a" opacity={isFemale ? 0.5 : 0.2} />
-          {/* Hair: Ranger hood first, then the picked hair style.
-              Female: Long (locks past the shoulders), Ponytail (one lock
-              tied to the side), Bun (hair up in a bun). Male: Short
-              (neat cap), Short + beard (same cap, beard below), Bald
-              (no top hair). The beard is drawn separately, only when the
-              picked hair style has one. */}
-          {g.classId === 'Ranger' ? (
-            <g>
-              <path d="M78 44 Q76 24 100 24 Q124 24 122 44 L115 38 Q111 28 100 28 Q89 28 85 38 Z" fill={`url(#${id('cape')})`} stroke={dark} strokeWidth="2.5" />
-              <path d="M88 30 Q94 25 100 25" fill="none" stroke={light} strokeWidth="2" opacity="0.6" />
-              <path d="M83 42 Q87 46 92 48" fill="none" stroke={dark} strokeWidth="1.5" opacity="0.4" />
-              {isFemale && hair === 'Long' && (
-                <g fill="#5b3a1e">
-                  <path d="M84 44 Q80 72 83 104 Q88 108 90 100 Q90 70 89 46 Z" />
-                  <path d="M116 44 Q120 72 117 104 Q112 108 110 100 Q110 70 111 46 Z" />
-                </g>
-              )}
-              {isFemale && hair === 'Ponytail' && (
-                <g fill="#5b3a1e">
-                  <path d="M116 44 Q122 74 118 110 Q112 114 110 104 Q112 72 111 46 Z" />
-                  <circle cx="115" cy="58" r="4" fill={gem} stroke="#fff" strokeWidth="1" />
-                </g>
-              )}
-              {isFemale && hair === 'Bun' && (
-                <g fill="#5b3a1e">
-                  <circle cx="100" cy="16" r="9" />
-                  <path d="M84 44 Q82 66 84 88 Q88 92 90 86 Q89 64 89 46 Z" />
-                  <path d="M116 44 Q118 66 116 88 Q112 92 110 86 Q111 64 111 46 Z" />
-                </g>
-              )}
-            </g>
-          ) : isFemale ? (
-            <g>
-              <path d="M83 44 Q81 24 100 24 Q119 24 117 44 Q112 30 100 30 Q88 30 83 44 Z" fill="#5b3a1e" />
-              <path d="M100 25 Q94 26 90 30" fill="none" stroke="#8a6238" strokeWidth="2.5" opacity="0.9" strokeLinecap="round" />
-              <path d="M100 25 Q106 26 110 30" fill="none" stroke="#8a6238" strokeWidth="2.5" opacity="0.9" strokeLinecap="round" />
-              {hair === 'Long' && (
-                <g>
-                  <path d="M82 40 Q76 66 80 102 Q84 110 89 104 Q88 74 87 44 Z" fill="#5b3a1e" />
-                  <path d="M118 40 Q124 66 120 102 Q116 110 111 104 Q112 74 113 44 Z" fill="#5b3a1e" />
-                  <path d="M84 52 Q82 72 84 92 M116 52 Q118 72 116 92" fill="none" stroke="#8a6238" strokeWidth="2" opacity="0.7" strokeLinecap="round" />
-                </g>
-              )}
-              {hair === 'Ponytail' && (
-                <g>
-                  <path d="M116 40 Q124 72 119 112 Q113 116 111 106 Q114 72 112 44 Z" fill="#5b3a1e" />
-                  <circle cx="116" cy="56" r="4.5" fill={gem} stroke="#fff" strokeWidth="1" />
-                  <path d="M84 46 Q82 64 84 84 Q88 88 90 82 Q89 62 89 46 Z" fill="#5b3a1e" />
-                </g>
-              )}
-              {hair === 'Bun' && (
-                <g>
-                  <circle cx="100" cy="18" r="10" fill="#5b3a1e" />
-                  <path d="M92 12 Q100 8 108 12" fill="none" stroke="#8a6238" strokeWidth="2" opacity="0.8" strokeLinecap="round" />
-                  <path d="M84 46 Q82 64 84 84 Q88 88 90 82 Q89 62 89 46 Z" fill="#5b3a1e" />
-                  <path d="M116 46 Q118 64 116 84 Q112 88 110 82 Q111 62 111 46 Z" fill="#5b3a1e" />
-                </g>
-              )}
-            </g>
-          ) : hair === 'Bald' ? (
-            <g>
-              <ellipse cx="100" cy="30" rx="10" ry="3" fill="#fff" opacity="0.18" />
-            </g>
-          ) : (
-            <g>
-              <path d="M83 44 Q81 24 100 24 Q119 24 117 44 Q112 30 100 30 Q88 30 83 44 Z" fill="#5b3a1e" />
-              <path d="M88 30 Q94 25 100 25 Q106 25 112 30" fill="none" stroke="#8a6238" strokeWidth="2.5" opacity="0.8" />
-              <path d="M83 42 L84 50 L86 50 L86 42 Z" fill="#5b3a1e" />
-              <path d="M117 42 L116 50 L114 50 L114 42 Z" fill="#5b3a1e" />
-            </g>
-          )}
-          {/* Beard: only when the picked hair style has one (Short + beard
-              or Bald for Male). Short is clean-shaven. Female has no beard. */}
+          {/* Hair: Ranger hood for Ranger, else the picked hair style. */}
+          {g.classId === 'Ranger' ? hoodHair : hairArt}
+          {/* Beard: only when the picked hair style has one (Short + beard,
+              Bald, or Long for Male). Short, Buzz, Curly, and Man bun are
+              clean-shaven. Female has no beard. */}
           {hasBeard && (
             <g fill="#5b3a1e">
               <path d="M85 46 Q84 60 100 62 Q116 60 115 46 L111 50 Q109 57 100 58 Q91 57 89 50 Z" />
@@ -477,28 +618,42 @@ export default function GuardianAvatar({
               <circle cx="110" cy="26" r="2" fill={gem} stroke="#fff" strokeWidth="1" />
             </g>
           )}
-          {/* Face: male has thick straight brows; female has arched brows,
-              lashes, and pink lips. */}
+          {/* Face: real eyes now — white, iris, pupil, highlight — not just
+              dots. A small shaded nose instead of a line. Male has thick
+              straight brows; female has arched brows, lashes, and pink lips.
+              Brows match the hair colour. */}
           {isFemale ? (
             <g>
               <path d="M87 37 Q91 34 95 37 M105 37 Q109 34 113 37" fill="none" stroke="#5b3a1e" strokeWidth="1.5" strokeLinecap="round" />
-              <circle cx="91" cy="44" r="2.6" fill="#1c2b3a" />
-              <circle cx="109" cy="44" r="2.6" fill="#1c2b3a" />
-              <circle cx="92" cy="43" r="0.9" fill="#fff" />
-              <circle cx="110" cy="43" r="0.9" fill="#fff" />
+              <ellipse cx="91" cy="44" rx="3.4" ry="2.8" fill="#fff" />
+              <ellipse cx="109" cy="44" rx="3.4" ry="2.8" fill="#fff" />
+              <circle cx="91" cy="44" r="2" fill="#4a3220" />
+              <circle cx="109" cy="44" r="2" fill="#4a3220" />
+              <circle cx="91" cy="44" r="1" fill="#1c2b3a" />
+              <circle cx="109" cy="44" r="1" fill="#1c2b3a" />
+              <circle cx="92" cy="43" r="0.7" fill="#fff" />
+              <circle cx="110" cy="43" r="0.7" fill="#fff" />
               <path d="M88 42 L85 40 M112 42 L115 40" stroke="#1c2b3a" strokeWidth="1.2" strokeLinecap="round" />
-              <path d="M98 47 Q100 50 102 47" fill="none" stroke="#c98a5a" strokeWidth="1.5" strokeLinecap="round" />
+              <path d="M100 43 L100 50 Q100 52 98 52" fill="none" stroke="#c98a5a" strokeWidth="1.5" strokeLinecap="round" />
+              <circle cx="97.4" cy="52.4" r="0.7" fill="#c98a5a" opacity="0.8" />
+              <circle cx="102.6" cy="52.4" r="0.7" fill="#c98a5a" opacity="0.8" />
               <path d="M93 53 Q100 58 107 53 Q100 56 93 53 Z" fill="#c25a6b" />
               <path d="M94 54 Q100 57 106 54" fill="none" stroke="#8a2f3f" strokeWidth="1" strokeLinecap="round" />
             </g>
           ) : (
             <g>
               <path d="M86 38 L95 37 M105 37 L114 38" fill="none" stroke="#5b3a1e" strokeWidth="2.5" strokeLinecap="round" />
-              <circle cx="91" cy="44" r="2.6" fill="#1c2b3a" />
-              <circle cx="109" cy="44" r="2.6" fill="#1c2b3a" />
-              <circle cx="92" cy="43" r="0.9" fill="#fff" />
-              <circle cx="110" cy="43" r="0.9" fill="#fff" />
-              <path d="M98 47 Q100 50 102 47" fill="none" stroke="#c98a5a" strokeWidth="1.5" strokeLinecap="round" />
+              <ellipse cx="91" cy="44" rx="3.4" ry="2.8" fill="#fff" />
+              <ellipse cx="109" cy="44" rx="3.4" ry="2.8" fill="#fff" />
+              <circle cx="91" cy="44" r="2" fill="#4a3220" />
+              <circle cx="109" cy="44" r="2" fill="#4a3220" />
+              <circle cx="91" cy="44" r="1" fill="#1c2b3a" />
+              <circle cx="109" cy="44" r="1" fill="#1c2b3a" />
+              <circle cx="92" cy="43" r="0.7" fill="#fff" />
+              <circle cx="110" cy="43" r="0.7" fill="#fff" />
+              <path d="M100 43 L100 50 Q100 52 98 52" fill="none" stroke="#c98a5a" strokeWidth="1.5" strokeLinecap="round" />
+              <circle cx="97.4" cy="52.4" r="0.7" fill="#c98a5a" opacity="0.8" />
+              <circle cx="102.6" cy="52.4" r="0.7" fill="#c98a5a" opacity="0.8" />
               <path d="M94 54 Q100 58 106 54" fill="none" stroke="#1c2b3a" strokeWidth="2.5" strokeLinecap="round" />
             </g>
           )}

@@ -4,6 +4,7 @@
 import type { AssessmentResult, FindingId, GoalType } from './types';
 import { CREATURES } from './data';
 import type { TrainingStyle } from './data';
+import { HAIR_OPTIONS } from './guardianOptions';
 
 export interface GuardianState {
   name: string;
@@ -258,8 +259,7 @@ export function normalizeProfile(raw: unknown): ProfileDoc {
   if (out.guardian) {
     const look = out.guardian.look === 'Male' ? 'Male' : 'Female';
     out.guardian.look = look;
-    const validHair =
-      look === 'Male' ? ['Short', 'ShortBeard', 'Bald'] : ['Long', 'Ponytail', 'Bun'];
+    const validHair = HAIR_OPTIONS[look];
     if (!out.guardian.hair || !validHair.includes(out.guardian.hair)) {
       out.guardian.hair = look === 'Male' ? 'ShortBeard' : 'Long';
     }

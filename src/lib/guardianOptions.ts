@@ -59,19 +59,28 @@ export const GEM_LIGHT_HEX: Record<string, string> = {
 
 // Hair styles, per look. Male "Short + beard" is the beard look; "Short"
 // is clean-shaven; "Bald" is shaved with a beard, so the face is never bare.
+// "Long" for Male is long hair with a beard. Female never has a beard.
 export type GuardianLook = 'Female' | 'Male';
 export const HAIR_OPTIONS: Record<GuardianLook, string[]> = {
-  Female: ['Long', 'Ponytail', 'Bun'],
-  Male: ['Short', 'ShortBeard', 'Bald'],
+  Female: ['Long', 'Ponytail', 'Bun', 'Curly', 'Braided', 'ShortBob', 'Topknot'],
+  Male: ['Short', 'ShortBeard', 'Bald', 'Curly', 'Buzz', 'Long', 'ManBun'],
 };
 export const HAIR_LABELS: Record<string, string> = {
   Long: 'Long',
   Ponytail: 'Ponytail',
   Bun: 'Bun',
+  Curly: 'Curly',
+  Braided: 'Braided',
+  ShortBob: 'Short bob',
+  Topknot: 'Topknot',
   Short: 'Short',
   ShortBeard: 'Short + beard',
   Bald: 'Bald',
+  Buzz: 'Buzz cut',
+  ManBun: 'Man bun',
 };
+// Which hair styles have a beard (Male only, never Female).
+export const HAIR_WITH_BEARD = ['ShortBeard', 'Bald', 'Long'];
 export const DEFAULT_HAIR: Record<GuardianLook, string> = {
   Female: 'Long',
   Male: 'ShortBeard',
