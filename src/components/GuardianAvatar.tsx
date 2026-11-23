@@ -11,7 +11,7 @@
 //   3. Large set + red dragon: outfit/weapon variety.
 //   4. Cartoon set + blue dragon: fierce cartoon bosses.
 //   5. Orcs/wolves/griffin/horse + flat weapons: creatures and gear.
-// The figure: head ~1/6 of total height, legs longer than the torso.
+// The figure: COMPACT — head ~1/5 of the short figure, legs about as long as the torso, like the reference paladin. Derek, Nov 22 7:48 PM: "I think it looks weird cause the guardian is too tall" — the old figure was ~173 units tall (legs 66, torso 64) and filled the whole card, head far up, long body below. Now ~139 units (legs 48, torso 48), shifted down 17 in the frame so it sits centred with breathing room above and below.
 // Neck: SHORT — the collar rises to just under the chin, only ~1.5
 // units of skin show, like the reference sheets, where the chin nearly
 // touches the collar. No bare neck column,
@@ -192,9 +192,11 @@ export default function GuardianAvatar({
   // Neck and mouth are UNCHANGED from v56/v57 (both verified FIXED
   // live Nov 22, 7:11-7:15 PM): neck short, collar rises to just
   // under the chin, ~1.5 units of skin show; mouth a thin short
-  // light line at y34.5. Legs (y110-176) are longer than the torso
-  // (y46-110), with a shade strip and a knee band each, so they
-  // read as armoured legs, not sticks.
+  // light line at y34.5. Legs (y94-142, 48 tall) are about as long as the torso (y46-94,
+  // 48 tall), with a shade strip and a knee band each, so they
+  // read as armoured legs, not sticks. The whole figure is ~139
+  // units tall (was ~173) and is shifted down 17 by the outer
+  // wrapper <g> below, so it sits centred in the 200 frame.
   // Neck: SHORT, NARROW, TAPERED — top 10 wide at the chin, widening
   // to 14 at the shoulders, mostly hidden by the collar, which rises
   // to just under the chin. Only ~1.5 units of skin show between chin
@@ -206,8 +208,8 @@ export default function GuardianAvatar({
   const handRx = isFemale ? 119 : 124;
   const handR = isFemale ? 5 : 5.5;
   const torsoD = isFemale
-    ? `M100 46 L${f(100 + 11 * bw)} 50 L${f(100 + 13 * bw)} 86 L${f(100 + 9 * bw)} 110 L${f(100 - 9 * bw)} 110 L${f(100 - 13 * bw)} 86 L${f(100 - 11 * bw)} 50 Z`
-    : `M100 46 L${f(100 + 17 * bw)} 50 L${f(100 + 19 * bw)} 88 L${f(100 + 14 * bw)} 110 L${f(100 - 14 * bw)} 110 L${f(100 - 19 * bw)} 88 L${f(100 - 17 * bw)} 50 Z`;
+    ? `M100 46 L${f(100 + 11 * bw)} 50 L${f(100 + 13 * bw)} 74 L${f(100 + 9 * bw)} 94 L${f(100 - 9 * bw)} 94 L${f(100 - 13 * bw)} 74 L${f(100 - 11 * bw)} 50 Z`
+    : `M100 46 L${f(100 + 17 * bw)} 50 L${f(100 + 19 * bw)} 76 L${f(100 + 14 * bw)} 94 L${f(100 - 14 * bw)} 94 L${f(100 - 19 * bw)} 76 L${f(100 - 17 * bw)} 50 Z`;
   const beltW = (isFemale ? 24 : 30) * bw;
   const pauldronRx = (isFemale ? 10 : 11) * bw;
   const pauldronDx = isFemale ? 13 : 18;
@@ -459,7 +461,8 @@ export default function GuardianAvatar({
 
   // --- Scene backgrounds: detailed flat cartoon scenes, one per class.
   // Detail stays BEHIND the figure and away from the face (the figure
-  // occupies x70-150, y0-190 and is drawn on top, opaque). The
+  // occupies x70-150, y17-170 in the frame (after the +17 shift)
+  // and is drawn on top, opaque). The
   // Spellweaver sky is steel blue #35567e, NOT navy, so the figure and
   // the light hat read against it — the navy-on-navy camouflage of v53
   // cannot happen.
@@ -551,7 +554,7 @@ export default function GuardianAvatar({
           <path d="M14 174 L18 166 L22 174 Z M52 178 L56 170 L60 178 Z M150 176 L154 168 L158 176 Z M186 180 L190 172 L194 180 Z" fill="#2f6f2f" />
           <circle cx="38" cy="180" r="2.5" fill="#e88a7a" />
           <circle cx="70" cy="184" r="2" fill="#f2d878" />
-          <circle cx="140" cy="182" r="2.5" fill="#fff" />
+          <circle cx="140" cy="148" r="2.5" fill="#fff" />
           <circle cx="166" cy="178" r="2" fill="#e88a7a" />
         </g>
       )}
@@ -658,30 +661,38 @@ export default function GuardianAvatar({
         {/* Thin gold frame, the one epic touch kept: flat, clean, reads at any size */}
         <rect x="2" y="2" width="196" height="196" rx="16" fill="none" stroke={GOLD} strokeWidth="3" opacity="0.8" />
         {/* Ground shadow */}
-        <ellipse className="guardian-shadow" cx="100" cy="190" rx="44" ry="6" fill="#124571" opacity="0.18" />
+        <ellipse className="guardian-shadow" cx="100" cy="172" rx="44" ry="6" fill="#124571" opacity="0.18" />
 
+        {/* Compact figure: the whole figure is shifted down 17 in the
+            frame by this plain wrapper <g> (no CSS class — the
+            .guardian-bob CSS animation animates transform, so an
+            attribute transform ON that group would be overridden
+            live). Figure now spans y~30 (hair top) to y~170 (boots),
+            ~139 units tall, centred with breathing room above and
+            below instead of filling the whole card. */}
+        <g transform="translate(0 17)">
         <g className="guardian-bob">
           {/* Cape with folds, flat, behind the body. Outlined in the
               darker cape colour, so it reads against the tunic instead
               of vanishing into it (same colour, no edge). */}
           {g.cape && (
             <g>
-              <path d="M100 48 L124 58 L121 142 Q100 150 79 142 L76 58 Z" fill={capeMain} stroke={capeDark} strokeWidth="2" opacity="0.96" />
-              <path d="M86 64 Q84 106 86 136" fill="none" stroke={capeDark} strokeWidth="2" opacity="0.6" />
-              <path d="M114 64 Q116 106 114 136" fill="none" stroke={capeDark} strokeWidth="2" opacity="0.6" />
-              <path d="M100 58 Q100 106 100 142" fill="none" stroke={capeDark} strokeWidth="1.5" opacity="0.4" />
+              <path d="M100 48 L124 58 L121 122 Q100 130 79 122 L76 58 Z" fill={capeMain} stroke={capeDark} strokeWidth="2" opacity="0.96" />
+              <path d="M86 64 Q84 96 86 118" fill="none" stroke={capeDark} strokeWidth="2" opacity="0.6" />
+              <path d="M114 64 Q116 96 114 118" fill="none" stroke={capeDark} strokeWidth="2" opacity="0.6" />
+              <path d="M100 58 Q100 96 100 122" fill="none" stroke={capeDark} strokeWidth="1.5" opacity="0.4" />
             </g>
           )}
           {/* Wings, Level 8+ : flat white feathers */}
           {showWings && (
             <g>
               <g fill="#ffffff" stroke={main} strokeWidth="2.5" opacity="0.95">
-                <ellipse cx="66" cy="92" rx="13" ry="30" transform="rotate(-25 66 92)" />
-                <ellipse cx="134" cy="92" rx="13" ry="30" transform="rotate(25 134 92)" />
+                <ellipse cx="66" cy="82" rx="13" ry="24" transform="rotate(-25 66 92)" />
+                <ellipse cx="134" cy="82" rx="13" ry="24" transform="rotate(25 134 92)" />
               </g>
               <g fill={gem} opacity="0.35">
-                <ellipse cx="66" cy="98" rx="7" ry="18" transform="rotate(-25 66 98)" />
-                <ellipse cx="134" cy="98" rx="7" ry="18" transform="rotate(25 134 98)" />
+                <ellipse cx="66" cy="88" rx="7" ry="15" transform="rotate(-25 66 98)" />
+                <ellipse cx="134" cy="88" rx="7" ry="15" transform="rotate(25 134 98)" />
               </g>
             </g>
           )}
@@ -711,44 +722,44 @@ export default function GuardianAvatar({
               Top edge (y46) sits under the collar (y41.5-50), which
               bridges chin to torso, so the neck never shows a gap. */}
           <path d={torsoD} fill={main} stroke={dark} strokeWidth="2.5" />
-          <path d="M88 64 Q86 84 88 104 Q93 106 95 104 Q91 84 93 66 Z" fill="#fff" opacity="0.22" />
-          <path d="M112 64 Q114 84 112 104 Q107 106 105 104 Q109 84 107 66 Z" fill="#000" opacity="0.14" />
+          <path d="M88 62 Q86 76 88 90 Q93 92 95 90 Q91 76 93 64 Z" fill="#fff" opacity="0.22" />
+          <path d="M112 62 Q114 76 112 90 Q107 92 105 90 Q109 76 107 64 Z" fill="#000" opacity="0.14" />
           {/* Belt with buckle and studs */}
-          <rect x={100 - beltW / 2} y="100" width={beltW} height="9" rx="4.5" fill={GOLD} stroke={GOLD_DARK} strokeWidth="1.5" />
-          <rect x="94" y="101" width="12" height="7" rx="2" fill="#fffdf4" stroke={GOLD_DARK} strokeWidth="1.5" />
-          <circle cx={100 - beltW / 2 + 5} cy="104.5" r="1.5" fill={GOLD_DARK} />
-          <circle cx={100 + beltW / 2 - 5} cy="104.5" r="1.5" fill={GOLD_DARK} />
+          <rect x={100 - beltW / 2} y="88" width={beltW} height="9" rx="4.5" fill={GOLD} stroke={GOLD_DARK} strokeWidth="1.5" />
+          <rect x="94" y="89" width="12" height="7" rx="2" fill="#fffdf4" stroke={GOLD_DARK} strokeWidth="1.5" />
+          <circle cx={100 - beltW / 2 + 5} cy="92.5" r="1.5" fill={GOLD_DARK} />
+          <circle cx={100 + beltW / 2 - 5} cy="92.5" r="1.5" fill={GOLD_DARK} />
           {/* Glowing gem on chest: flat diamond with a white facet.
               The gem PULSES (.guardian-gem) — a subtle contextual glow,
               not a halo around the figure. */}
           <g className="guardian-gem">
-            <polygon points="100,66 109,75 100,86 91,75" fill={gem} stroke="#fff" strokeWidth="2" />
-            <polygon points="100,71 104,75 100,80 96,75" fill="#fff" opacity="0.55" />
+            <polygon points="100,62 109,71 100,80 91,71" fill={gem} stroke="#fff" strokeWidth="2" />
+            <polygon points="100,66 104,71 100,76 96,71" fill="#fff" opacity="0.55" />
           </g>
           {/* Legs, with a shade strip and a knee band each, so they read
               as armoured legs, not plain sticks (Derek's screenshot:
               long plain red rectangles, no knees, no shading). */}
-          <path d={isFemale ? 'M89 110 L88 176 L95 176 L95 110 Z' : 'M87 110 L86 176 L97 176 L97 110 Z'} fill={legMain} stroke={legDark} strokeWidth="1.5" />
-          <path d={isFemale ? 'M105 110 L105 176 L112 176 L111 110 Z' : 'M103 110 L103 176 L114 176 L113 110 Z'} fill={legMain} stroke={legDark} strokeWidth="1.5" />
-          <rect x={isFemale ? 92 : 94} y="112" width="3" height="62" fill="#000" opacity="0.14" />
-          <rect x={isFemale ? 109 : 111} y="112" width="3" height="62" fill="#000" opacity="0.14" />
-          <path d={isFemale ? 'M88.5 141 L95 141 M105 141 L111.5 141' : 'M86.5 141 L97 141 M103 141 L113.5 141'} fill="none" stroke={legDark} strokeWidth="2.5" opacity="0.85" strokeLinecap="round" />
-          <ellipse cx="91" cy="182" rx="10" ry="4.5" fill={BOOT} />
-          <ellipse cx="109" cy="182" rx="10" ry="4.5" fill={BOOT} />
+          <path d={isFemale ? 'M89 94 L88 142 L95 142 L95 94 Z' : 'M87 94 L86 142 L97 142 L97 94 Z'} fill={legMain} stroke={legDark} strokeWidth="1.5" />
+          <path d={isFemale ? 'M105 94 L105 142 L112 142 L111 94 Z' : 'M103 94 L103 142 L114 142 L113 94 Z'} fill={legMain} stroke={legDark} strokeWidth="1.5" />
+          <rect x={isFemale ? 92 : 94} y="96" width="3" height="44" fill="#000" opacity="0.14" />
+          <rect x={isFemale ? 109 : 111} y="96" width="3" height="44" fill="#000" opacity="0.14" />
+          <path d={isFemale ? 'M88.5 120 L95 120 M105 120 L111.5 120' : 'M86.5 120 L97 120 M103 120 L113.5 120'} fill="none" stroke={legDark} strokeWidth="2.5" opacity="0.85" strokeLinecap="round" />
+          <ellipse cx="91" cy="148" rx="10" ry="4.5" fill={BOOT} />
+          <ellipse cx="109" cy="148" rx="10" ry="4.5" fill={BOOT} />
           {/* Boot straps, BOLD and bright — the old thin tan lines were
               invisible at preview size live. */}
-          <path d="M83 179 L99 179 M101 179 L117 179" stroke="#d9a441" strokeWidth="3" opacity="1" />
-          <path d="M83 184 L99 184 M101 184 L117 184" stroke="#d9a441" strokeWidth="2.5" opacity="0.9" />
+          <path d="M83 145 L99 145 M101 145 L117 145" stroke="#d9a441" strokeWidth="3" opacity="1" />
+          <path d="M83 150 L99 150 M101 150 L117 150" stroke="#d9a441" strokeWidth="2.5" opacity="0.9" />
           {/* Spellweaver wizard robe: flows from the waist to the ankles
               over the legs, boots peeking out below. Flat, with fold
               lines, a hem trim, and a gem. */}
           {g.classId === 'Spellweaver' && (
             <g>
-              <path d="M84 106 L116 106 L128 164 Q100 172 72 164 Z" fill={main} stroke={dark} strokeWidth="2.5" />
-              <path d="M92 114 Q90 142 92 160 M100 116 Q100 142 100 164 M108 114 Q110 142 108 160" fill="none" stroke={dark} strokeWidth="1.5" opacity="0.4" />
-              <path d="M88 120 Q86 144 88 158" fill="#fff" opacity="0.18" />
-              <path d="M76 160 Q100 168 124 160" fill="none" stroke={GOLD} strokeWidth="2" opacity="0.7" />
-              <circle cx="100" cy="136" r="4" fill={gem} stroke="#fff" strokeWidth="1.5" />
+              <path d="M84 92 L116 92 L126 138 Q100 146 74 138 Z" fill={main} stroke={dark} strokeWidth="2.5" />
+              <path d="M92 100 Q90 120 92 134 M100 102 Q100 120 100 138 M108 100 Q110 120 108 134" fill="none" stroke={dark} strokeWidth="1.5" opacity="0.4" />
+              <path d="M88 104 Q86 122 88 132" fill="#fff" opacity="0.18" />
+              <path d="M76 134 Q100 142 124 134" fill="none" stroke={GOLD} strokeWidth="2" opacity="0.7" />
+              <circle cx="100" cy="118" r="4" fill={gem} stroke="#fff" strokeWidth="1.5" />
             </g>
           )}
           {/* Neck: SHORT, NARROW, TAPERED — like the reference sheets,
@@ -777,7 +788,8 @@ export default function GuardianAvatar({
           <circle cx="100" cy="47" r="3.5" fill={GOLD} stroke={GOLD_DARK} strokeWidth="1.5" />
           <circle cx="100" cy="47" r="1.8" fill={gem} stroke="#fff" strokeWidth="1" />
           {/* Head: one flat skin circle, r13 at (100,29), 26 units tall
-              (hair top y13.5 to chin y42 is ~28 of ~173, about 1/6).
+              (hair top y13.5 to chin y42 is ~28 of the ~139-unit figure,
+              about 1/5 — stockier, like the reference paladin).
               v56/v57 had r11 and the head read TINY live against the
               wide torso. Drawn AFTER the neck, so it overlaps the neck
               top. Same coordinates as the face and hair — no scale
@@ -868,17 +880,17 @@ export default function GuardianAvatar({
               circles at the waist. */}
           {isFemale ? (
             <g>
-              <path d="M88 49 Q80 66 79 100 L86 101 Q87 82 92 53 Z" fill={armMain} stroke={armDark} strokeWidth="2" />
-              <path d="M112 49 Q120 66 121 100 L114 101 Q113 82 108 53 Z" fill={armMain} stroke={armDark} strokeWidth="2" />
-              <path d="M84 58 Q81 70 81 96" fill="none" stroke="#fff" strokeWidth="2" opacity="0.3" strokeLinecap="round" />
-              <path d="M116 58 Q119 70 119 96" fill="none" stroke="#fff" strokeWidth="2" opacity="0.3" strokeLinecap="round" />
+              <path d="M88 49 Q80 62 79 88 L86 89 Q87 74 92 53 Z" fill={armMain} stroke={armDark} strokeWidth="2" />
+              <path d="M112 49 Q120 62 121 88 L114 89 Q113 74 108 53 Z" fill={armMain} stroke={armDark} strokeWidth="2" />
+              <path d="M84 56 Q81 66 81 84" fill="none" stroke="#fff" strokeWidth="2" opacity="0.3" strokeLinecap="round" />
+              <path d="M116 56 Q119 66 119 84" fill="none" stroke="#fff" strokeWidth="2" opacity="0.3" strokeLinecap="round" />
             </g>
           ) : (
             <g>
-              <path d="M86 48 Q75 66 74 100 L83 101 Q85 82 91 52 Z" fill={armMain} stroke={armDark} strokeWidth="2" />
-              <path d="M114 48 Q125 66 126 100 L117 101 Q115 82 109 52 Z" fill={armMain} stroke={armDark} strokeWidth="2" />
-              <path d="M80 56 Q76 70 76 96" fill="none" stroke="#fff" strokeWidth="2" opacity="0.3" strokeLinecap="round" />
-              <path d="M120 56 Q124 70 124 96" fill="none" stroke="#fff" strokeWidth="2" opacity="0.3" strokeLinecap="round" />
+              <path d="M86 48 Q75 62 74 88 L83 89 Q85 74 91 52 Z" fill={armMain} stroke={armDark} strokeWidth="2" />
+              <path d="M114 48 Q125 62 126 88 L117 89 Q115 74 109 52 Z" fill={armMain} stroke={armDark} strokeWidth="2" />
+              <path d="M80 54 Q76 66 76 84" fill="none" stroke="#fff" strokeWidth="2" opacity="0.3" strokeLinecap="round" />
+              <path d="M120 54 Q124 66 124 84" fill="none" stroke="#fff" strokeWidth="2" opacity="0.3" strokeLinecap="round" />
             </g>
           )}
           {/* Guardian pauldrons, drawn AFTER the arms so they cover the
@@ -909,11 +921,11 @@ export default function GuardianAvatar({
                   does not look tiny next to it. Raised 10 with the
                   shoulders (top y50, was y62) so the chin sits just
                   above it. */}
-              <path d="M90 50 L110 50 L113 76 L100 86 L87 76 Z" fill={STEEL} stroke={STEEL_DARK} strokeWidth="2" opacity="0.95" />
-              <path d="M90 50 L110 50 L112 62 L88 62 Z" fill={main} opacity="0.85" />
-              <path d="M94 54 L92 74 M106 54 L108 74" stroke={STEEL_DARK} strokeWidth="1.5" opacity="0.6" strokeLinecap="round" />
+              <path d="M90 50 L110 50 L112 68 L100 78 L88 68 Z" fill={STEEL} stroke={STEEL_DARK} strokeWidth="2" opacity="0.95" />
+              <path d="M90 50 L110 50 L111 60 L89 60 Z" fill={main} opacity="0.85" />
+              <path d="M94 54 L92 66 M106 54 L108 66" stroke={STEEL_DARK} strokeWidth="1.5" opacity="0.6" strokeLinecap="round" />
               <g className="guardian-gem">
-                <circle cx="100" cy="76" r="4" fill={gem} stroke="#fff" strokeWidth="1.5" />
+                <circle cx="100" cy="70" r="4" fill={gem} stroke="#fff" strokeWidth="1.5" />
               </g>
             </g>
           )}
@@ -923,7 +935,7 @@ export default function GuardianAvatar({
           {g.classId === 'Guardian' && hangingHair}
           {/* Ranger quiver strap, diagonal across the chest */}
           {g.classId === 'Ranger' && (
-            <path d="M84 62 L116 100" fill="none" stroke={WOOD_DARK} strokeWidth="4" opacity="0.7" strokeLinecap="round" />
+            <path d="M84 58 L116 88" fill="none" stroke={WOOD_DARK} strokeWidth="4" opacity="0.7" strokeLinecap="round" />
           )}
           {/* Weapons, flat like reference image 5: a distinct item at a
               glance, HELD in the hand — the hand circle is drawn over the
@@ -932,22 +944,22 @@ export default function GuardianAvatar({
           {g.classId === 'Guardian' && (
             <g>
               {/* Shield, image-right */}
-              <path d={`M${handRx - 2} 78 L${handRx + 28} 78 L${handRx + 28} 98 Q${handRx + 13} 114 ${handRx - 2} 98 Z`} fill={STEEL} stroke={GOLD} strokeWidth="3" />
-              <path d={`M${handRx + 3} 83 L${handRx + 23} 83 L${handRx + 23} 97 Q${handRx + 13} 108 ${handRx + 3} 97 Z`} fill={main} opacity="0.9" />
-              <circle cx={handRx + 13} cy="93" r="10" fill={gem} opacity="0.45" />
-              <circle cx={handRx + 13} cy="93" r="5.5" fill={gem} stroke="#fff" strokeWidth="1.5" />
+              <path d={`M${handRx - 2} 66 L${handRx + 28} 66 L${handRx + 28} 86 Q${handRx + 13} 102 ${handRx - 2} 86 Z`} fill={STEEL} stroke={GOLD} strokeWidth="3" />
+              <path d={`M${handRx + 3} 71 L${handRx + 23} 71 L${handRx + 23} 85 Q${handRx + 13} 96 ${handRx + 3} 85 Z`} fill={main} opacity="0.9" />
+              <circle cx={handRx + 13} cy="81" r="10" fill={gem} opacity="0.45" />
+              <circle cx={handRx + 13} cy="81" r="5.5" fill={gem} stroke="#fff" strokeWidth="1.5" />
               {/* Sword, image-left: blade with fuller line, gold
                   crossguard, wrapped grip, gem in the pommel */}
-              <g transform={`rotate(-12 ${handLx} 80)`}>
-                <rect x={handLx - 3} y="48" width="6" height="48" rx="3" fill={STEEL} stroke={STEEL_DARK} strokeWidth="1.5" />
-                <rect x={handLx - 1} y="50" width="1.8" height="42" fill="#fff" opacity="0.7" />
-                <rect x={handLx - 10} y="94" width="20" height="6" rx="3" fill={GOLD} stroke={GOLD_DARK} strokeWidth="1.5" />
+              <g transform={`rotate(-12 ${handLx} 68)`}>
+                <rect x={handLx - 3} y="40" width="6" height="44" rx="3" fill={STEEL} stroke={STEEL_DARK} strokeWidth="1.5" />
+                <rect x={handLx - 1} y="42" width="1.8" height="38" fill="#fff" opacity="0.7" />
+                <rect x={handLx - 10} y="82" width="20" height="6" rx="3" fill={GOLD} stroke={GOLD_DARK} strokeWidth="1.5" />
                 {/* Grip, BOLDER wrap — the old thin lines were invisible
                     at preview size live (grip read as solid brown). */}
-                <rect x={handLx - 4.5} y="100" width="9" height="13" rx="3" fill={WOOD} />
-                <path d={`M${handLx - 4.5} 102 L${handLx + 4.5} 104 M${handLx - 4.5} 106 L${handLx + 4.5} 108 M${handLx - 4.5} 110 L${handLx + 4.5} 112`} stroke={WOOD_DARK} strokeWidth="2.5" />
-                <circle cx={handLx} cy="113" r="6" fill={gem} opacity="0.4" />
-                <circle cx={handLx} cy="113" r="3.5" fill={gem} stroke="#fff" strokeWidth="1.5" />
+                <rect x={handLx - 4.5} y="88" width="9" height="13" rx="3" fill={WOOD} />
+                <path d={`M${handLx - 4.5} 90 L${handLx + 4.5} 92 M${handLx - 4.5} 94 L${handLx + 4.5} 96 M${handLx - 4.5} 98 L${handLx + 4.5} 100`} stroke={WOOD_DARK} strokeWidth="2.5" />
+                <circle cx={handLx} cy="101" r="6" fill={gem} opacity="0.4" />
+                <circle cx={handLx} cy="101" r="3.5" fill={gem} stroke="#fff" strokeWidth="1.5" />
               </g>
             </g>
           )}
@@ -956,18 +968,18 @@ export default function GuardianAvatar({
               {/* Bow, image-right hand: flat brown arc, string, arrow with
                   fletching and a GLOWING tip (gem glow — a spell-like
                   effect, not a halo). */}
-              <path d={`M${handRx} 66 Q${handRx + 24} 102 ${handRx} 138`} fill="none" stroke={WOOD} strokeWidth="4.5" strokeLinecap="round" />
-              <path d={`M${handRx} 66 Q${handRx + 19} 102 ${handRx} 138`} fill="none" stroke="#a8763e" strokeWidth="2" strokeLinecap="round" />
-              <line x1={handRx} y1="66" x2={handRx} y2="138" stroke="#e8e2d4" strokeWidth="2" />
-              <path d={`M${handRx - 3} 98 L${handRx + 3} 98 M${handRx - 3} 106 L${handRx + 3} 106`} stroke={WOOD_DARK} strokeWidth="2" />
-              <line x1={handRx} y1="102" x2={handRx + 24} y2="102" stroke={gem} strokeWidth="3.5" strokeLinecap="round" />
-              <polygon points={`${handRx + 24},102 ${handRx + 17},99 ${handRx + 17},105`} fill={STEEL_DARK} />
-              <circle cx={handRx + 24} cy="102" r="6" fill={gem} opacity="0.45" />
+              <path d={`M${handRx} 66 Q${handRx + 24} 90 ${handRx} 126`} fill="none" stroke={WOOD} strokeWidth="4.5" strokeLinecap="round" />
+              <path d={`M${handRx} 66 Q${handRx + 19} 90 ${handRx} 126`} fill="none" stroke="#a8763e" strokeWidth="2" strokeLinecap="round" />
+              <line x1={handRx} y1="66" x2={handRx} y2="126" stroke="#e8e2d4" strokeWidth="2" />
+              <path d={`M${handRx - 3} 86 L${handRx + 3} 86 M${handRx - 3} 94 L${handRx + 3} 94`} stroke={WOOD_DARK} strokeWidth="2" />
+              <line x1={handRx} y1="90" x2={handRx + 24} y2="90" stroke={gem} strokeWidth="3.5" strokeLinecap="round" />
+              <polygon points={`${handRx + 24},90 ${handRx + 17},87 ${handRx + 17},93`} fill={STEEL_DARK} />
+              <circle cx={handRx + 24} cy="90" r="6" fill={gem} opacity="0.45" />
               {/* Fletching, BIG — the old small white triangle was
                   invisible at preview size live. A large white feather
                   at the arrow tail, with a second smaller one. */}
-              <polygon points={`${handRx + 2},102 ${handRx - 13},96 ${handRx - 13},108`} fill="#fff" opacity="0.9" />
-              <polygon points={`${handRx + 2},102 ${handRx - 9},104 ${handRx - 9},110`} fill="#dfe8f0" opacity="0.9" />
+              <polygon points={`${handRx + 2},90 ${handRx - 13},84 ${handRx - 13},96`} fill="#fff" opacity="0.9" />
+              <polygon points={`${handRx + 2},90 ${handRx - 9},92 ${handRx - 9},98`} fill="#dfe8f0" opacity="0.9" />
             </g>
           )}
           {g.classId === 'Spellweaver' && (
@@ -978,17 +990,17 @@ export default function GuardianAvatar({
                   clear of the face (face right edge x113, star left edge
                   x120). The star GLOWS: a soft gem-coloured disc behind
                   it, pulsing (.guardian-gem) — the spell being cast. */}
-              <g transform={`rotate(7 ${handRx} 102)`}>
-                <rect x={handRx - 3} y="27" width="6" height="69" rx="3" fill={WOOD} stroke={WOOD_DARK} strokeWidth="1.5" />
-                <rect x={handRx - 3} y="108" width="6" height="50" rx="3" fill={WOOD} stroke={WOOD_DARK} strokeWidth="1.5" />
-                <rect x={handRx - 1} y="29" width="2" height="65" fill="#a8763e" opacity="0.7" />
-                <rect x={handRx - 1} y="110" width="2" height="46" fill="#a8763e" opacity="0.7" />
+              <g transform={`rotate(7 ${handRx} 90)`}>
+                <rect x={handRx - 3} y="27" width="6" height="57" rx="3" fill={WOOD} stroke={WOOD_DARK} strokeWidth="1.5" />
+                <rect x={handRx - 3} y="96" width="6" height="50" rx="3" fill={WOOD} stroke={WOOD_DARK} strokeWidth="1.5" />
+                <rect x={handRx - 1} y="29" width="2" height="55" fill="#a8763e" opacity="0.7" />
+                <rect x={handRx - 1} y="98" width="2" height="46" fill="#a8763e" opacity="0.7" />
                 {/* Carved rings, GOLD and BOLD — the old dark thin bands
                     were invisible on the brown wood at preview size
                     live (staff read as plain brown). Four rings, plus
                     bolder wrap lines at the grip. */}
-                <path d={`M${handRx - 3} 44 L${handRx + 3} 44 M${handRx - 3} 58 L${handRx + 3} 58 M${handRx - 3} 72 L${handRx + 3} 72 M${handRx - 3} 130 L${handRx + 3} 130`} stroke={GOLD} strokeWidth="3.5" />
-                <path d={`M${handRx - 3} 118 L${handRx + 3} 120 M${handRx - 3} 124 L${handRx + 3} 126`} stroke={WOOD_DARK} strokeWidth="2.5" />
+                <path d={`M${handRx - 3} 44 L${handRx + 3} 44 M${handRx - 3} 58 L${handRx + 3} 58 M${handRx - 3} 72 L${handRx + 3} 72 M${handRx - 3} 118 L${handRx + 3} 118`} stroke={GOLD} strokeWidth="3.5" />
+                <path d={`M${handRx - 3} 106 L${handRx + 3} 108 M${handRx - 3} 112 L${handRx + 3} 114`} stroke={WOOD_DARK} strokeWidth="2.5" />
                 <g className="guardian-gem">
                   <circle cx={handRx + 10} cy="18" r="16" fill={gem} opacity="0.45" />
                   <polygon points={starPoints(handRx + 10, 18, 9)} fill={gem} stroke="#fff" strokeWidth="2" />
@@ -999,8 +1011,9 @@ export default function GuardianAvatar({
           )}
           {/* Hands, drawn LAST over the weapon grips, so every weapon
               reads as held. Skin circles with a dark outline. */}
-          <circle cx={handLx} cy="102" r={handR} fill={SKIN} stroke={dark} strokeWidth="1.5" />
-          <circle cx={handRx} cy="102" r={handR} fill={SKIN} stroke={dark} strokeWidth="1.5" />
+          <circle cx={handLx} cy="90" r={handR} fill={SKIN} stroke={dark} strokeWidth="1.5" />
+          <circle cx={handRx} cy="90" r={handR} fill={SKIN} stroke={dark} strokeWidth="1.5" />
+        </g>
         </g>
       </svg>
       <p className="guardian-caption">
