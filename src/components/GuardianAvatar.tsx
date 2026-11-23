@@ -12,9 +12,9 @@
 //   4. Cartoon set + blue dragon: fierce cartoon bosses.
 //   5. Orcs/wolves/griffin/horse + flat weapons: creatures and gear.
 // The figure: head ~1/7 of total height, legs longer than the torso.
-// Neck: SHORT, NARROW, TAPERED, mostly hidden by a collar that rises to
-// just under the chin — only ~4 units of skin show, like the reference
-// sheets, where the chin nearly touches the collar. No bare neck column,
+// Neck: SHORT — the collar rises to just under the chin, only ~1.5
+// units of skin show, like the reference sheets, where the chin nearly
+// touches the collar. No bare neck column,
 // no gap, no floating, no dark band between head and body. Face: small
 // dark dot eyes, strong brows, firm straight mouth, a THIN short light
 // mouth line (never a thick dark band),
@@ -172,8 +172,8 @@ export default function GuardianAvatar({
   // head+hair is ~25 of ~171, about 1/7. Legs (y110-176) are longer
   // than the torso (y54-110), so the figure reads tall, not stocky.
   // Neck: SHORT, NARROW, TAPERED — top 10 wide at the chin, widening
-  // to 16 at the shoulders, mostly hidden by the collar, which rises
-  // to just under the chin. Only ~4 units of skin show between chin
+  // to 14 at the shoulders, mostly hidden by the collar, which rises
+  // to just under the chin. Only ~1.5 units of skin show between chin
   // and collar. Like the reference sheets: the chin nearly touches
   // the collar, there is no bare column of neck.
   // Hands: image-left hand holds the sword (figure's right), image-right
@@ -656,7 +656,8 @@ export default function GuardianAvatar({
           )}
           {/* Body: flat tunic in the main colour, one light strip on the
               left, one dark strip on the right (reference image 2 shading).
-              Top edge (y54) overlaps the bottom of the neck (y58). */}
+              Top edge (y54) sits under the collar (y41.5-58), which
+              bridges chin to torso, so the neck never shows a gap. */}
           <path d={torsoD} fill={main} stroke={dark} strokeWidth="2.5" />
           <path d="M88 64 Q86 84 88 104 Q93 106 95 104 Q91 84 93 66 Z" fill="#fff" opacity="0.22" />
           <path d="M112 64 Q114 84 112 104 Q107 106 105 104 Q109 84 107 66 Z" fill="#000" opacity="0.14" />
@@ -694,23 +695,23 @@ export default function GuardianAvatar({
           {/* Neck: SHORT, NARROW, TAPERED — like the reference sheets,
               where the chin nearly touches the collar and almost no
               neck shows. Top 10 wide at the chin (y38, inside the
-              head), widening to 16 at the shoulders (y56, below the
+              head), widening to 14 at the shoulders (y50, below the
               torso top), about half the face width. A soft shade strip
               on one side. The COLLAR drawn after it covers the bottom
-              half, so only ~4 units of skin show between chin (y40)
-              and collar (y44) — a neck, not a column, not a thin
+              half, so only ~1.5 units of skin show between chin (y40)
+              and collar (y41.5) — a neck, not a column, not a thin
               stick, never a wide block. Drawn AFTER the torso and
               BEFORE the head; the chin sits ON the neck, the neck
               disappears INTO the collar. */}
-          <path d="M95 38 L105 38 L108 56 L92 56 Z" fill={SKIN} />
-          <path d="M102 40 L105 40 L105 44 L102.5 44 Z" fill="#c98a5a" opacity="0.3" />
+          <path d="M95 38 L105 38 L107 50 L93 50 Z" fill={SKIN} />
+          <path d="M102 40 L105 40 L105 42.5 L102.5 42.5 Z" fill="#c98a5a" opacity="0.3" />
           {/* Collar: a dome-topped band rising to just under the chin
-              (top edge y44), joining chin to shoulders and covering
+              (top edge y41.5), joining chin to shoulders and covering
               the neck's bottom half. Main colour (hood colour for the
               Ranger, so it reads as the cowl). Light trim along the
               top edge. */}
-          <path d="M85 58 Q85 44 100 44 Q115 44 115 58 Z" fill={g.classId === 'Ranger' ? capeMain : main} stroke={dark} strokeWidth="2" />
-          <path d="M88 47 Q100 45 112 47" fill="none" stroke={light} strokeWidth="1.5" opacity="0.5" />
+          <path d="M85 58 Q85 41.5 100 41.5 Q115 41.5 115 58 Z" fill={g.classId === 'Ranger' ? capeMain : main} stroke={dark} strokeWidth="2" />
+          <path d="M88 44.5 Q100 42.5 112 44.5" fill="none" stroke={light} strokeWidth="1.5" opacity="0.5" />
           {/* Cape clasp on the collar, joining neck to shoulders */}
           <circle cx="100" cy="55" r="3.5" fill={GOLD} stroke={GOLD_DARK} strokeWidth="1.5" />
           <circle cx="100" cy="55" r="1.8" fill={gem} stroke="#fff" strokeWidth="1" />
