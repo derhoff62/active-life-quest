@@ -1017,11 +1017,11 @@ export default function GuardianAvatar({
           <path d={torsoD} fill={main} stroke={dark} strokeWidth="2.5" />
           <path d="M88 62 Q86 76 88 90 Q93 92 95 90 Q91 76 93 64 Z" fill="#fff" opacity="0.22" />
           <path d="M112 62 Q114 76 112 90 Q107 92 105 90 Q109 76 107 64 Z" fill="#000" opacity="0.14" />
-          {/* Belt with buckle and studs */}
-          <rect x={100 - beltW / 2} y="88" width={beltW} height="9" rx="4.5" fill={GOLD} stroke={GOLD_DARK} strokeWidth="1.5" />
-          <rect x="94" y="89" width="12" height="7" rx="2" fill="#fffdf4" stroke={GOLD_DARK} strokeWidth="1.5" />
-          <circle cx={100 - beltW / 2 + 5} cy="92.5" r="1.5" fill={GOLD_DARK} />
-          <circle cx={100 + beltW / 2 - 5} cy="92.5" r="1.5" fill={GOLD_DARK} />
+          {/* Belt: drawn AFTER the legs and the Spellweaver robe (see
+              below), so it sits ON TOP of them at the waist — the legs
+              used to be drawn after the belt and covered its bottom
+              3 units, so the legs read as being over the belt
+              (Derek, Nov 23 1:12 PM). */}
           {/* Glowing gem on chest: flat diamond with a white facet.
               The gem PULSES (.guardian-gem) — a subtle contextual glow,
               not a halo around the figure. */}
@@ -1055,6 +1055,13 @@ export default function GuardianAvatar({
               <circle cx="100" cy="118" r="4" fill={gem} stroke="#fff" strokeWidth="1.5" />
             </g>
           )}
+          {/* Belt with buckle and studs — AFTER the legs, boots and
+              Spellweaver robe, so the full gold belt reads across the
+              waist and the legs start BELOW it, never over it. */}
+          <rect x={100 - beltW / 2} y="88" width={beltW} height="9" rx="4.5" fill={GOLD} stroke={GOLD_DARK} strokeWidth="1.5" />
+          <rect x="94" y="89" width="12" height="7" rx="2" fill="#fffdf4" stroke={GOLD_DARK} strokeWidth="1.5" />
+          <circle cx={100 - beltW / 2 + 5} cy="92.5" r="1.5" fill={GOLD_DARK} />
+          <circle cx={100 + beltW / 2 - 5} cy="92.5" r="1.5" fill={GOLD_DARK} />
           {/* Neck: SHORT, NARROW, TAPERED — like the reference sheets,
               where the chin nearly touches the collar and almost no
               neck shows. Top 10 wide at the chin (y38, inside the
@@ -1431,18 +1438,39 @@ export default function GuardianAvatar({
               as fingers wrapping the wood. The left hand moves up
               2 units onto the sleeve end (cy88, r+0.5) so it is not
               detached at the waist either. Other classes keep the
-              generic hands exactly as before (they passed live). */}
+              generic hands exactly as before (they passed live).
+              FINGERS v5 (Derek, Nov 23 2:11 PM: "make the fingers
+              visible"; live Nov 23 1:14 PM: hand IS on the shaft,
+              no gap, but NO finger bands — "smooth, featureless
+              pale oval", "pale blob resting on the shaft"):
+              DIAGNOSIS — the v4 finger lines were
+              shade(SKIN,-40) = #cfb186 on Light skin, only 2 units
+              wide (1px at 100px, 0.5px at 56px), drawn ON a pale
+              skin ellipse: tan-on-pale has almost no contrast, and
+              over the wood they were a single faint tan line that
+              antialiasing washed out at 4x/8x. Lines cannot read
+              at preview size; the fingers must be STRUCTURAL.
+              The fist is now three separate skin CAPSULES across
+              the shaft (y83.5-87, 88.5-92, 93.5-97), joined on the
+              palm side by a skin column, with 1.5-unit GAPS
+              between them where the dark WOOD shaft shows through
+              — wood-between-skin is the separation, and it reads
+              at 100px because the bands are 3.5 tall (~1.75px)
+              and the gaps are wood, not a thin line. Capsule
+              outlines use the light-cream halo colour on Brown/
+              Deep skin (same skinIsDark rule as the brows), dark
+              navy otherwise, so the outline reads on every tone. */}
           {isStaffGrip ? (
             <g>
               <circle cx={handLx} cy="88" r={handR + 0.5} fill={SKIN} stroke={dark} strokeWidth="1.5" />
-              <ellipse cx={handRx - 2} cy="90" rx="7.5" ry="6" fill={SKIN} stroke={dark} strokeWidth="1" />
-              <path
-                d={`M${handRx - 9} 86.5 Q${handRx - 2} 88 ${handRx + 5} 86.5 M${handRx - 9} 90 Q${handRx - 2} 91.5 ${handRx + 5} 90 M${handRx - 9} 93.5 Q${handRx - 2} 95 ${handRx + 5} 93.5`}
-                fill="none"
-                stroke={shade(SKIN, -40)}
-                strokeWidth="2"
-                strokeLinecap="round"
-              />
+              {/* Palm column (left / body side), joins the fingers. */}
+              <rect x={handRx - 9.5} y="83.5" width="5" height="13.5" rx="2" fill={SKIN} stroke={skinIsDark ? '#ffe3c2' : dark} strokeWidth="1.5" />
+              {/* Three finger capsules across the shaft; the 1.5-unit
+                  gaps between them show the dark wood shaft, so the
+                  fingers read as separate bands wrapping the wood. */}
+              <rect x={handRx - 6} y="83.5" width="11.5" height="3.5" rx="1.75" fill={SKIN} stroke={skinIsDark ? '#ffe3c2' : dark} strokeWidth="1.2" />
+              <rect x={handRx - 6} y="88.5" width="11.5" height="3.5" rx="1.75" fill={SKIN} stroke={skinIsDark ? '#ffe3c2' : dark} strokeWidth="1.2" />
+              <rect x={handRx - 6} y="93.5" width="11.5" height="3.5" rx="1.75" fill={SKIN} stroke={skinIsDark ? '#ffe3c2' : dark} strokeWidth="1.2" />
             </g>
           ) : (
             <g>
