@@ -159,14 +159,34 @@ export default function GuardianAvatar({
   // outline reads as shading, never as a band, and the mouth stays a
   // separate thin line.
   const headStroke = shade(SKIN, -55);
-  // Face-feature contrast: on the two darkest tones (Brown, Deep) the
-  // medium-brown brows (#5b3a1e) and muted-brown mouth (#6b4a3a) would
-  // vanish into the skin, so the brows go near-black and the mouth goes
-  // a lighter tan that still reads as a mouth, not a smile. The dark
-  // dot eyes (#1c2b3a) already read on every tone.
+  // Face-feature contrast, REWORKED (Derek, Nov 22 8:30 PM: "I don't
+  // see a difference" — live v67 test: on Deep the brows and mouth
+  // effectively vanish, on Brown they are faint). Why the v67 fix did
+  // NOT read: Deep skin #54371e and near-black #1c2b3a are both dark
+  // (relative luminance ~0.05 vs ~0.03), so a dark brow on dark skin
+  // has almost no contrast, and a 1.2-1.4 unit stroke is 0.34-0.4 px
+  // at the 56px preview — sub-pixel, so it disappears whatever its
+  // colour. The mouth on dark tones was shade(skin,+70) = #9a7d64, a
+  // mid-tan 1.4-unit line: a faint mark, not a mouth.
+  // Fix: on the two darkest tones the brow is drawn TWICE — a wide
+  // light-cream halo underneath (#ffe3c2, the Fair tone) and a dark
+  // near-black core on top — so the dark brow is rimmed in light and
+  // separates from both the dark skin and the dark hair. The mouth on
+  // dark tones is a light-cream line, thicker (2.8) and longer (8
+  // units), so it reads as a mouth, not a faint mark. On light tones
+  // the brow stays dark brown and the mouth stays muted brown, both
+  // thickened a little (brows 2.2->3.0 male, mouth 1.4->2.0) so they
+  // read at 56px without becoming a band. Eyes get slightly bigger
+  // dots (r2.4->2.7); they already read on every tone.
   const skinIsDark = skinTone === 'Brown' || skinTone === 'Deep';
-  const browStroke = skinIsDark ? '#1c2b3a' : HAIR_C;
-  const mouthStroke = skinIsDark ? shade(SKIN, 70) : '#6b4a3a';
+  const browCore = skinIsDark ? '#120a04' : HAIR_C;
+  const browHalo = skinIsDark ? '#ffe3c2' : null;
+  const mouthStroke = skinIsDark ? '#ffe3c2' : '#6b4a3a';
+  const mouthWidth = skinIsDark ? 2.8 : 2.0;
+  // Beard edge on dark skin: the old dark outline (#2e1a08) vanished
+  // into Deep skin (#54371e) next to beard fill #40260f, so the beard
+  // edge gets a light-tan rim on dark tones instead.
+  const beardStroke = skinIsDark ? '#e5b183' : '#2e1a08';
   const gem = GEM_MAP[g.gem] ?? GEM_MAP.Sapphire;
   const px = SIZES[size];
   const showWings = level >= 8;
@@ -177,6 +197,8 @@ export default function GuardianAvatar({
   const id = (n: string) => `${n}-${uid}`;
   const scene: GuardianScene = background ?? CLASS_SCENE[g.classId] ?? 'guardian';
   const isFemale = g.look === 'Female';
+  const browCoreWidth = isFemale ? 2.4 : 3.0;
+  const browHaloWidth = isFemale ? 4.6 : 5.2;
   const hair = hairForLook(g.look, g.hair);
   const hasBeard = !isFemale && HAIR_WITH_BEARD.includes(hair);
   const bw = buildWidth(g.build);
@@ -876,7 +898,7 @@ export default function GuardianAvatar({
               Female never has a beard. */}
           {hasBeard && (
             <g fill={BEARD_C}>
-              <path d="M91 37 Q89.5 43 100 44.5 Q110.5 43 109 37 Q105 39.5 100 39.5 Q95 39.5 91 37 Z" stroke="#2e1a08" strokeWidth="0.8" />
+              <path d="M91 37 Q89.5 43 100 44.5 Q110.5 43 109 37 Q105 39.5 100 39.5 Q95 39.5 91 37 Z" stroke={beardStroke} strokeWidth="1" />
               <path d="M95 40.5 L95 43.2 M98.5 40.5 L98.5 43.5 M101.5 40.5 L101.5 43.5 M105 40.5 L105 43.2" fill="none" stroke={HAIR_L} strokeWidth="1.6" opacity="0.9" strokeLinecap="round" />
             </g>
           )}
@@ -895,24 +917,36 @@ export default function GuardianAvatar({
               Strong brows angled down toward the centre. A firm straight
               mouth, not a smile. NO nose, NO ears, NO blush. Female is
               serious too, with slimmer brows and small lashes; male brows
-              are thick, with jaw lines. */}
+              are thick, with jaw lines. On dark skin tones the brows get
+              a light halo under the dark core and the mouth is light
+              cream — see the contrast note above; without the halo the
+              dark brow vanishes into dark skin at preview size. */}
           <g>
             {isFemale ? (
               <>
-                <path d="M88.5 22.5 L95.5 25 M104.5 25 L111.5 22.5" fill="none" stroke={browStroke} strokeWidth="1.6" strokeLinecap="round" />
-                <path d="M90 24.5 L88.5 22.5 M110 24.5 L111.5 22.5" fill="none" stroke="#1c2b3a" strokeWidth="1.1" strokeLinecap="round" />
+                {browHalo && (
+                  <path d="M88.5 22.5 L95.5 25 M104.5 25 L111.5 22.5" fill="none" stroke={browHalo} strokeWidth={browHaloWidth} strokeLinecap="round" />
+                )}
+                <path d="M88.5 22.5 L95.5 25 M104.5 25 L111.5 22.5" fill="none" stroke={browCore} strokeWidth={browCoreWidth} strokeLinecap="round" />
+                <path d="M90 24.5 L88.5 22.5 M110 24.5 L111.5 22.5" fill="none" stroke={browCore} strokeWidth="1.8" strokeLinecap="round" />
               </>
             ) : (
-              <path d="M88 22.5 L95.5 25 M104.5 25 L112 22.5" fill="none" stroke={browStroke} strokeWidth="2.2" strokeLinecap="round" />
+              <>
+                {browHalo && (
+                  <path d="M88 22.5 L95.5 25 M104.5 25 L112 22.5" fill="none" stroke={browHalo} strokeWidth={browHaloWidth} strokeLinecap="round" />
+                )}
+                <path d="M88 22.5 L95.5 25 M104.5 25 L112 22.5" fill="none" stroke={browCore} strokeWidth={browCoreWidth} strokeLinecap="round" />
+              </>
             )}
-            <circle cx="92.5" cy="27.5" r="2.4" fill="#1c2b3a" />
-            <circle cx="107.5" cy="27.5" r="2.4" fill="#1c2b3a" />
-            {/* Mouth: GENUINELY thin and short — 1.2/1.4 wide, 5 units
-                long (x97.5-102.5), at y34.5, in a muted brown
-                (#6b4a3a), NOT near-black. The old 1.8/2.2 near-black
-                bar read as a thick band at 4x. Nothing else dark
-                sits at mouth level. */}
-            <path d="M97.5 34.5 L102.5 34.5" fill="none" stroke={mouthStroke} strokeWidth={isFemale ? 1.2 : 1.4} strokeLinecap="round" />
+            <circle cx="92.5" cy="27.5" r="2.7" fill="#1c2b3a" />
+            <circle cx="107.5" cy="27.5" r="2.7" fill="#1c2b3a" />
+            {/* Mouth: GENUINELY thin and short — 2.0/2.8 wide, 8 units
+                long (x96-104), at y34.5, in a muted brown on light skin
+                (#6b4a3a) and light cream on dark skin (#ffe3c2), NOT
+                near-black. The old 1.8/2.2 near-black bar read as a
+                thick band at 4x; the old 1.2/1.4 line vanished at 56px.
+                Nothing else dark sits at mouth level. */}
+            <path d="M96 34.5 L104 34.5" fill="none" stroke={mouthStroke} strokeWidth={mouthWidth} strokeLinecap="round" />
           </g>
           {/* Arms, drawn AFTER the torso and chest, BEFORE the
               pauldrons and weapons: thick shapes in the arm colour
