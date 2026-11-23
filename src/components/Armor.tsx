@@ -243,7 +243,12 @@ export default function Armor({ ctx }: { ctx: Ctx }) {
             {doc.guardian && (
               <p className="small muted">Change class, color, gem, cape, look, skin color, or name in Customize guardian below. Your XP, level, and armor stay.</p>
             )}
-            <button onClick={openCustomize}>
+            {/* TOGGLE, not open-only: the old handler called
+                openCustomize() every time, which always ran
+                setShowCustomize(true) — so "Close customize" did
+                nothing (and re-initialised the draft). Closing
+                discards the unsaved draft, exactly like Cancel. */}
+            <button onClick={() => { if (showCustomize) { setShowCustomize(false); setCustomizeMsg(''); } else { openCustomize(); } }}>
               {showCustomize ? 'Close customize' : 'Customize guardian'}
             </button>
             {customizeMsg && <p className="small" style={{ color: '#1e7a46' }}>{customizeMsg}</p>}

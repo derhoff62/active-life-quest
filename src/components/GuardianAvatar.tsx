@@ -229,6 +229,11 @@ export default function GuardianAvatar({
   const capeName = partName(g.capeColor);
   const armMain = COLOR_HEX[armName];
   const armDark = shade(armMain, -45);
+  const armLight = shade(armMain, 40);
+  // Sleeve fill, LIGHTER than the torso: the old arms used armMain
+  // itself, so on Ranger and Spellweaver (no pauldrons, torso and
+  // arms the same Navy) the arm was a thin dark strip that read as
+  // a seam, not a limb — the hands floated at the waist.
   const legMain = COLOR_HEX[legName];
   const legDark = shade(legMain, -45);
   const capeMain = COLOR_HEX[capeName];
@@ -439,63 +444,41 @@ export default function GuardianAvatar({
       </g>
     );
   };
-  // LONG hair (Derek, Nov 22 9:18 PM: "The long hair looks weird";
-  // live check Nov 22 9:45 PM: it read as TWO separate side locks
-  // with armour showing between them at the neck/chest, not one
-  // mass; live check Nov 22 9:58 PM, v75: STILL two locks; live
-  // check Nov 22 10:06 PM, v76/commit 99ec9e6f: STILL two locks).
-  // ROOT CAUSE (measured in the shipped render, GuardianAvatar.tsx
-  // lines 429-433, 1145-1152, and pixel-sampled in the 800px render):
-  // the v76 front panel was NOT covered over by anything later —
-  // it IS in the shipped bundle (dist index-C3bzgNZO.js contains
-  // "M91 49...") and it IS drawn twice, after the chest plate.
-  // It was simply TOO SMALL to read as a hair mass: 20 wide
-  // (x90-110) x 15 tall (y49-64), tapering to a POINT at y64.
-  // Pixel samples (800px render, viewBox*4): centre x100 is brown
-  // only at viewBox y67-79 (figure y50-62), and at viewBox y80
-  // (figure y63) only x100 itself is brown — a 1-2px point.
-  // Below figure y64 there is NO hair at all, so the full chest
-  // plate (silver, blue circle gem at y70, white chevron) shows
-  // between where the locks end (y54). At 100px preview the panel
-  // is ~10x7px and at 56px ~6x4px: it reads as a small brown patch
-  // / bib under the throat, exactly what Derek reported live.
-  // The fix (v77): the panel is now a BROAD CURTAIN, 32 wide
-  // (x84-116) x 30 tall (y48-78), with a broad ROUNDED bottom
-  // (not a point), so from figure y48 to y78 the centre chest is
-  // brown across x85-115 continuously — no steel window at all.
-  // The locks (ending y54) + panel union is continuous x79-121
-  // at y48-54 and x84-116 at y55-78. The chest-plate gem at
-  // (100,70) is now covered by the hair (as long hair covers
-  // armour), so it is re-drawn ON the panel as a gem brooch at
-  // (100,68), keeping the gem/glow cue. Face stays clear,
-  // collar clasp at (100,47) stays visible just above the panel
-  // top (y48), pauldrons stay visible at the sides. Male Long
-  // keeps the old band only: it PASSED live, so it is untouched.
-  const longFrontPanel = (
-    <g fill={HAIR_C}>
-      <path d="M85 48 Q100 50 115 48 L116 66 Q115 76 100 78 Q85 76 84 66 Z" />
-      <path d="M92 52 Q91 62 93 73 M97 52 Q96 63 98 74 M100 52 L100 75 M103 52 Q104 63 102 74 M108 52 Q109 62 107 73" fill="none" stroke={HAIR_L} strokeWidth="1.8" opacity="0.6" strokeLinecap="round" />
-      <g className="guardian-gem">
-        <circle cx="100" cy="68" r="4" fill={gem} stroke="#fff" strokeWidth="1.5" />
-      </g>
-    </g>
-  );
+  // LONG hair (Derek, Nov 22 9:18 PM: "The long hair looks weird").
+  // History: it first read as TWO separate side locks with armour
+  // showing between them (live Nov 22 9:45/9:58/10:06 PM), so a
+  // broad front panel was added (v77) joining the locks down the
+  // centre chest to y78 with a gem brooch in it. That fixed the
+  // two-strand read — but the full health check (Nov 23 7:32 AM)
+  // found the cure reads as a BEARD: a large brown mass covering
+  // the chin and chest, with a blue gem in it. A solid brown bib
+  // down the centre front IS a beard shape, whatever it is called.
+  // The redesign (v78): NO centre panel at all. The hair frames
+  // the face from the sides and falls BESIDE the torso, OVER the
+  // shoulders — never down the centre front. The locks are WIDE
+  // (~18 units each, not the old 9-wide straps) and connected at
+  // the crown by the cap, so they do not read as two thin separate
+  // strands; between them, under the chin, a small gap shows skin
+  // (neck), collar clasp, and chest plate — the centre chest shows
+  // ARMOUR, not hair. The chest-plate gem stays on the chest
+  // plate at (100,70), where it belongs, not in the hair. Male
+  // Long keeps its under-chin band (it passed live, and a bearded
+  // man with long hair is expected to have hair meeting beard).
   const longHair = (topY = 30, endY = 54) => {
+    const tipY = endY + 4;
     const bandTop = endY - 6;
     const bandDip = endY + 1;
     const bandBottom = endY + 1;
-    const innerL = isFemale ? 97 : 94;
-    const innerR = isFemale ? 103 : 106;
     const lock = (left: boolean) => {
       const d = left
-        ? `M86 ${topY - 1} Q79 ${topY + 8} 80 ${topY + 17} Q81 ${endY} 87 ${endY} Q93 ${endY} ${innerL} ${topY + 16} Q${innerL} ${topY + 6} 90 ${topY} Z`
-        : `M114 ${topY - 1} Q121 ${topY + 8} 120 ${topY + 17} Q119 ${endY} 113 ${endY} Q107 ${endY} ${innerR} ${topY + 16} Q${innerR} ${topY + 6} 110 ${topY} Z`;
+        ? `M86 ${topY - 1} Q79 ${topY + 7} 80 ${topY + 18} Q81 ${tipY - 2} 88 ${tipY} Q95 ${tipY} 97 ${tipY - 8} Q98 ${topY + 10} 91 ${topY} Z`
+        : `M114 ${topY - 1} Q121 ${topY + 7} 120 ${topY + 18} Q119 ${tipY - 2} 112 ${tipY} Q105 ${tipY} 103 ${tipY - 8} Q102 ${topY + 10} 109 ${topY} Z`;
       const strand = left
-        ? `M84 ${topY + 8} Q83 ${topY + 16} 85 ${endY - 3}`
-        : `M116 ${topY + 8} Q117 ${topY + 16} 115 ${endY - 3}`;
+        ? `M84 ${topY + 10} Q83 ${topY + 18} 85 ${tipY - 3}`
+        : `M116 ${topY + 10} Q117 ${topY + 18} 115 ${tipY - 3}`;
       const strand2 = left
-        ? `M90 ${topY + 10} Q90 ${topY + 17} 91 ${endY - 4}`
-        : `M110 ${topY + 10} Q110 ${topY + 17} 109 ${endY - 4}`;
+        ? `M91 ${topY + 12} Q91 ${topY + 20} 92 ${tipY - 4}`
+        : `M109 ${topY + 12} Q109 ${topY + 20} 108 ${tipY - 4}`;
       return (
         <g fill={HAIR_C}>
           <path d={d} />
@@ -506,15 +489,13 @@ export default function GuardianAvatar({
     };
     return (
       <g>
-        {/* Male only: the old under-chin band (Female gets the front
-            panel instead, which joins the locks in front of the
-            chest, not just under the chin). */}
+        {/* Male only: the old under-chin band (Female has no centre
+            panel any more — see the comment above). */}
         {!isFemale && (
           <path d={`M93 ${bandTop} Q100 ${bandDip} 107 ${bandTop} L107 ${bandBottom - 1} Q100 ${bandBottom + 1} 93 ${bandBottom - 1} Z`} fill={HAIR_C} />
         )}
         {lock(true)}
         {lock(false)}
-        {isFemale && longFrontPanel}
       </g>
     );
   };
@@ -1127,27 +1108,41 @@ export default function GuardianAvatar({
           )}
           {faceArt}
           {/* Arms, drawn AFTER the torso and chest, BEFORE the
-              pauldrons and weapons: thick shapes in the arm colour
-              running from under the pauldrons down to the hands, with
-              a light highlight strip so they read even when the arm
-              colour matches the torso (Derek's Black guardian). The
-              pauldrons (drawn next) cover the arm tops; the hands
-              (drawn last) cover the arm bottoms — so shoulder, arm
-              and hand read as ONE connected limb, never floating
-              circles at the waist. */}
+              pauldrons and weapons: WIDE SLEEVES in a lighter shade
+              of the arm colour, with a sleeve cap at each shoulder
+              covering the joint — so shoulder, arm and hand read as
+              ONE connected limb, never floating circles at the waist.
+              (Derek, Nov 23 7:37 AM: "The arms also don't connect
+              to the body properly on two of the classes." Diagnosis
+              in the renders: Ranger and Spellweaver. The old arms
+              were thin (~7-9 units) dark strips in armMain, the
+              same Navy as the torso/robe, with no pauldron to cover
+              the joint — they read as seams, and the hands floated.
+              Guardian only read connected because its steel
+              pauldrons covered the arm tops. The new sleeves are
+              ~13 units wide, stick out past the torso silhouette
+              against the background, and are filled lighter than
+              the torso so they separate from it on every class.
+              The pauldrons (drawn next) cover the caps on
+              Guardian; the hands (drawn last) cover the arm
+              bottoms — so the joint and the grip both read.) */}
           {isFemale ? (
             <g>
-              <path d="M88 49 Q80 62 79 88 L86 89 Q87 74 92 53 Z" fill={armMain} stroke={armDark} strokeWidth="2" />
-              <path d="M112 49 Q120 62 121 88 L114 89 Q113 74 108 53 Z" fill={armMain} stroke={armDark} strokeWidth="2" />
-              <path d="M84 56 Q81 66 81 84" fill="none" stroke="#fff" strokeWidth="2" opacity="0.3" strokeLinecap="round" />
-              <path d="M116 56 Q119 66 119 84" fill="none" stroke="#fff" strokeWidth="2" opacity="0.3" strokeLinecap="round" />
+              <ellipse cx="86" cy="50" rx="7.5" ry="5.5" fill={armLight} stroke={armDark} strokeWidth="2" />
+              <ellipse cx="114" cy="50" rx="7.5" ry="5.5" fill={armLight} stroke={armDark} strokeWidth="2" />
+              <path d="M90 48 Q76 60 75 88 L84 89 Q86 74 93 52 Z" fill={armLight} stroke={armDark} strokeWidth="2" />
+              <path d="M110 48 Q124 60 125 88 L116 89 Q114 74 107 52 Z" fill={armLight} stroke={armDark} strokeWidth="2" />
+              <path d="M80 56 Q77 66 77 84" fill="none" stroke="#fff" strokeWidth="2" opacity="0.3" strokeLinecap="round" />
+              <path d="M120 56 Q123 66 123 84" fill="none" stroke="#fff" strokeWidth="2" opacity="0.3" strokeLinecap="round" />
             </g>
           ) : (
             <g>
-              <path d="M86 48 Q75 62 74 88 L83 89 Q85 74 91 52 Z" fill={armMain} stroke={armDark} strokeWidth="2" />
-              <path d="M114 48 Q125 62 126 88 L117 89 Q115 74 109 52 Z" fill={armMain} stroke={armDark} strokeWidth="2" />
-              <path d="M80 54 Q76 66 76 84" fill="none" stroke="#fff" strokeWidth="2" opacity="0.3" strokeLinecap="round" />
-              <path d="M120 54 Q124 66 124 84" fill="none" stroke="#fff" strokeWidth="2" opacity="0.3" strokeLinecap="round" />
+              <ellipse cx="84" cy="50" rx="8" ry="5.5" fill={armLight} stroke={armDark} strokeWidth="2" />
+              <ellipse cx="116" cy="50" rx="8" ry="5.5" fill={armLight} stroke={armDark} strokeWidth="2" />
+              <path d="M88 48 Q72 60 71 88 L80 89 Q83 74 90 52 Z" fill={armLight} stroke={armDark} strokeWidth="2" />
+              <path d="M112 48 Q128 60 129 88 L120 89 Q117 74 110 52 Z" fill={armLight} stroke={armDark} strokeWidth="2" />
+              <path d="M76 56 Q73 66 73 84" fill="none" stroke="#fff" strokeWidth="2" opacity="0.3" strokeLinecap="round" />
+              <path d="M124 56 Q127 66 127 84" fill="none" stroke="#fff" strokeWidth="2" opacity="0.3" strokeLinecap="round" />
             </g>
           )}
           {/* Guardian pauldrons, drawn AFTER the arms so they cover the
@@ -1190,14 +1185,6 @@ export default function GuardianAvatar({
               Ranger hood and Spellweaver hat have no pauldrons to
               swallow them, so their hair stays in the early block). */}
           {g.classId === 'Guardian' && hangingHair}
-          {/* Female Long front panel, drawn AGAIN here in front of the
-              chest plate / quiver strap / equip trim, for ALL classes:
-              the panel inside longHair is behind the strap and the
-              equip trim for Ranger/Spellweaver (their hair is drawn
-              in the early head block), so without this late layer the
-              join would be partly covered. Same shape, same colour,
-              drawn over itself — no seam, just the frontmost layer. */}
-          {isFemale && hair === 'Long' && longFrontPanel}
           {/* Ranger quiver strap, diagonal across the chest */}
           {g.classId === 'Ranger' && (
             <path d="M84 58 L116 88" fill="none" stroke={WOOD_DARK} strokeWidth="4" opacity="0.7" strokeLinecap="round" />
