@@ -537,8 +537,10 @@ export default function GuardianAvatar({
               Drawn before the torso and head, so it fills the seam.
               Male neck is wider and thicker; female neck is narrower. */}
           <rect x={isFemale ? 95 : 92} y="48" width={isFemale ? 10 : 16} height="20" rx="4" fill={`url(#${id('skin')})`} stroke={dark} strokeWidth="2" />
-          {/* Shadow under the chin, so the neck reads as a neck, not a block. */}
-          <ellipse cx="100" cy="52" rx="8" ry="3" fill="#d89a5f" opacity="0.45" />
+          {/* Very light shadow under the chin, just enough to read as a neck.
+              Kept faint on purpose — the v49 version was darker and read as
+              a shadow face. */}
+          <ellipse cx="100" cy="52" rx="7" ry="2.5" fill="#d89a5f" opacity="0.2" />
           {/* Arms: male arms are thicker and more muscular; female arms slimmer. */}
           {isFemale ? (
             <>
@@ -585,11 +587,6 @@ export default function GuardianAvatar({
           {/* Head: male has a squarer, stronger jaw; female a softer, rounder face.
               Same size, different jaw shading so the difference reads at 72px too. */}
           <circle cx="100" cy="42" r="17" fill={`url(#${id('skin')})`} stroke={dark} strokeWidth="2.5" />
-          {/* Ears, so the head reads as a head, not a ball. Drawn before the
-              hair, so long hair covers the tops of them. */}
-          <ellipse cx="83" cy="44" rx="3.5" ry="5" fill={`url(#${id('skin')})`} stroke={dark} strokeWidth="1.5" />
-          <ellipse cx="117" cy="44" rx="3.5" ry="5" fill={`url(#${id('skin')})`} stroke={dark} strokeWidth="1.5" />
-          <path d="M84 42 Q86 44 84 46 M116 42 Q114 44 116 46" fill="none" stroke={dark} strokeWidth="1" opacity="0.5" strokeLinecap="round" />
           {!isFemale && (
             <g stroke={dark} strokeWidth="1.5" opacity="0.35" fill="none" strokeLinecap="round">
               <path d="M86 48 L90 56" />
@@ -618,43 +615,37 @@ export default function GuardianAvatar({
               <circle cx="110" cy="26" r="2" fill={gem} stroke="#fff" strokeWidth="1" />
             </g>
           )}
-          {/* Face: real eyes now — white, iris, pupil, highlight — not just
-              dots. A small shaded nose instead of a line. Male has thick
-              straight brows; female has arched brows, lashes, and pink lips.
-              Brows match the hair colour. */}
+          {/* Face: middle ground between the v48 simple dots and the v49
+              realistic face, which read as creepy. Friendly and illustrated,
+              not realistic, not uncanny: soft brown iris ring + dark pupil +
+              one tiny highlight dot, NO white eyeball. A very soft, short
+              nose line, no nostril dots, no 3D nose. No ears. A soft, simple
+              smile. Female has arched brows, lashes, and pink lips; male has
+              thick straight brows. Brows match the hair colour. */}
           {isFemale ? (
             <g>
               <path d="M87 37 Q91 34 95 37 M105 37 Q109 34 113 37" fill="none" stroke="#5b3a1e" strokeWidth="1.5" strokeLinecap="round" />
-              <ellipse cx="91" cy="44" rx="3.4" ry="2.8" fill="#fff" />
-              <ellipse cx="109" cy="44" rx="3.4" ry="2.8" fill="#fff" />
-              <circle cx="91" cy="44" r="2" fill="#4a3220" />
-              <circle cx="109" cy="44" r="2" fill="#4a3220" />
-              <circle cx="91" cy="44" r="1" fill="#1c2b3a" />
-              <circle cx="109" cy="44" r="1" fill="#1c2b3a" />
-              <circle cx="92" cy="43" r="0.7" fill="#fff" />
-              <circle cx="110" cy="43" r="0.7" fill="#fff" />
+              <circle cx="91" cy="44" r="2.8" fill="#4a3220" />
+              <circle cx="109" cy="44" r="2.8" fill="#4a3220" />
+              <circle cx="91" cy="44" r="1.4" fill="#1c2b3a" />
+              <circle cx="109" cy="44" r="1.4" fill="#1c2b3a" />
+              <circle cx="92" cy="43" r="0.6" fill="#fff" />
+              <circle cx="110" cy="43" r="0.6" fill="#fff" />
               <path d="M88 42 L85 40 M112 42 L115 40" stroke="#1c2b3a" strokeWidth="1.2" strokeLinecap="round" />
-              <path d="M100 43 L100 50 Q100 52 98 52" fill="none" stroke="#c98a5a" strokeWidth="1.5" strokeLinecap="round" />
-              <circle cx="97.4" cy="52.4" r="0.7" fill="#c98a5a" opacity="0.8" />
-              <circle cx="102.6" cy="52.4" r="0.7" fill="#c98a5a" opacity="0.8" />
-              <path d="M93 53 Q100 58 107 53 Q100 56 93 53 Z" fill="#c25a6b" />
-              <path d="M94 54 Q100 57 106 54" fill="none" stroke="#8a2f3f" strokeWidth="1" strokeLinecap="round" />
+              <path d="M100 45 L100 49 Q100 50 99 50" fill="none" stroke="#c98a5a" strokeWidth="1.2" opacity="0.6" strokeLinecap="round" />
+              <path d="M94 54 Q100 57 106 54" fill="none" stroke="#c25a6b" strokeWidth="2" strokeLinecap="round" />
             </g>
           ) : (
             <g>
               <path d="M86 38 L95 37 M105 37 L114 38" fill="none" stroke="#5b3a1e" strokeWidth="2.5" strokeLinecap="round" />
-              <ellipse cx="91" cy="44" rx="3.4" ry="2.8" fill="#fff" />
-              <ellipse cx="109" cy="44" rx="3.4" ry="2.8" fill="#fff" />
-              <circle cx="91" cy="44" r="2" fill="#4a3220" />
-              <circle cx="109" cy="44" r="2" fill="#4a3220" />
-              <circle cx="91" cy="44" r="1" fill="#1c2b3a" />
-              <circle cx="109" cy="44" r="1" fill="#1c2b3a" />
-              <circle cx="92" cy="43" r="0.7" fill="#fff" />
-              <circle cx="110" cy="43" r="0.7" fill="#fff" />
-              <path d="M100 43 L100 50 Q100 52 98 52" fill="none" stroke="#c98a5a" strokeWidth="1.5" strokeLinecap="round" />
-              <circle cx="97.4" cy="52.4" r="0.7" fill="#c98a5a" opacity="0.8" />
-              <circle cx="102.6" cy="52.4" r="0.7" fill="#c98a5a" opacity="0.8" />
-              <path d="M94 54 Q100 58 106 54" fill="none" stroke="#1c2b3a" strokeWidth="2.5" strokeLinecap="round" />
+              <circle cx="91" cy="44" r="2.8" fill="#4a3220" />
+              <circle cx="109" cy="44" r="2.8" fill="#4a3220" />
+              <circle cx="91" cy="44" r="1.4" fill="#1c2b3a" />
+              <circle cx="109" cy="44" r="1.4" fill="#1c2b3a" />
+              <circle cx="92" cy="43" r="0.6" fill="#fff" />
+              <circle cx="110" cy="43" r="0.6" fill="#fff" />
+              <path d="M100 45 L100 49 Q100 50 99 50" fill="none" stroke="#c98a5a" strokeWidth="1.2" opacity="0.6" strokeLinecap="round" />
+              <path d="M94 54 Q100 57 106 54" fill="none" stroke="#1c2b3a" strokeWidth="2.5" strokeLinecap="round" />
             </g>
           )}
           {/* Class weapon */}
