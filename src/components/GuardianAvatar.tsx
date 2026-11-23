@@ -203,6 +203,22 @@ export default function GuardianAvatar({
   const equippedWeapon = ARMOR.find((a) => a.id === g.equippedWeaponId);
   const equippedArmor = ARMOR.find((a) => a.id === g.equippedArmorId);
   const equippedWeaponKind = equippedWeapon ? weaponKind(equippedWeapon) : null;
+  // Shield hand (Derek, Nov 22 10:02 PM: "if a shield is equipped you
+  // shouldn't be able to see the hand right?"): correct — the hand
+  // holding a shield is BEHIND the shield, so it must not be drawn
+  // over the shield face. The class Guardian shield is drawn whenever
+  // no weapon is equipped, or a one-handed left-hand weapon is
+  // equipped (sword/dagger/hammer/claws); an equipped shield also
+  // covers the right hand. In those cases the right hand is omitted
+  // at the end (see Hands below), not drawn over the shield.
+  const shieldCoversRightHand =
+    equippedWeaponKind === 'shield' ||
+    (g.classId === 'Guardian' &&
+      (!equippedWeapon ||
+        equippedWeaponKind === 'sword' ||
+        equippedWeaponKind === 'dagger' ||
+        equippedWeaponKind === 'hammer' ||
+        equippedWeaponKind === 'claws'));
   const equippedArmorKind = equippedArmor ? armorKind(equippedArmor) : null;
   const equipTier = equippedArmor ? tierColor(equippedArmor.tier) : null;
   const weaponTier = equippedWeapon ? tierColor(equippedWeapon.tier) : null;
@@ -387,43 +403,45 @@ export default function GuardianAvatar({
   // LONG hair (Derek, Nov 22 9:18 PM: "The long hair looks weird";
   // live check Nov 22 9:45 PM: it read as TWO separate side locks
   // with armour showing between them at the neck/chest, not one
-  // mass). The old locks were two thin (9-wide) straps, x81-91 /
-  // 109-119, hanging to y54 with an 18-wide armour gap between
-  // them. The new hair is ONE connected mass, drawn as a single
-  // group:
-  //  - each lock is ~15 wide (outer x79-80, inner x94-95 left /
-  //    105-106 right), hugging the face side so the jaw is framed,
-  //    tapering to a rounded tip ending ON the pauldron (tip y54
-  //    Guardian/Ranger, y54 under the hat brim for Spellweaver —
-  //    the old Spellweaver locks stopped at y46, visibly shorter
-  //    than the other classes, so endY is now 54 for all three),
-  //    never dangling over the chest plate;
-  //  - a band joins the two locks UNDER the chin (top y48 at the
-  //    sides, dipping to ~y51.5 at the centre, bottom y55), so the
-  //    locks are connected at the top (cap) AND at the bottom, and
-  //    the neck/collar show through the V opening above the band —
-  //    the collar clasp at (100,47) stays visible, the face stays
-  //    clear, and at 56px the whole thing reads as one brown mass,
-  //    not two strands. The band is drawn first, the locks over
-  //    it, so no seam shows. Male Long has a beard (bottom y44.5):
-  //    the band top (y48) starts just below it, so beard and hair
-  //    meet at the chin, never overlap.
+  // mass; live check Nov 22 9:58 PM, v75: STILL two locks). Why the
+  // v75 band was invisible: the band was a thin crescent, top y48
+  // dipping to ~y51.5 at the centre, bottom y55 — only ~2.5 units
+  // thick at the centre, 12 wide, drawn BEFORE the locks, so the
+  // locks covered its ends and only a sliver showed; below y55 the
+  // pale chest plate showed FULLY between the locks. A join that is
+  // 2.5 units tall at the centre cannot join two locks that end at
+  // y54 with a 12-wide gap between them.
+  // The fix (v76): the locks JOIN IN FRONT, visibly:
+  //  - Female locks are wider inward (inner edge x97 left / x103
+  //    right, was x94 / x106), so the gap between them is only 6;
+  //  - a FRONT HAIR PANEL, Female only, hangs down the CENTRE chest
+  //    in front of the torso/chest plate: top y49, just below the
+  //    collar clasp at (100,47) so the clasp stays visible, sides
+  //    x90-110 at the top so it overlaps both locks by ~6 units
+  //    each side, tapering to a rounded tip at y64. It is drawn
+  //    AFTER the torso/chest plate (Guardian hangingHair, and again
+  //    in the late front-panel block below, so Ranger/Spellweaver
+  //    get it in front of the quiver strap / equip trim too), never
+  //    behind it. The chest gem at (100,70) stays visible below
+  //    the panel tip. Face stays clear, pauldrons stay visible at
+  //    the sides. Male Long keeps the old band only: it PASSED live
+  //    (beard bridges the locks at the chin), so it is untouched.
+  const longFrontPanel = (
+    <g fill={HAIR_C}>
+      <path d="M91 49 Q100 51 109 49 L110 58 Q109 63 100 64 Q91 63 90 58 Z" />
+      <path d="M96 52 Q95 59 97 62 M100 52 L100 62 M104 52 Q105 59 103 62" fill="none" stroke={HAIR_L} strokeWidth="1.8" opacity="0.6" strokeLinecap="round" />
+    </g>
+  );
   const longHair = (topY = 30, endY = 54) => {
-    // Band joining the locks under the chin: a DEEP-V crescent at
-    // the base only (top y48 at the sides, dipping to ~y51.5 at
-    // the centre, bottom y55), so the neck and the collar clasp
-    // at (100,47) stay visible in the V opening and the hair does
-    // NOT read as a bib/turtleneck across the chest — the first
-    // version had a flat top at y45 and covered the clasp. The
-    // locks still join at the bottom, so the mass is connected
-    // at the top (cap) and at the bottom (band).
     const bandTop = endY - 6;
     const bandDip = endY + 1;
     const bandBottom = endY + 1;
+    const innerL = isFemale ? 97 : 94;
+    const innerR = isFemale ? 103 : 106;
     const lock = (left: boolean) => {
       const d = left
-        ? `M86 ${topY - 1} Q79 ${topY + 8} 80 ${topY + 17} Q81 ${endY} 87 ${endY} Q93 ${endY} 94 ${topY + 16} Q94 ${topY + 6} 90 ${topY} Z`
-        : `M114 ${topY - 1} Q121 ${topY + 8} 120 ${topY + 17} Q119 ${endY} 113 ${endY} Q107 ${endY} 106 ${topY + 16} Q106 ${topY + 6} 110 ${topY} Z`;
+        ? `M86 ${topY - 1} Q79 ${topY + 8} 80 ${topY + 17} Q81 ${endY} 87 ${endY} Q93 ${endY} ${innerL} ${topY + 16} Q${innerL} ${topY + 6} 90 ${topY} Z`
+        : `M114 ${topY - 1} Q121 ${topY + 8} 120 ${topY + 17} Q119 ${endY} 113 ${endY} Q107 ${endY} ${innerR} ${topY + 16} Q${innerR} ${topY + 6} 110 ${topY} Z`;
       const strand = left
         ? `M84 ${topY + 8} Q83 ${topY + 16} 85 ${endY - 3}`
         : `M116 ${topY + 8} Q117 ${topY + 16} 115 ${endY - 3}`;
@@ -440,10 +458,15 @@ export default function GuardianAvatar({
     };
     return (
       <g>
-        {/* Band joining the locks under the chin. */}
-        <path d={`M93 ${bandTop} Q100 ${bandDip} 107 ${bandTop} L107 ${bandBottom - 1} Q100 ${bandBottom + 1} 93 ${bandBottom - 1} Z`} fill={HAIR_C} />
+        {/* Male only: the old under-chin band (Female gets the front
+            panel instead, which joins the locks in front of the
+            chest, not just under the chin). */}
+        {!isFemale && (
+          <path d={`M93 ${bandTop} Q100 ${bandDip} 107 ${bandTop} L107 ${bandBottom - 1} Q100 ${bandBottom + 1} 93 ${bandBottom - 1} Z`} fill={HAIR_C} />
+        )}
         {lock(true)}
         {lock(false)}
+        {isFemale && longFrontPanel}
       </g>
     );
   };
@@ -1119,6 +1142,14 @@ export default function GuardianAvatar({
               Ranger hood and Spellweaver hat have no pauldrons to
               swallow them, so their hair stays in the early block). */}
           {g.classId === 'Guardian' && hangingHair}
+          {/* Female Long front panel, drawn AGAIN here in front of the
+              chest plate / quiver strap / equip trim, for ALL classes:
+              the panel inside longHair is behind the strap and the
+              equip trim for Ranger/Spellweaver (their hair is drawn
+              in the early head block), so without this late layer the
+              join would be partly covered. Same shape, same colour,
+              drawn over itself — no seam, just the frontmost layer. */}
+          {isFemale && hair === 'Long' && longFrontPanel}
           {/* Ranger quiver strap, diagonal across the chest */}
           {g.classId === 'Ranger' && (
             <path d="M84 58 L116 88" fill="none" stroke={WOOD_DARK} strokeWidth="4" opacity="0.7" strokeLinecap="round" />
@@ -1223,13 +1254,21 @@ export default function GuardianAvatar({
                 </g>
               )}
               {equippedWeaponKind === 'staff' && (
-                <g transform={`rotate(7 ${handRx} 90)`}>
-                  <rect x={handRx - 3} y="27" width="6" height="57" rx="3" fill={WOOD} stroke={WOOD_DARK} strokeWidth="1.5" />
+                <g>
+                  {/* Staff, STRAIGHT and star ON the shaft: the old
+                      version rotated the whole group 7 degrees and
+                      put the star at (handRx+10, 18), diagonally off
+                      the shaft top, so the star floated beside the
+                      stick and the shaft leaned across the robe. Now
+                      the shaft is vertical, top y20, and the star is
+                      centred on the shaft axis at (handRx, 17), its
+                      bottom overlapping the shaft top. */}
+                  <rect x={handRx - 3} y="20" width="6" height="64" rx="3" fill={WOOD} stroke={WOOD_DARK} strokeWidth="1.5" />
                   <rect x={handRx - 3} y="96" width="6" height="50" rx="3" fill={WOOD} stroke={WOOD_DARK} strokeWidth="1.5" />
                   <path d={`M${handRx - 3} 44 L${handRx + 3} 44 M${handRx - 3} 58 L${handRx + 3} 58 M${handRx - 3} 72 L${handRx + 3} 72`} stroke={weaponTier ?? GOLD} strokeWidth="3.5" />
                   <g className="guardian-gem">
-                    <circle cx={handRx + 10} cy="18" r="16" fill={weaponTier ?? gem} opacity="0.45" />
-                    <polygon points={starPoints(handRx + 10, 18, 9)} fill={weaponTier ?? gem} stroke="#fff" strokeWidth="2" />
+                    <circle cx={handRx} cy="17" r="14" fill={weaponTier ?? gem} opacity="0.45" />
+                    <polygon points={starPoints(handRx, 17, 9)} fill={weaponTier ?? gem} stroke="#fff" strokeWidth="2" />
                   </g>
                 </g>
               )}
@@ -1300,15 +1339,19 @@ export default function GuardianAvatar({
           {!equippedWeapon && g.classId === 'Spellweaver' && (
             <g>
               {/* Staff: held in the image-right hand, shaft split at the
-                  grip so the hand reads as holding it. The star sits
-                  ABOVE and BESIDE the head — centre (handRx+10, 18), r9 —
-                  clear of the face (face right edge x113, star left edge
-                  x120). The star GLOWS: a soft gem-coloured disc behind
-                  it, pulsing (.guardian-gem) — the spell being cast. */}
-              <g transform={`rotate(7 ${handRx} 90)`}>
-                <rect x={handRx - 3} y="27" width="6" height="57" rx="3" fill={WOOD} stroke={WOOD_DARK} strokeWidth="1.5" />
+                  grip so the hand reads as holding it. STRAIGHT, star
+                  ON the shaft axis: the old version rotated the group
+                  7 degrees and put the star at (handRx+10, 18), so
+                  the star floated diagonally off the shaft top and
+                  the shaft leaned across the robe. Now the shaft is
+                  vertical from y20 to the grip, and the star sits
+                  centred at (handRx, 17), r9, clear of the face
+                  (face top y16, star left edge x110-111 at y8-17,
+                  above the face) with a soft gem glow behind it. */}
+              <g>
+                <rect x={handRx - 3} y="20" width="6" height="64" rx="3" fill={WOOD} stroke={WOOD_DARK} strokeWidth="1.5" />
                 <rect x={handRx - 3} y="96" width="6" height="50" rx="3" fill={WOOD} stroke={WOOD_DARK} strokeWidth="1.5" />
-                <rect x={handRx - 1} y="29" width="2" height="55" fill="#a8763e" opacity="0.7" />
+                <rect x={handRx - 1} y="22" width="2" height="60" fill="#a8763e" opacity="0.7" />
                 <rect x={handRx - 1} y="98" width="2" height="46" fill="#a8763e" opacity="0.7" />
                 {/* Carved rings, GOLD and BOLD — the old dark thin bands
                     were invisible on the brown wood at preview size
@@ -1317,17 +1360,24 @@ export default function GuardianAvatar({
                 <path d={`M${handRx - 3} 44 L${handRx + 3} 44 M${handRx - 3} 58 L${handRx + 3} 58 M${handRx - 3} 72 L${handRx + 3} 72 M${handRx - 3} 118 L${handRx + 3} 118`} stroke={GOLD} strokeWidth="3.5" />
                 <path d={`M${handRx - 3} 106 L${handRx + 3} 108 M${handRx - 3} 112 L${handRx + 3} 114`} stroke={WOOD_DARK} strokeWidth="2.5" />
                 <g className="guardian-gem">
-                  <circle cx={handRx + 10} cy="18" r="16" fill={gem} opacity="0.45" />
-                  <polygon points={starPoints(handRx + 10, 18, 9)} fill={gem} stroke="#fff" strokeWidth="2" />
+                  <circle cx={handRx} cy="17" r="14" fill={gem} opacity="0.45" />
+                  <polygon points={starPoints(handRx, 17, 9)} fill={gem} stroke="#fff" strokeWidth="2" />
                 </g>
-                <polygon points={`${handRx + 10},13 ${handRx + 13},18 ${handRx + 10},23 ${handRx + 7},18`} fill="#fff" opacity="0.5" />
+                <polygon points={`${handRx},12 ${handRx + 3},17 ${handRx},22 ${handRx - 3},17`} fill="#fff" opacity="0.5" />
               </g>
             </g>
           )}
           {/* Hands, drawn LAST over the weapon grips, so every weapon
-              reads as held. Skin circles with a dark outline. */}
+              reads as held. Skin circles with a dark outline.
+              EXCEPT the shield hand: when a shield covers the right
+              hand (class Guardian shield, or an equipped shield),
+              the hand is BEHIND the shield and must NOT show on the
+              shield face, so it is omitted here — see
+              shieldCoversRightHand above. */}
           <circle cx={handLx} cy="90" r={handR} fill={SKIN} stroke={dark} strokeWidth="1.5" />
-          <circle cx={handRx} cy="90" r={handR} fill={SKIN} stroke={dark} strokeWidth="1.5" />
+          {!shieldCoversRightHand && (
+            <circle cx={handRx} cy="90" r={handR} fill={SKIN} stroke={dark} strokeWidth="1.5" />
+          )}
         </g>
         </g>
       </svg>
