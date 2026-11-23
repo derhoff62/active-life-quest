@@ -48,6 +48,8 @@ import {
   HAIR_WITH_BEARD,
   buildWidth,
   hairForLook,
+  skinHex,
+  skinToneFor,
 } from '../lib/guardianOptions';
 
 const COLOR_MAP: Record<string, string> = COLOR_HEX;
@@ -82,6 +84,7 @@ export const DEFAULT_GUARDIAN: GuardianState = {
   color: 'Navy',
   gem: 'Sapphire',
   cape: true,
+  skinColor: 'Light',
 };
 
 // Star polygon centred at (cx, cy), outer radius r, inner r * 0.42.
@@ -106,8 +109,10 @@ function shade(hex: string, amount: number): string {
   return `#${((r << 16) | (g << 8) | b).toString(16).padStart(6, '0')}`;
 }
 
-// Flat cartoon palette: solid skin, solid steel, solid gold, solid wood.
-const SKIN = '#f7d9ae';
+// Flat cartoon palette: solid steel, solid gold, solid wood. Skin is
+// NOT a constant any more: it comes from the guardian's picked skin
+// tone (SKIN_TONES in guardianOptions), default Light (#f7d9ae, the
+// tone the avatar shipped with).
 const STEEL = '#b9c9d8';
 const STEEL_DARK = '#7d93a8';
 const GOLD = '#c9a227';
@@ -141,6 +146,12 @@ export default function GuardianAvatar({
   const main = COLOR_MAP[g.bodyColor ?? g.color] ?? COLOR_MAP.Navy;
   const light = shade(main, 100);
   const dark = shade(main, -45);
+  // Skin tone (Derek, Nov 22 8:22 PM: "I need skin color customization
+  // as well"): the picked tone drives the face, the neck, and the hands.
+  // Old profiles have no skinColor, so skinToneFor falls back to
+  // 'Light', the tone the avatar shipped with.
+  const skinTone = skinToneFor(g.skinColor);
+  const SKIN = skinHex(skinTone);
   // Head outline: a warm TAN (darkened skin), NOT dark navy. PIL on the
   // v55 render proved the old dark-navy chin arc + the mouth line + the
   // circle's side strokes merged at preview size into one dark band
@@ -148,6 +159,14 @@ export default function GuardianAvatar({
   // outline reads as shading, never as a band, and the mouth stays a
   // separate thin line.
   const headStroke = shade(SKIN, -55);
+  // Face-feature contrast: on the two darkest tones (Brown, Deep) the
+  // medium-brown brows (#5b3a1e) and muted-brown mouth (#6b4a3a) would
+  // vanish into the skin, so the brows go near-black and the mouth goes
+  // a lighter tan that still reads as a mouth, not a smile. The dark
+  // dot eyes (#1c2b3a) already read on every tone.
+  const skinIsDark = skinTone === 'Brown' || skinTone === 'Deep';
+  const browStroke = skinIsDark ? '#1c2b3a' : HAIR_C;
+  const mouthStroke = skinIsDark ? shade(SKIN, 70) : '#6b4a3a';
   const gem = GEM_MAP[g.gem] ?? GEM_MAP.Sapphire;
   const px = SIZES[size];
   const showWings = level >= 8;
@@ -778,7 +797,7 @@ export default function GuardianAvatar({
               BEFORE the head; the chin sits ON the neck, the neck
               disappears INTO the collar. */}
           <path d="M95 38 L105 38 L107 50 L93 50 Z" fill={SKIN} />
-          <path d="M102 40 L105 40 L105 42.5 L102.5 42.5 Z" fill="#c98a5a" opacity="0.3" />
+          <path d="M102 40 L105 40 L105 42.5 L102.5 42.5 Z" fill={shade(SKIN, -30)} opacity="0.45" />
           {/* Collar: a SHALLOW dome-topped cap rising to just under the
               chin (top edge y41.5, bottom edge y50) — it joins chin to
               shoulders and covers the neck's bottom half. It used to
@@ -880,11 +899,11 @@ export default function GuardianAvatar({
           <g>
             {isFemale ? (
               <>
-                <path d="M88.5 22.5 L95.5 25 M104.5 25 L111.5 22.5" fill="none" stroke={HAIR_C} strokeWidth="1.6" strokeLinecap="round" />
+                <path d="M88.5 22.5 L95.5 25 M104.5 25 L111.5 22.5" fill="none" stroke={browStroke} strokeWidth="1.6" strokeLinecap="round" />
                 <path d="M90 24.5 L88.5 22.5 M110 24.5 L111.5 22.5" fill="none" stroke="#1c2b3a" strokeWidth="1.1" strokeLinecap="round" />
               </>
             ) : (
-              <path d="M88 22.5 L95.5 25 M104.5 25 L112 22.5" fill="none" stroke={HAIR_C} strokeWidth="2.2" strokeLinecap="round" />
+              <path d="M88 22.5 L95.5 25 M104.5 25 L112 22.5" fill="none" stroke={browStroke} strokeWidth="2.2" strokeLinecap="round" />
             )}
             <circle cx="92.5" cy="27.5" r="2.4" fill="#1c2b3a" />
             <circle cx="107.5" cy="27.5" r="2.4" fill="#1c2b3a" />
@@ -893,7 +912,7 @@ export default function GuardianAvatar({
                 (#6b4a3a), NOT near-black. The old 1.8/2.2 near-black
                 bar read as a thick band at 4x. Nothing else dark
                 sits at mouth level. */}
-            <path d="M97.5 34.5 L102.5 34.5" fill="none" stroke="#6b4a3a" strokeWidth={isFemale ? 1.2 : 1.4} strokeLinecap="round" />
+            <path d="M97.5 34.5 L102.5 34.5" fill="none" stroke={mouthStroke} strokeWidth={isFemale ? 1.2 : 1.4} strokeLinecap="round" />
           </g>
           {/* Arms, drawn AFTER the torso and chest, BEFORE the
               pauldrons and weapons: thick shapes in the arm colour

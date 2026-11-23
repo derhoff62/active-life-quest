@@ -57,6 +57,29 @@ export const GEM_LIGHT_HEX: Record<string, string> = {
   Diamond: '#ffffff',
 };
 
+// Skin tones, plain names. Light (#f7d9ae) is the tone the avatar
+// shipped with, so it is the default for old profiles. All six are
+// spaced far enough apart to read clearly at 56px and at large
+// preview, and dark enough / light enough that the dark dot eyes and
+// firm mouth still read on every tone (see GuardianAvatar, which
+// switches the brow/mouth shade on the two darkest tones).
+export const SKIN_TONES = ['Fair', 'Light', 'Medium', 'Tan', 'Brown', 'Deep'] as const;
+export const SKIN_HEX: Record<string, string> = {
+  Fair: '#ffe3c2',
+  Light: '#f7d9ae',
+  Medium: '#e5b183',
+  Tan: '#c98a5a',
+  Brown: '#8d5a35',
+  Deep: '#54371e',
+};
+export const DEFAULT_SKIN_TONE = 'Light';
+export function skinHex(tone: string | undefined): string {
+  return (tone && SKIN_HEX[tone]) || SKIN_HEX.Light;
+}
+export function skinToneFor(tone: string | undefined): string {
+  return tone && (SKIN_TONES as readonly string[]).includes(tone) ? tone : DEFAULT_SKIN_TONE;
+}
+
 // Hair styles, per look. Male "Short + beard" is the beard look; "Short"
 // is clean-shaven; "Bald" is shaved with a beard, so the face is never bare.
 // "Long" for Male is long hair with a beard. Female never has a beard.

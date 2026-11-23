@@ -18,6 +18,8 @@ import {
   GUARDIAN_GEMS,
   HAIR_LABELS,
   HAIR_OPTIONS,
+  SKIN_HEX,
+  SKIN_TONES,
 } from '../lib/guardianOptions';
 const COLORS = [...GUARDIAN_COLORS];
 const GEMS = [...GUARDIAN_GEMS];
@@ -31,6 +33,7 @@ const DEFAULT_DRAFT: GuardianState = {
   look: 'Female',
   hair: 'Long',
   build: 'Athletic',
+  skinColor: 'Light',
   bodyColor: 'Navy',
   armColor: 'Navy',
   legColor: 'Navy',
@@ -173,6 +176,7 @@ export default function Armor({ ctx }: { ctx: Ctx }) {
       look,
       hair: g?.hair || DEFAULT_HAIR[look],
       build: g?.build || 'Athletic',
+      skinColor: g?.skinColor || 'Light',
       bodyColor: g?.bodyColor || color,
       armColor: g?.armColor || color,
       legColor: g?.legColor || color,
@@ -202,7 +206,7 @@ export default function Armor({ ctx }: { ctx: Ctx }) {
               <p className="small"><strong>{CLASS_WORKOUT_FOCUS[doc.guardian.classId].line}</strong></p>
             )}
             {doc.guardian && (
-              <p className="small muted">Change class, color, gem, cape, look, or name in Customize guardian below. Your XP, level, and armor stay.</p>
+              <p className="small muted">Change class, color, gem, cape, look, skin color, or name in Customize guardian below. Your XP, level, and armor stay.</p>
             )}
             <button onClick={openCustomize}>
               {showCustomize ? 'Close customize' : 'Customize guardian'}
@@ -254,6 +258,21 @@ export default function Armor({ ctx }: { ctx: Ctx }) {
             {BUILD_OPTIONS.map((b) => (
               <button key={b} type="button" onClick={() => setDraft((d) => ({ ...d, build: b }))} style={draft.build === b ? { background: '#124571', color: '#fff' } : {}}>
                 {b}
+              </button>
+            ))}
+          </div>
+          <label>Skin color</label>
+          <div className="row">
+            {SKIN_TONES.map((s) => (
+              <button
+                key={s}
+                type="button"
+                onClick={() => setDraft((d) => ({ ...d, skinColor: s }))}
+                style={draft.skinColor === s ? { background: '#124571', color: '#fff', borderColor: '#c9a227', borderWidth: 2 } : {}}
+                aria-pressed={draft.skinColor === s}
+              >
+                <span aria-hidden style={{ display: 'inline-block', width: 14, height: 14, borderRadius: '50%', background: SKIN_HEX[s], marginRight: 6, verticalAlign: 'middle', border: '1px solid #5b6b7a' }} />
+                {s}
               </button>
             ))}
           </div>

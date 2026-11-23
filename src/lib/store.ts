@@ -4,7 +4,7 @@
 import type { AssessmentResult, FindingId, GoalType } from './types';
 import { CREATURES } from './data';
 import type { TrainingStyle } from './data';
-import { HAIR_OPTIONS } from './guardianOptions';
+import { HAIR_OPTIONS, SKIN_TONES } from './guardianOptions';
 
 export interface GuardianState {
   name: string;
@@ -15,6 +15,10 @@ export interface GuardianState {
   look?: 'Female' | 'Male';
   hair?: string;
   build?: 'Slim' | 'Athletic' | 'Strong';
+  // Skin tone name, one of SKIN_TONES in guardianOptions. Optional on
+  // old profiles: store.ts fills in 'Light' (the tone the avatar
+  // shipped with) so existing guardians do not break.
+  skinColor?: string;
   bodyColor?: string;
   armColor?: string;
   legColor?: string;
@@ -269,6 +273,11 @@ export function normalizeProfile(raw: unknown): ProfileDoc {
     }
     if (!['Slim', 'Athletic', 'Strong'].includes(out.guardian.build || '')) {
       out.guardian.build = 'Athletic';
+    }
+    // Skin tone: old profiles have none, so fill in 'Light', the tone
+    // the avatar shipped with. An unknown value is reset the same way.
+    if (!out.guardian.skinColor || !(SKIN_TONES as readonly string[]).includes(out.guardian.skinColor)) {
+      out.guardian.skinColor = 'Light';
     }
     // Per-part colors default to the overall color, so old profiles and a
     // single overall pick still look the same.

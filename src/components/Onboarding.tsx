@@ -11,6 +11,8 @@ import {
   GUARDIAN_GEMS,
   HAIR_LABELS,
   HAIR_OPTIONS,
+  SKIN_HEX,
+  SKIN_TONES,
 } from '../lib/guardianOptions';
 
 const COLORS = [...GUARDIAN_COLORS];
@@ -27,6 +29,7 @@ export default function Onboarding({ ctx }: { ctx: Ctx }) {
   const [look, setLook] = useState<'Female' | 'Male'>('Female');
   const [hair, setHair] = useState('Long');
   const [build, setBuild] = useState<'Slim' | 'Athletic' | 'Strong'>('Athletic');
+  const [skinColor, setSkinColor] = useState('Light');
   const [bodyColor, setBodyColor] = useState('Navy');
   const [armColor, setArmColor] = useState('Navy');
   const [legColor, setLegColor] = useState('Navy');
@@ -54,7 +57,7 @@ export default function Onboarding({ ctx }: { ctx: Ctx }) {
         <p className="small muted">Nothing here is a test you can fail. The assessment finds where to start, so the plan fits you.</p>
         <button className="primary" onClick={() => setStep(1)} style={{ width: '100%' }}>Pick my guardian</button>
         <p style={{ marginTop: 10 }}>
-          <button onClick={() => update((d) => { d.tutorialDone = true; d.guardianPicked = true; d.guardian = { name: 'Brave Beginner', classId: 'Guardian', color: 'Navy', gem: 'Sapphire', cape: true, look: 'Female', hair: 'Long', build: 'Athletic', bodyColor: 'Navy', armColor: 'Navy', legColor: 'Navy', capeColor: 'Navy' }; })}>Skip for now</button>
+          <button onClick={() => update((d) => { d.tutorialDone = true; d.guardianPicked = true; d.guardian = { name: 'Brave Beginner', classId: 'Guardian', color: 'Navy', gem: 'Sapphire', cape: true, look: 'Female', hair: 'Long', build: 'Athletic', skinColor: 'Light', bodyColor: 'Navy', armColor: 'Navy', legColor: 'Navy', capeColor: 'Navy' }; })}>Skip for now</button>
         </p>
       </div>
     );
@@ -77,7 +80,7 @@ export default function Onboarding({ ctx }: { ctx: Ctx }) {
             </label>
           </div>
         ))}
-        <GuardianAvatar guardian={{ name: name.trim() || 'Your guardian', classId, color, gem, cape, look, hair, build, bodyColor, armColor, legColor, capeColor }} level={1} size="medium" label={`${name.trim() || 'Your guardian'} the ${classId} · Level 1`} />
+        <GuardianAvatar guardian={{ name: name.trim() || 'Your guardian', classId, color, gem, cape, look, hair, build, skinColor, bodyColor, armColor, legColor, capeColor }} level={1} size="medium" label={`${name.trim() || 'Your guardian'} the ${classId} · Level 1`} />
         <label>Guardian look</label>
         <div className="row">
           {(['Female', 'Male'] as const).map((l) => (
@@ -99,6 +102,21 @@ export default function Onboarding({ ctx }: { ctx: Ctx }) {
           {BUILD_OPTIONS.map((b) => (
             <button key={b} type="button" onClick={() => setBuild(b)} style={build === b ? { background: '#124571', color: '#fff' } : {}}>
               {b}
+            </button>
+          ))}
+        </div>
+        <label>Skin color</label>
+        <div className="row">
+          {SKIN_TONES.map((s) => (
+            <button
+              key={s}
+              type="button"
+              onClick={() => setSkinColor(s)}
+              style={skinColor === s ? { background: '#124571', color: '#fff', borderColor: '#c9a227', borderWidth: 2 } : {}}
+              aria-pressed={skinColor === s}
+            >
+              <span aria-hidden style={{ display: 'inline-block', width: 14, height: 14, borderRadius: '50%', background: SKIN_HEX[s], marginRight: 6, verticalAlign: 'middle', border: '1px solid #5b6b7a' }} />
+              {s}
             </button>
           ))}
         </div>
@@ -216,7 +234,7 @@ export default function Onboarding({ ctx }: { ctx: Ctx }) {
           className="primary"
           onClick={() => {
             update((d) => {
-              d.guardian = { name: name.trim(), classId, color, gem, cape, look, hair, build, bodyColor, armColor, legColor, capeColor };
+              d.guardian = { name: name.trim(), classId, color, gem, cape, look, hair, build, skinColor, bodyColor, armColor, legColor, capeColor };
               d.guardianPicked = true;
               d.tutorialDone = true;
               d.equipment = equipment;
