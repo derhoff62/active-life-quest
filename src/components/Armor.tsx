@@ -48,7 +48,17 @@ function GearIcon({ piece }: { piece: ArmorPiece }) {
   const common = { stroke: tierColor, strokeWidth: 2, fill: 'none', strokeLinecap: 'round' as const };
   return (
     <svg width="40" height="40" viewBox="0 0 40 40" role="img" aria-label={piece.name} style={{ flexShrink: 0 }}>
-      {n.includes('blade') || n.includes('shortblade') || n.includes('greatblade') ? (
+      {n.includes('hammer') ? (
+        <g {...common}><rect x="10" y="7" width="20" height="11" rx="3" fill={tierColor} stroke="none" opacity="0.9" /><path d="M20 18 L20 36" strokeWidth="4" /><circle cx="20" cy="12" r="2" fill="#fff" stroke="none" /></g>
+      ) : n.includes('shield') ? (
+        <g {...common}><path d="M20 5 L32 9 L32 20 Q32 30 20 35 Q8 30 8 20 L8 9 Z" fill={tierColor} stroke="none" opacity="0.85" /><circle cx="20" cy="19" r="5" fill="#fff" stroke="none" /><circle cx="20" cy="19" r="2.5" fill={tierColor} stroke="none" /></g>
+      ) : n.includes('lasso') ? (
+        <g {...common}><circle cx="20" cy="14" r="8" /><path d="M20 22 L28 34" /><circle cx="20" cy="14" r="3" fill={tierColor} stroke="none" /></g>
+      ) : n.includes('dagger') ? (
+        <g {...common}><path d="M20 4 L24 14 L20 28 L16 14 Z" fill={tierColor} stroke="none" /><path d="M12 28 L28 28 M20 28 L20 36" /></g>
+      ) : n.includes('sword') ? (
+        <g {...common}><path d="M20 4 L24 12 L20 28 L16 12 Z" fill={tierColor} stroke="none" /><path d="M11 29 L29 29 M20 29 L20 36" /><circle cx="20" cy="14" r="2" fill="#fff" stroke="none" /></g>
+      ) : n.includes('blade') || n.includes('shortblade') || n.includes('greatblade') ? (
         <g {...common}><path d="M20 4 L24 12 L20 30 L16 12 Z" fill={tierColor} stroke="none" /><path d="M12 30 L28 30 M20 30 L20 36" /></g>
       ) : n.includes('bow') ? (
         <g {...common}><path d="M28 6 Q10 20 28 34" /><line x1="28" y1="6" x2="28" y2="34" /><line x1="28" y1="20" x2="14" y2="20" /></g>
@@ -379,6 +389,13 @@ export default function Armor({ ctx }: { ctx: Ctx }) {
       <div className="card">
         <h3>Class weapons</h3>
         {bySet('Class weapon').map((a) => (
+          <GearCard key={a.id} piece={a} earned={earned.has(a.id) || rarityEarned.has(a.id)} />
+        ))}
+      </div>
+      <div className="card">
+        <h3>Epic weapons</h3>
+        <p className="small muted">Famous weapons, retold. Earned from real milestones, never bought. Legendary and Mythical pieces stay hidden until earned.</p>
+        {bySet('Epic weapons').map((a) => (
           <GearCard key={a.id} piece={a} earned={earned.has(a.id) || rarityEarned.has(a.id)} />
         ))}
       </div>

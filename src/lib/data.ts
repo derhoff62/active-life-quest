@@ -2158,7 +2158,8 @@ export const BADGES: Badge[] = [
 
 // -------------------------------------------------------------------- ARMOR
 // 18 level pieces: 10 Common by level, 4 Peakforged (Phase 4), 4 Stormforged
-// (Phase 5). Plus 3 class weapons and 9 rarity pieces. Every effect is plain
+// (Phase 5). Plus 3 class weapons, 9 rarity pieces, and 8 epic weapons
+// (famous-weapon-inspired, renamed). Every effect is plain
 // words and never blocks a workout, quest, check-in, or retest.
 
 export const ARMOR: ArmorPiece[] = [
@@ -2206,6 +2207,17 @@ export const ARMOR: ArmorPiece[] = [
   { id: 'crown-year', name: 'Crown of the Summit', tier: 'Mythical', how: 'Save a review retest.', effect: 'A crown for a long road, well walked.' },
   { id: 'cloak-year', name: 'Cloak of Twenty Wins', tier: 'Legendary', how: 'Earn 20 badges.', effect: 'Twenty wins sewn into one cloak.' },
   { id: 'boots-year', name: 'Boots of a Thousand Minutes', tier: 'Legendary', how: 'Log 2,000 minutes of cardio in total.', effect: 'Two thousand minutes of moving. Your heart knows the road.' },
+  // Epic weapons: inspired by famous weapons from popular movies and
+  // shows, renamed so nothing here uses a movie, show, or brand name.
+  // Legendary and Mythical, so they stay hidden until earned.
+  { id: 'epic-excalibur', name: 'Excalibur, Sword of the Stone', tier: 'Mythical', set: 'Epic weapons', how: 'Defeat 5 boss rounds.', effect: 'A sword pulled from stone. Boss rounds feel winnable, because you have done it five times.' },
+  { id: 'epic-stormhammer', name: 'Stormhammer Mjolnir', tier: 'Legendary', set: 'Epic weapons', how: 'Set 5 personal records.', effect: 'Thunder in your hands. Your heavy lifts hit harder and steadier.' },
+  { id: 'epic-starforged-blade', name: 'Starforged Blade', tier: 'Legendary', set: 'Epic weapons', how: 'Finish 15 workouts.', effect: 'A blade that hums with light. Fifteen workouts, and it is yours.' },
+  { id: 'epic-windrunner-bow', name: 'Windrunner Bow', tier: 'Legendary', set: 'Epic weapons', how: 'Beat your best balance hold of 45 seconds.', effect: 'An arrow that finds its mark. Balance you can trust on one leg.' },
+  { id: 'epic-starfall-staff', name: 'Starfall Staff', tier: 'Legendary', set: 'Epic weapons', how: 'Check in 14 days in a row.', effect: 'A star at the end of a staff. Showing up every day is the real magic.' },
+  { id: 'epic-vanguard-shield', name: 'Vanguard Shield', tier: 'Mythical', set: 'Epic weapons', how: 'Earn 12 badges.', effect: 'A shield that has seen twelve wins. Nothing gets through.' },
+  { id: 'epic-truthbound-lasso', name: 'Truthbound Lasso', tier: 'Legendary', set: 'Epic weapons', how: 'Log sleep 30 times.', effect: 'A rope that only tells the truth: rest is part of training.' },
+  { id: 'epic-shadowstep-dagger', name: 'Shadowstep Dagger', tier: 'Mythical', set: 'Epic weapons', how: 'Reach Level 12.', effect: 'Quick and quiet. Twelve levels of showing up, in one small blade.' },
 ];
 
 // ---------------------------------------------------------------- NUTRITION

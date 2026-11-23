@@ -578,6 +578,15 @@ export function earnedArmorIds(doc: ProfileDoc): string[] {
   add('crown-year', hasRetest(52));
   add('cloak-year', badges.length >= 20);
   add('boots-year', cardioTotal >= 2000);
+  // Epic weapons: famous-weapon-inspired, renamed, earned only.
+  add('epic-excalibur', bossesBeaten >= 5);
+  add('epic-stormhammer', prs.length >= 5);
+  add('epic-starforged-blade', workouts.length >= 15);
+  add('epic-windrunner-bow', balanceBest >= 45);
+  add('epic-starfall-staff', checkinStreak >= 14);
+  add('epic-vanguard-shield', badges.length >= 12);
+  add('epic-truthbound-lasso', (doc.sleep || []).length >= 30);
+  add('epic-shadowstep-dagger', level >= 12);
   return [...out];
 }
 

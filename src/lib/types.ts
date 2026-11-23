@@ -117,7 +117,7 @@ export interface ArmorPiece {
   how: string;
   effect: string;
   /** Optional set label, used for the Peakforged (Phase 4), Stormforged (Phase 5) and class weapon sets, plus the year sets Emberforged (Cycle 2), Tideforged (Cycle 3) and Summitforged (Cycle 4). */
-  set?: 'Peakforged' | 'Stormforged' | 'Class weapon' | 'Emberforged' | 'Tideforged' | 'Summitforged';
+  set?: 'Peakforged' | 'Stormforged' | 'Class weapon' | 'Emberforged' | 'Tideforged' | 'Summitforged' | 'Epic weapons';
 }
 
 export interface Spell {
