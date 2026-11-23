@@ -354,7 +354,7 @@ export default function GuardianAvatar({
   // like [a wizard] staff rather than a stick with a star?").
   // A proper wizard staff, not a straight stick with a star on top:
   // gnarled / twisted natural wood shaft (BOLD S-curve swinging
-  // 8 units each way, large knots, thick bark lines, gold carved
+  // 12-14 units each way, large knots, thick bark lines, gold carved
   // rings), and a forked crook top holding a glowing crystal
   // orb IN the fork — the orb sits DOWN between two wide prongs
   // and in a wood cup under it, clearly mounted, no gap, no floating. The
@@ -364,59 +364,84 @@ export default function GuardianAvatar({
   // it reads as glowing crystal at 56px, not a flat star. The
   // equipped staff uses the same shape; its glow is the tier colour
   // (Legendary gold) and its orb stays the gem colour.
+  // NON-DEMONIC (Derek, Nov 23 9:54 AM: "I just don't want the staff
+  // to look like a demonic thing"): NO sharp horns, no trident, no
+  // pointed black/red spikes, no red/black colours, no jagged or
+  // claw-like prongs. The fork here is a tree-branch CUP / CRADLE,
+  // not horns: two short, thick, ROUNDED lobes (ellipses, fully
+  // rounded tips, leaning gently outward) that cup the orb from the
+  // sides, warm brown wood, pale blue/white orb, soft glow. If it
+  // ever reads as horns or a trident, it has failed this rule.
   const wizardStaff = (orbFill: string, glowFill: string) => {
-    // BOLD wizard staff (Nov 23: live 7:43 AM, the previous version
-    // read as a straight smooth pole with an orb perched on top).
-    // Why it failed: the old S-curve swung only 2-3 units, knots
-    // were ~2 units, and the prong tips sat ~0.5 units outside the
-    // orb edge, so at 100px (0.5px/unit) every gnarl/fork detail
-    // was sub-pixel and vanished. Nothing here is under 3 units:
-    // the bend swings 8 units each way, knots are 4-5 units, bark
-    // lines are 3.5 wide, prongs are 5-6 wide and spread 16 units
-    // from the orb centre, so a clear sky gap shows on BOTH sides
-    // of the orb at 100px. Orb centre oy=22, r8.5, sits DOWN
-    // between the prongs (tips y9-10), not perched on a straight
-    // shaft. Shaft centreline passes through the hand (handRx,90).
+    // BOLD wizard staff, v3 (Nov 23: live 7:50 AM, the v2 fork still
+    // FAILED — "narrow, no sky gap, orb wedged/perched").
+    // DIAGNOSIS (measured, not guessed): the v2 prong inner edge was
+    // only 2.5 units from the orb edge (inner x ox-11 vs orb ox-8.5),
+    // and the prong's 2-unit dark outline + the orb's 1-unit white
+    // stroke + the r12 glow disc (0.45) tinting the gap blue closed
+    // that 2.5 units completely at 100px (0.5px/unit = 1.25px, minus
+    // strokes = ~0). The old S-curve swung only 8 units and the
+    // knots were 4.5 units, so the shaft still read mostly vertical.
+    // V3 tried detached rounded lobes at ox+/-20; the 100px render
+    // showed them as two floating brown eggs beside the orb,
+    // disconnected from the shaft. So the fork is now CONTINUOUS
+    // curved arms from the knob, tips (ox-19,10)/(ox+19,11), arm
+    // inner edges ~ox+/-15 at orb height — ~4-6 units of sky after
+    // strokes, = 2-3px at 100px. Orb centre oy=28, r8.5, top
+    // y19.5 — 9.5 units BELOW the arm tips, so it sits DOWN between
+    // them, nestled, not perched. Shaft centreline swings 12-14
+    // units each way and passes through the hand (handRx,90).
     const ox = handRx + 2;
-    const oy = 22;
+    const oy = 28;
     // Centreline: top (knob) -> bend LEFT -> grip -> bend RIGHT -> foot.
-    const shaftD = `M${handRx + 1} 34 C${handRx - 10} 52 ${handRx - 11} 70 ${handRx - 2} 90 C${handRx + 5} 108 ${handRx + 8} 126 ${handRx - 1} 146`;
+    const shaftD = `M${handRx + 2} 40 C${handRx - 13} 55 ${handRx - 14} 72 ${handRx - 2} 90 C${handRx + 7} 108 ${handRx + 12} 126 ${handRx - 2} 146`;
     return (
       <g>
-        <g className="guardian-gem"><circle cx={ox} cy={oy} r="12" fill={glowFill} opacity="0.45" /></g>
+        <g className="guardian-gem"><circle cx={ox} cy={oy} r="10" fill={glowFill} opacity="0.35" /></g>
         {/* Gnarled shaft: dark outline stroke, then wood, so the bend
-            has a visible edge at preview size. Width 13 -> 10.5. */}
-        <path d={shaftD} fill="none" stroke={WOOD_DARK} strokeWidth="13" strokeLinecap="round" />
-        <path d={shaftD} fill="none" stroke={WOOD} strokeWidth="10.5" strokeLinecap="round" />
+            has a visible edge at preview size. Width 14 -> 11.5. */}
+        <path d={shaftD} fill="none" stroke={WOOD_DARK} strokeWidth="14" strokeLinecap="round" />
+        <path d={shaftD} fill="none" stroke={WOOD} strokeWidth="11.5" strokeLinecap="round" />
         {/* Wood highlight following the bend, split at the grip. */}
-        <path d={`M${handRx - 2} 40 C${handRx - 11} 55 ${handRx - 11} 68 ${handRx - 5} 82 M${handRx + 1} 98 C${handRx + 4} 112 ${handRx + 5} 124 ${handRx} 142`} fill="none" stroke="#a8763e" strokeWidth="3" opacity="0.8" strokeLinecap="round" />
+        <path d={`M${handRx - 3} 46 C${handRx - 12} 58 ${handRx - 12} 70 ${handRx - 6} 84 M${handRx + 2} 98 C${handRx + 6} 112 ${handRx + 8} 124 ${handRx} 142`} fill="none" stroke="#a8763e" strokeWidth="3" opacity="0.8" strokeLinecap="round" />
         {/* Knots: LARGE dark blobs with a light centre dot, on the bends. */}
-        <ellipse cx={handRx - 7} cy="62" rx="4.5" ry="5.5" fill={WOOD_DARK} opacity="0.9" />
-        <circle cx={handRx - 7} cy="62" r="1.8" fill="#a8763e" opacity="0.9" />
-        <ellipse cx={handRx + 5} cy="124" rx="4.5" ry="5.5" fill={WOOD_DARK} opacity="0.9" />
-        <circle cx={handRx + 5} cy="124" r="1.8" fill="#a8763e" opacity="0.9" />
+        <ellipse cx={handRx - 11} cy="62" rx="5.5" ry="6.5" fill={WOOD_DARK} opacity="0.9" />
+        <circle cx={handRx - 11} cy="62" r="2.2" fill="#a8763e" opacity="0.9" />
+        <ellipse cx={handRx + 9} cy="124" rx="5.5" ry="6.5" fill={WOOD_DARK} opacity="0.9" />
+        <circle cx={handRx + 9} cy="124" r="2.2" fill="#a8763e" opacity="0.9" />
         {/* Bark lines: thick dark diagonals across the shaft. */}
-        <path d={`M${handRx - 9} 48 L${handRx + 1} 54 M${handRx - 2} 104 L${handRx + 8} 110 M${handRx - 6} 134 L${handRx + 4} 140`} fill="none" stroke={WOOD_DARK} strokeWidth="3.5" opacity="0.75" strokeLinecap="round" />
+        <path d={`M${handRx - 13} 48 L${handRx - 2} 55 M${handRx - 1} 104 L${handRx + 10} 111 M${handRx - 8} 134 L${handRx + 3} 141`} fill="none" stroke={WOOD_DARK} strokeWidth="4" opacity="0.75" strokeLinecap="round" />
         {/* Carved gold rings: thick bands across the shaft. */}
-        <path d={`M${handRx - 10} 76 L${handRx + 2} 76 M${handRx - 1} 112 L${handRx + 9} 112`} stroke={GOLD} strokeWidth="4.5" strokeLinecap="round" />
-        {/* Forked crook: big knob, then two FILLED prongs spreading
-            wide around the orb. Left tip (ox-16,9), right tip
-            (ox+16,10); orb spans ox+/-8.5, so ~5 units of sky show
-            between each prong and the orb at 100px. Prongs are
-            filled shapes with a dark outline, not thin strokes. */}
-        <circle cx={handRx + 1} cy="33" r="6.5" fill={WOOD} stroke={WOOD_DARK} strokeWidth="2" />
-        <path d={`M${ox - 3} 36 Q${ox - 15} 28 ${ox - 16} 12 Q${ox - 15} 7 ${ox - 11} 9 Q${ox - 8} 24 ${ox - 1} 30 Z`} fill={WOOD} stroke={WOOD_DARK} strokeWidth="2" strokeLinejoin="round" />
-        <path d={`M${ox + 3} 36 Q${ox + 15} 28 ${ox + 16} 12 Q${ox + 15} 7 ${ox + 11} 9 Q${ox + 8} 24 ${ox + 1} 30 Z`} fill={WOOD} stroke={WOOD_DARK} strokeWidth="2" strokeLinejoin="round" />
-        {/* Wood cup under the orb, wide and visible below it. */}
-        <path d={`M${ox - 10} 26 Q${ox} 35 ${ox + 10} 26 L${ox + 9} 31 Q${ox} 38 ${ox - 9} 31 Z`} fill={WOOD} stroke={WOOD_DARK} strokeWidth="1.5" />
-        {/* Crystal orb, DOWN between the prongs: centre (ox,22),
-            r8.5, bottom y30.5 overlaps the cup and the shaft top,
+        <path d={`M${handRx - 17} 76 L${handRx - 5} 76 M${handRx + 2} 112 L${handRx + 14} 112`} stroke={GOLD} strokeWidth="5" strokeLinecap="round" />
+        {/* Forked crook: big rounded knob, then a wide wood cup under
+            the orb. The cup is drawn BEFORE the orb, so the orb sits
+            in it. */}
+        <circle cx={handRx + 1} cy="40" r="7" fill={WOOD} stroke={WOOD_DARK} strokeWidth="2" />
+        <path d={`M${ox - 11} 32 Q${ox} 42 ${ox + 11} 32 L${ox + 9} 38 Q${ox} 44 ${ox - 9} 38 Z`} fill={WOOD} stroke={WOOD_DARK} strokeWidth="1.5" />
+        {/* Crystal orb, DOWN between the prongs: centre (ox,28),
+            r8.5, bottom y36.5 overlaps the cup and the shaft top,
             so it is mounted, not floating. */}
         <circle cx={ox} cy={oy} r="8.5" fill={orbFill} stroke="#fff" strokeWidth="1" />
         {/* White heart kept SMALL (r2.2, not r3.5): a bigger white
             centre read at large size as a pupil, like a blue eye. */}
         <circle cx={ox} cy={oy} r="2.2" fill="#fff" opacity="0.85" />
         <circle cx={ox - 3} cy={oy - 3} r="1.4" fill="#fff" opacity="0.9" />
+        {/* Rounded cup/cradle arms, drawn AFTER the orb so they are
+            never hidden behind it. CONTINUOUS curved arms, not
+            isolated blobs: each arm starts at the knob (ox,42) and
+            curves up and out, then slightly back in, ending in a
+            fully rounded tip — a tree-branch cup, NOT horns or a
+            trident: no points, no spikes, no isolated eggs. The
+            previous version used two detached ellipses; at 100px
+            they read as two floating brown eggs beside the orb,
+            disconnected from the shaft. Left tip (ox-19,10), right
+            tip (ox+19,11); arm inner edges sit ~ox+/-15 at orb
+            height, so ~4-6 units of sky show between each arm and
+            the orb after strokes. */}
+        <path d={`M${ox} 42 Q${ox - 24} 30 ${ox - 19} 10`} fill="none" stroke={WOOD_DARK} strokeWidth="10" strokeLinecap="round" />
+        <path d={`M${ox} 42 Q${ox + 24} 31 ${ox + 19} 11`} fill="none" stroke={WOOD_DARK} strokeWidth="10" strokeLinecap="round" />
+        <path d={`M${ox} 42 Q${ox - 24} 30 ${ox - 19} 10`} fill="none" stroke={WOOD} strokeWidth="7" strokeLinecap="round" />
+        <path d={`M${ox} 42 Q${ox + 24} 31 ${ox + 19} 11`} fill="none" stroke={WOOD} strokeWidth="7" strokeLinecap="round" />
       </g>
     );
   };
