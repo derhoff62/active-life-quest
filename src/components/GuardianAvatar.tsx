@@ -1265,17 +1265,26 @@ export default function GuardianAvatar({
               {equippedWeaponKind === 'staff' && (
                 <g>
                   {/* Staff, STRAIGHT and star MOUNTED on the shaft (see
-                      class staff below): star centre (handRx,21),
-                      r7.5, shaft top y14, so the shaft runs through
-                      the star body — the old (handRx,17)/r9 star
-                      only touched the shaft's narrow bottom point
-                      and read as floating live. */}
-                  <rect x={handRx - 3} y="14" width="6" height="70" rx="3" fill={WOOD} stroke={WOOD_DARK} strokeWidth="1.5" />
+                      class staff below): star centre (handRx,24),
+                      r8.5, shaft top y16 (flush with the star top y16.5,
+                      so no brown stub pokes out above it), so the shaft runs through
+                      the star body — the old (handRx,21)/r7.5 star
+                      still read as floating live (Nov 23 4:37 AM:
+                      ~2px gap at 100px preview). The star's white
+                      2-unit stroke also read as a gap, so it is
+                      now 1 unit. */}
+                  {/* Glow disc FIRST, before the shaft: the old order drew
+                      it over the shaft and tinted the wood grey-blue
+                      for ~7 units below the star's centre notch
+                      (fig y27.4-35), which read live as a ~2px gap
+                      between the star and the brown shaft. Now the
+                      shaft stays brown right up to the star. */}
+                  <g className="guardian-gem"><circle cx={handRx} cy="25" r="10" fill={weaponTier ?? gem} opacity="0.45" /></g>
+                  <rect x={handRx - 3} y="16" width="6" height="68" rx="3" fill={WOOD} stroke={WOOD_DARK} strokeWidth="1.5" />
                   <rect x={handRx - 3} y="96" width="6" height="50" rx="3" fill={WOOD} stroke={WOOD_DARK} strokeWidth="1.5" />
                   <path d={`M${handRx - 3} 44 L${handRx + 3} 44 M${handRx - 3} 58 L${handRx + 3} 58 M${handRx - 3} 72 L${handRx + 3} 72`} stroke={weaponTier ?? GOLD} strokeWidth="3.5" />
                   <g className="guardian-gem">
-                    <circle cx={handRx} cy="21" r="10" fill={weaponTier ?? gem} opacity="0.45" />
-                    <polygon points={starPoints(handRx, 21, 7.5)} fill={weaponTier ?? gem} stroke="#fff" strokeWidth="2" />
+                    <polygon points={starPoints(handRx, 25, 8.5)} fill={weaponTier ?? gem} stroke="none" />
                   </g>
                 </g>
               )}
@@ -1358,16 +1367,21 @@ export default function GuardianAvatar({
                   itself was 18 wide and the glow disc r14 made it
                   a separate orb. At 100px/56px that point contact
                   vanishes and the star reads detached. Fix: star
-                  centre (handRx,21), r7.5, glow disc r10, shaft
-                  top raised to y14, so the 6-wide shaft runs
-                  THROUGH the star body (overlap y14-28.5, star
-                  ~12-14 wide at y20-24) with broad contact, no
-                  side gaps. Star top y13.5, left tip x111.9 — clear
+                  centre (handRx,25), r8.5, glow disc r10, shaft
+                  top y16, so the 6-wide shaft runs
+                  THROUGH the star body (overlap y10-32, star
+                  ~13-15 wide at y23-27) with broad contact, no
+                  side gaps. Star top y16, left tip x111.4 — clear
                   of the face (face right edge x108.3 at y19). */}
               <g>
-                <rect x={handRx - 3} y="14" width="6" height="70" rx="3" fill={WOOD} stroke={WOOD_DARK} strokeWidth="1.5" />
+                {/* Glow disc FIRST, before the shaft — see equipped
+                    staff above: drawing it over the shaft tinted
+                    the wood grey-blue below the star's centre
+                    notch and read live as a gap. */}
+                <g className="guardian-gem"><circle cx={handRx} cy="25" r="10" fill={gem} opacity="0.45" /></g>
+                <rect x={handRx - 3} y="16" width="6" height="68" rx="3" fill={WOOD} stroke={WOOD_DARK} strokeWidth="1.5" />
                 <rect x={handRx - 3} y="96" width="6" height="50" rx="3" fill={WOOD} stroke={WOOD_DARK} strokeWidth="1.5" />
-                <rect x={handRx - 1} y="16" width="2" height="66" fill="#a8763e" opacity="0.7" />
+                <rect x={handRx - 1} y="18" width="2" height="64" fill="#a8763e" opacity="0.7" />
                 <rect x={handRx - 1} y="98" width="2" height="46" fill="#a8763e" opacity="0.7" />
                 {/* Carved rings, GOLD and BOLD — the old dark thin bands
                     were invisible on the brown wood at preview size
@@ -1376,10 +1390,9 @@ export default function GuardianAvatar({
                 <path d={`M${handRx - 3} 44 L${handRx + 3} 44 M${handRx - 3} 58 L${handRx + 3} 58 M${handRx - 3} 72 L${handRx + 3} 72 M${handRx - 3} 118 L${handRx + 3} 118`} stroke={GOLD} strokeWidth="3.5" />
                 <path d={`M${handRx - 3} 106 L${handRx + 3} 108 M${handRx - 3} 112 L${handRx + 3} 114`} stroke={WOOD_DARK} strokeWidth="2.5" />
                 <g className="guardian-gem">
-                  <circle cx={handRx} cy="21" r="10" fill={gem} opacity="0.45" />
-                  <polygon points={starPoints(handRx, 21, 7.5)} fill={gem} stroke="#fff" strokeWidth="2" />
+                  <polygon points={starPoints(handRx, 25, 8.5)} fill={gem} stroke="none" />
                 </g>
-                <polygon points={`${handRx},16 ${handRx + 3},21 ${handRx},26 ${handRx - 3},21`} fill="#fff" opacity="0.5" />
+                <polygon points={`${handRx},20 ${handRx + 3},25 ${handRx},30 ${handRx - 3},25`} fill="#fff" opacity="0.5" />
               </g>
             </g>
           )}
