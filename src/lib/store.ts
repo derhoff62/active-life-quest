@@ -587,6 +587,7 @@ export function earnedArmorIds(doc: ProfileDoc): string[] {
   add('epic-vanguard-shield', badges.length >= 12);
   add('epic-truthbound-lasso', (doc.sleep || []).length >= 30);
   add('epic-shadowstep-dagger', level >= 12);
+  add('epic-feral-claws', bossesBeaten >= 3);
   return [...out];
 }
 

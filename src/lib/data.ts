@@ -2218,6 +2218,7 @@ export const ARMOR: ArmorPiece[] = [
   { id: 'epic-vanguard-shield', name: 'Vanguard Shield', tier: 'Mythical', set: 'Epic weapons', how: 'Earn 12 badges.', effect: 'A shield that has seen twelve wins. Nothing gets through.' },
   { id: 'epic-truthbound-lasso', name: 'Truthbound Lasso', tier: 'Legendary', set: 'Epic weapons', how: 'Log sleep 30 times.', effect: 'A rope that only tells the truth: rest is part of training.' },
   { id: 'epic-shadowstep-dagger', name: 'Shadowstep Dagger', tier: 'Mythical', set: 'Epic weapons', how: 'Reach Level 12.', effect: 'Quick and quiet. Twelve levels of showing up, in one small blade.' },
+  { id: 'epic-feral-claws', name: 'Feral Claws', tier: 'Mythical', set: 'Epic weapons', how: 'Defeat 3 boss rounds.', effect: 'Three sharp claws, quick and fierce. For the days you need to fight through.' },
 ];
 
 // ---------------------------------------------------------------- NUTRITION

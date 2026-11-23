@@ -48,7 +48,9 @@ function GearIcon({ piece }: { piece: ArmorPiece }) {
   const common = { stroke: tierColor, strokeWidth: 2, fill: 'none', strokeLinecap: 'round' as const };
   return (
     <svg width="40" height="40" viewBox="0 0 40 40" role="img" aria-label={piece.name} style={{ flexShrink: 0 }}>
-      {n.includes('hammer') ? (
+      {n.includes('claw') ? (
+        <g {...common}><path d="M12 28 L16 28 L13 8 L9 12 Z" fill={tierColor} stroke="none" /><path d="M18 28 L22 28 L20 5 L18 5 Z" fill={tierColor} stroke="none" /><path d="M24 28 L28 28 L31 12 L27 8 Z" fill={tierColor} stroke="none" /><rect x="8" y="28" width="24" height="6" rx="3" fill={tierColor} stroke="none" opacity="0.9" /></g>
+      ) : n.includes('hammer') ? (
         <g {...common}><rect x="10" y="7" width="20" height="11" rx="3" fill={tierColor} stroke="none" opacity="0.9" /><path d="M20 18 L20 36" strokeWidth="4" /><circle cx="20" cy="12" r="2" fill="#fff" stroke="none" /></g>
       ) : n.includes('shield') ? (
         <g {...common}><path d="M20 5 L32 9 L32 20 Q32 30 20 35 Q8 30 8 20 L8 9 Z" fill={tierColor} stroke="none" opacity="0.85" /><circle cx="20" cy="19" r="5" fill="#fff" stroke="none" /><circle cx="20" cy="19" r="2.5" fill={tierColor} stroke="none" /></g>
