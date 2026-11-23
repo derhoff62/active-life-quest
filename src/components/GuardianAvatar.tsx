@@ -1151,16 +1151,22 @@ export default function GuardianAvatar({
               )}
             </g>
           )}
-          {!equippedWeapon && g.classId === 'Guardian' && (
+          {(!equippedWeapon || equippedWeaponKind === 'sword' || equippedWeaponKind === 'dagger' || equippedWeaponKind === 'hammer' || equippedWeaponKind === 'claws') && g.classId === 'Guardian' && (
             <g>
-              {/* Shield, image-right */}
+              {/* Shield, image-right. Kept when the equipped weapon is
+                  a one-handed left-hand weapon (sword / dagger / hammer
+                  / claws), so equipping Excalibur does not leave the
+                  shield hand empty. A right-hand equipped weapon
+                  (bow / staff / shield / lasso) takes the shield's
+                  place instead. */}
               <path d={`M${handRx - 2} 66 L${handRx + 28} 66 L${handRx + 28} 86 Q${handRx + 13} 102 ${handRx - 2} 86 Z`} fill={STEEL} stroke={GOLD} strokeWidth="3" />
               <path d={`M${handRx + 3} 71 L${handRx + 23} 71 L${handRx + 23} 85 Q${handRx + 13} 96 ${handRx + 3} 85 Z`} fill={main} opacity="0.9" />
               <circle cx={handRx + 13} cy="81" r="10" fill={gem} opacity="0.45" />
               <circle cx={handRx + 13} cy="81" r="5.5" fill={gem} stroke="#fff" strokeWidth="1.5" />
+              {!equippedWeapon && (
+              <g transform={`rotate(-12 ${handLx} 68)`}>
               {/* Sword, image-left: blade with fuller line, gold
                   crossguard, wrapped grip, gem in the pommel */}
-              <g transform={`rotate(-12 ${handLx} 68)`}>
                 <rect x={handLx - 3} y="40" width="6" height="44" rx="3" fill={STEEL} stroke={STEEL_DARK} strokeWidth="1.5" />
                 <rect x={handLx - 1} y="42" width="1.8" height="38" fill="#fff" opacity="0.7" />
                 <rect x={handLx - 10} y="82" width="20" height="6" rx="3" fill={GOLD} stroke={GOLD_DARK} strokeWidth="1.5" />
@@ -1171,6 +1177,7 @@ export default function GuardianAvatar({
                 <circle cx={handLx} cy="101" r="6" fill={gem} opacity="0.4" />
                 <circle cx={handLx} cy="101" r="3.5" fill={gem} stroke="#fff" strokeWidth="1.5" />
               </g>
+              )}
             </g>
           )}
           {!equippedWeapon && g.classId === 'Ranger' && (
