@@ -176,11 +176,24 @@ export default function GuardianAvatar({
   // now (male ±19 at the widest, was ±23), the pauldrons sit closer
   // in, and the arms are drawn AFTER the torso so they are VISIBLE
   // from shoulder to hand instead of hidden behind the tunic.
+  // SHOULDERS RAISED (Derek, Nov 22 7:24 PM: "Why is the head still
+  // really high?"): his 7:24 screenshot shows the head perched high
+  // above the shoulders — chin y42, then a tall black collar dome
+  // down to y58, pauldrons at cy65 (top y57), flanking the chest
+  // plate, not the head. The fix moves the SHOULDERS up to the chin,
+  // not the head down: torso top y54->46, collar a shallow cap
+  // (y41.5-50, was y41.5-58), pauldrons cy65->52 (tops y44, only 2
+  // units below the chin), chest plate up 10, arms starting at the
+  // new shoulder line. The head now sits BETWEEN the pauldrons, chin
+  // just above the chest plate, like the reference paladins. Hanging
+  // hair (locks, braid, ponytail tail) is drawn AFTER the pauldrons
+  // (hangingHair) so it falls IN FRONT of the raised armour instead
+  // of being swallowed by it.
   // Neck and mouth are UNCHANGED from v56/v57 (both verified FIXED
   // live Nov 22, 7:11-7:15 PM): neck short, collar rises to just
   // under the chin, ~1.5 units of skin show; mouth a thin short
   // light line at y34.5. Legs (y110-176) are longer than the torso
-  // (y54-110), with a shade strip and a knee band each, so they
+  // (y46-110), with a shade strip and a knee band each, so they
   // read as armoured legs, not sticks.
   // Neck: SHORT, NARROW, TAPERED — top 10 wide at the chin, widening
   // to 14 at the shoulders, mostly hidden by the collar, which rises
@@ -193,8 +206,8 @@ export default function GuardianAvatar({
   const handRx = isFemale ? 119 : 124;
   const handR = isFemale ? 5 : 5.5;
   const torsoD = isFemale
-    ? `M100 54 L${f(100 + 11 * bw)} 58 L${f(100 + 13 * bw)} 86 L${f(100 + 9 * bw)} 110 L${f(100 - 9 * bw)} 110 L${f(100 - 13 * bw)} 86 L${f(100 - 11 * bw)} 58 Z`
-    : `M100 54 L${f(100 + 17 * bw)} 58 L${f(100 + 19 * bw)} 88 L${f(100 + 14 * bw)} 110 L${f(100 - 14 * bw)} 110 L${f(100 - 19 * bw)} 88 L${f(100 - 17 * bw)} 58 Z`;
+    ? `M100 46 L${f(100 + 11 * bw)} 50 L${f(100 + 13 * bw)} 86 L${f(100 + 9 * bw)} 110 L${f(100 - 9 * bw)} 110 L${f(100 - 13 * bw)} 86 L${f(100 - 11 * bw)} 50 Z`
+    : `M100 46 L${f(100 + 17 * bw)} 50 L${f(100 + 19 * bw)} 88 L${f(100 + 14 * bw)} 110 L${f(100 - 14 * bw)} 110 L${f(100 - 19 * bw)} 88 L${f(100 - 17 * bw)} 50 Z`;
   const beltW = (isFemale ? 24 : 30) * bw;
   const pauldronRx = (isFemale ? 10 : 11) * bw;
   const pauldronDx = isFemale ? 13 : 18;
@@ -236,29 +249,14 @@ export default function GuardianAvatar({
   const hairArt = isFemale ? (
     <g>
       {hairCap}
-      {hair === 'Long' && longLocks(false)}
-      {hair === 'Ponytail' && (
-        <g>
-          {/* ONE tail on the right side only, THICKER — the old version
-              had this tail PLUS a short lock on the left, which read
-              live as two thin symmetric strands / pigtails. The cap
-              already frames the left side of the face. The tail ends
-              at y58, ABOVE the pauldron top (y57.5), so the end gem
-              tie is visible — the old y66 end put the tie behind the
-              pauldron. Gem ties at the top AND at the end, both big
-              enough to see at preview size. */}
-          <path d="M111 30 Q121 44 119 58 Q114 61 111 55 Q113 42 109 34 Z" fill={HAIR_C} />
-          <path d="M116 42 Q117 50 116 56" fill="none" stroke={HAIR_L} strokeWidth="2" opacity="0.7" strokeLinecap="round" />
-          <circle cx="115" cy="44" r="5" fill={gem} stroke="#fff" strokeWidth="1.5" />
-          <circle cx="116" cy="56" r="4.5" fill={gem} stroke="#fff" strokeWidth="1.5" />
-        </g>
-      )}
+      {/* Long locks hang in front of the pauldrons — see hangingHair. */}
+      {/* Ponytail tail hangs in front of the pauldrons — see hangingHair. */}
       {hair === 'Bun' && (
         <g>
           <circle cx="100" cy="10" r="8" fill={HAIR_C} />
           <path d="M94 7 Q100 4 106 7" fill="none" stroke={HAIR_L} strokeWidth="2" opacity="0.8" strokeLinecap="round" />
           <path d="M93 12 Q100 9 107 12" fill="none" stroke={HAIR_L} strokeWidth="1.8" opacity="0.6" strokeLinecap="round" />
-          {shortLocks}
+          {/* Bun side locks hang in front of the pauldrons — hangingHair. */}
         </g>
       )}
       {hair === 'Curly' && (
@@ -269,41 +267,18 @@ export default function GuardianAvatar({
           <circle cx="111" cy="26" r="5.5" />
           <circle cx="85" cy="35" r="5" />
           <circle cx="115" cy="35" r="5" />
-          <circle cx="86" cy="50" r="4.5" />
-          <circle cx="114" cy="50" r="4.5" />
+          {/* Lower side curls hang in front of the pauldrons — hangingHair. */}
           <path d="M91 23 Q95 20 100 23 M104 23 Q109 20 113 23" fill="none" stroke={HAIR_L} strokeWidth="1.8" strokeLinecap="round" />
         </g>
       )}
-      {hair === 'Braided' && (
-        <g fill={HAIR_C}>
-          {/* Braid hangs to the SHOULDER (y60), aligned with the right
-              arm — the old braid ran to y80, mid-torso, floating. */}
-          <path d="M88.5 35.5 Q86.5 45 88.5 55 Q90.5 57 92.5 51 Q91.5 43 91.5 35.5 Z" />
-          <circle cx="114" cy="42" r="5" />
-          <circle cx="112" cy="49" r="5" />
-          <circle cx="114" cy="55" r="4.5" />
-          {/* Gem ties, BIG — the old r2.5 ties were invisible at
-              preview size live. One at the top of the braid, one at
-              the end — the end tie sits at y55, ABOVE the pauldron
-              top (y57.5), so it is visible; the old y63 tie was
-              hidden behind the pauldron. */}
-          <circle cx="114" cy="40" r="4.5" fill={gem} stroke="#fff" strokeWidth="1.5" />
-          <circle cx="114" cy="56" r="4.5" fill={gem} stroke="#fff" strokeWidth="1.5" />
-        </g>
-      )}
-      {hair === 'ShortBob' && (
-        <g fill={HAIR_C}>
-          <path d="M86 36 Q83 46 86 52 Q89 54 91 49 Q90 42 90 36 Z" />
-          <path d="M114 36 Q117 46 114 52 Q111 54 109 49 Q110 42 110 36 Z" />
-          <path d="M88 44 Q90 50 92 48 M112 44 Q110 50 108 48" fill="none" stroke={HAIR_L} strokeWidth="1.8" strokeLinecap="round" />
-        </g>
-      )}
+      {/* Braid hangs in front of the pauldrons — see hangingHair. */}
+      {/* Short bob locks hang in front of the pauldrons — see hangingHair. */}
       {hair === 'Topknot' && (
         <g fill={HAIR_C}>
           <circle cx="100" cy="9" r="8" />
           <path d="M94 6 Q100 3 106 6" fill="none" stroke={HAIR_L} strokeWidth="2" strokeLinecap="round" />
           <path d="M93 14 Q100 11 107 14" fill="none" stroke={gem} strokeWidth="3" strokeLinecap="round" />
-          {shortLocks}
+          {/* Topknot side locks hang in front of the pauldrons — hangingHair. */}
         </g>
       )}
     </g>
@@ -340,12 +315,72 @@ export default function GuardianAvatar({
           <circle cx="115" cy="34" r="4" />
         </g>
       )}
-      {hair === 'Long' && longLocks(true)}
+      {/* Long locks hang in front of the pauldrons — see hangingHair. */}
       {hair === 'ManBun' && (
         <g fill={HAIR_C}>
           <circle cx="100" cy="10" r="7" />
           <path d="M95 7 Q100 4 105 7" fill="none" stroke={HAIR_L} strokeWidth="2" strokeLinecap="round" />
           <path d="M94 14 Q100 11 106 14" fill="none" stroke={gem} strokeWidth="2.5" strokeLinecap="round" />
+          {/* Man bun side locks hang in front of the pauldrons — hangingHair. */}
+        </g>
+      )}
+    </g>
+  );
+
+  // Hanging hair, drawn AFTER the pauldrons (in front of the armour),
+  // so long hair falls over the shoulders like the reference sheets.
+  // The pauldrons now sit up at chin height (tops y44), so hair drawn
+  // before them would be swallowed — only the cap and on-head styles
+  // are drawn early, in hairArt above. Gem ties are BIG (r4.5-5) so
+  // they read at preview size.
+  const hangingHair = isFemale ? (
+    <g>
+      {hair === 'Long' && longLocks(false)}
+      {hair === 'Ponytail' && (
+        <g>
+          {/* ONE tail on the right side only, THICKER — the old version
+              had this tail PLUS a short lock on the left, which read
+              live as two thin symmetric strands / pigtails. Gem ties
+              at the top AND at the end, both big enough to see. */}
+          <path d="M111 30 Q121 44 119 58 Q114 61 111 55 Q113 42 109 34 Z" fill={HAIR_C} />
+          <path d="M116 42 Q117 50 116 56" fill="none" stroke={HAIR_L} strokeWidth="2" opacity="0.7" strokeLinecap="round" />
+          <circle cx="115" cy="44" r="5" fill={gem} stroke="#fff" strokeWidth="1.5" />
+          <circle cx="116" cy="56" r="4.5" fill={gem} stroke="#fff" strokeWidth="1.5" />
+        </g>
+      )}
+      {hair === 'Bun' && shortLocks}
+      {hair === 'Curly' && (
+        <g fill={HAIR_C}>
+          <circle cx="86" cy="50" r="4.5" />
+          <circle cx="114" cy="50" r="4.5" />
+        </g>
+      )}
+      {hair === 'Braided' && (
+        <g fill={HAIR_C}>
+          {/* Braid hangs to the SHOULDER (y60), aligned with the right
+              arm — the old braid ran to y80, mid-torso, floating. */}
+          <path d="M88.5 35.5 Q86.5 45 88.5 55 Q90.5 57 92.5 51 Q91.5 43 91.5 35.5 Z" />
+          <circle cx="114" cy="42" r="5" />
+          <circle cx="112" cy="49" r="5" />
+          <circle cx="114" cy="55" r="4.5" />
+          <circle cx="114" cy="40" r="4.5" fill={gem} stroke="#fff" strokeWidth="1.5" />
+          <circle cx="114" cy="56" r="4.5" fill={gem} stroke="#fff" strokeWidth="1.5" />
+        </g>
+      )}
+      {hair === 'ShortBob' && (
+        <g fill={HAIR_C}>
+          <path d="M86 36 Q83 46 86 52 Q89 54 91 49 Q90 42 90 36 Z" />
+          <path d="M114 36 Q117 46 114 52 Q111 54 109 49 Q110 42 110 36 Z" />
+          <path d="M88 44 Q90 50 92 48 M112 44 Q110 50 108 48" fill="none" stroke={HAIR_L} strokeWidth="1.8" strokeLinecap="round" />
+        </g>
+      )}
+      {hair === 'Topknot' && shortLocks}
+    </g>
+  ) : (
+    <g>
+      {hair === 'Long' && longLocks(true)}
+      {hair === 'ManBun' && (
+        <g fill={HAIR_C}>
           <path d="M87 38 Q85 47 87 55 Q90 57 92 52 Q91 44 91 38 Z" />
           <path d="M113 38 Q115 47 113 55 Q110 57 108 52 Q109 44 109 38 Z" />
         </g>
@@ -631,10 +666,10 @@ export default function GuardianAvatar({
               of vanishing into it (same colour, no edge). */}
           {g.cape && (
             <g>
-              <path d="M100 56 L124 66 L121 142 Q100 150 79 142 L76 66 Z" fill={capeMain} stroke={capeDark} strokeWidth="2" opacity="0.96" />
-              <path d="M86 72 Q84 106 86 136" fill="none" stroke={capeDark} strokeWidth="2" opacity="0.6" />
-              <path d="M114 72 Q116 106 114 136" fill="none" stroke={capeDark} strokeWidth="2" opacity="0.6" />
-              <path d="M100 66 Q100 106 100 142" fill="none" stroke={capeDark} strokeWidth="1.5" opacity="0.4" />
+              <path d="M100 48 L124 58 L121 142 Q100 150 79 142 L76 58 Z" fill={capeMain} stroke={capeDark} strokeWidth="2" opacity="0.96" />
+              <path d="M86 64 Q84 106 86 136" fill="none" stroke={capeDark} strokeWidth="2" opacity="0.6" />
+              <path d="M114 64 Q116 106 114 136" fill="none" stroke={capeDark} strokeWidth="2" opacity="0.6" />
+              <path d="M100 58 Q100 106 100 142" fill="none" stroke={capeDark} strokeWidth="1.5" opacity="0.4" />
             </g>
           )}
           {/* Wings, Level 8+ : flat white feathers */}
@@ -653,7 +688,7 @@ export default function GuardianAvatar({
           {/* Ranger quiver, worn on the back: peeks over the left shoulder
               with arrows sticking up, strap diagonal across the chest. */}
           {g.classId === 'Ranger' && (
-            <g>
+            <g transform="translate(0 -8)">
               <g transform="rotate(-18 76 72)">
                 <rect x="69" y="58" width="14" height="32" rx="7" fill={WOOD} stroke={WOOD_DARK} strokeWidth="1.5" />
                 <path d="M72 62 L72 86 M79 62 L79 86" stroke={WOOD_DARK} strokeWidth="1.5" opacity="0.6" />
@@ -673,7 +708,7 @@ export default function GuardianAvatar({
               the waist, which is what Derek's screenshot shows. */}
           {/* Body: flat tunic in the main colour, one light strip on the
               left, one dark strip on the right (reference image 2 shading).
-              Top edge (y54) sits under the collar (y41.5-58), which
+              Top edge (y46) sits under the collar (y41.5-50), which
               bridges chin to torso, so the neck never shows a gap. */}
           <path d={torsoD} fill={main} stroke={dark} strokeWidth="2.5" />
           <path d="M88 64 Q86 84 88 104 Q93 106 95 104 Q91 84 93 66 Z" fill="#fff" opacity="0.22" />
@@ -687,8 +722,8 @@ export default function GuardianAvatar({
               The gem PULSES (.guardian-gem) — a subtle contextual glow,
               not a halo around the figure. */}
           <g className="guardian-gem">
-            <polygon points="100,76 109,85 100,96 91,85" fill={gem} stroke="#fff" strokeWidth="2" />
-            <polygon points="100,81 104,85 100,90 96,85" fill="#fff" opacity="0.55" />
+            <polygon points="100,66 109,75 100,86 91,75" fill={gem} stroke="#fff" strokeWidth="2" />
+            <polygon points="100,71 104,75 100,80 96,75" fill="#fff" opacity="0.55" />
           </g>
           {/* Legs, with a shade strip and a knee band each, so they read
               as armoured legs, not plain sticks (Derek's screenshot:
@@ -729,16 +764,18 @@ export default function GuardianAvatar({
               disappears INTO the collar. */}
           <path d="M95 38 L105 38 L107 50 L93 50 Z" fill={SKIN} />
           <path d="M102 40 L105 40 L105 42.5 L102.5 42.5 Z" fill="#c98a5a" opacity="0.3" />
-          {/* Collar: a dome-topped band rising to just under the chin
-              (top edge y41.5), joining chin to shoulders and covering
-              the neck's bottom half. Main colour (hood colour for the
-              Ranger, so it reads as the cowl). Light trim along the
-              top edge. */}
-          <path d="M85 58 Q85 41.5 100 41.5 Q115 41.5 115 58 Z" fill={g.classId === 'Ranger' ? capeMain : main} stroke={dark} strokeWidth="2" />
+          {/* Collar: a SHALLOW dome-topped cap rising to just under the
+              chin (top edge y41.5, bottom edge y50) — it joins chin to
+              shoulders and covers the neck's bottom half. It used to
+              run down to y58, a tall black dome that made the head
+              look perched high above the shoulders (Derek, Nov 22
+              7:24 PM). Main colour (hood colour for the Ranger, so it
+              reads as the cowl). Light trim along the top edge. */}
+          <path d="M85 50 Q85 41.5 100 41.5 Q115 41.5 115 50 Z" fill={g.classId === 'Ranger' ? capeMain : main} stroke={dark} strokeWidth="2" />
           <path d="M88 44.5 Q100 42.5 112 44.5" fill="none" stroke={light} strokeWidth="1.5" opacity="0.5" />
           {/* Cape clasp on the collar, joining neck to shoulders */}
-          <circle cx="100" cy="55" r="3.5" fill={GOLD} stroke={GOLD_DARK} strokeWidth="1.5" />
-          <circle cx="100" cy="55" r="1.8" fill={gem} stroke="#fff" strokeWidth="1" />
+          <circle cx="100" cy="47" r="3.5" fill={GOLD} stroke={GOLD_DARK} strokeWidth="1.5" />
+          <circle cx="100" cy="47" r="1.8" fill={gem} stroke="#fff" strokeWidth="1" />
           {/* Head: one flat skin circle, r13 at (100,29), 26 units tall
               (hair top y13.5 to chin y42 is ~28 of ~173, about 1/6).
               v56/v57 had r11 and the head read TINY live against the
@@ -831,32 +868,36 @@ export default function GuardianAvatar({
               circles at the waist. */}
           {isFemale ? (
             <g>
-              <path d="M88 63 Q80 80 79 100 L86 101 Q87 82 92 67 Z" fill={armMain} stroke={armDark} strokeWidth="2" />
-              <path d="M112 63 Q120 80 121 100 L114 101 Q113 82 108 67 Z" fill={armMain} stroke={armDark} strokeWidth="2" />
-              <path d="M84 72 Q81 84 81 96" fill="none" stroke="#fff" strokeWidth="2" opacity="0.3" strokeLinecap="round" />
-              <path d="M116 72 Q119 84 119 96" fill="none" stroke="#fff" strokeWidth="2" opacity="0.3" strokeLinecap="round" />
+              <path d="M88 49 Q80 66 79 100 L86 101 Q87 82 92 53 Z" fill={armMain} stroke={armDark} strokeWidth="2" />
+              <path d="M112 49 Q120 66 121 100 L114 101 Q113 82 108 53 Z" fill={armMain} stroke={armDark} strokeWidth="2" />
+              <path d="M84 58 Q81 70 81 96" fill="none" stroke="#fff" strokeWidth="2" opacity="0.3" strokeLinecap="round" />
+              <path d="M116 58 Q119 70 119 96" fill="none" stroke="#fff" strokeWidth="2" opacity="0.3" strokeLinecap="round" />
             </g>
           ) : (
             <g>
-              <path d="M86 62 Q75 80 74 100 L83 101 Q85 82 91 66 Z" fill={armMain} stroke={armDark} strokeWidth="2" />
-              <path d="M114 62 Q125 80 126 100 L117 101 Q115 82 109 66 Z" fill={armMain} stroke={armDark} strokeWidth="2" />
-              <path d="M80 70 Q76 84 76 96" fill="none" stroke="#fff" strokeWidth="2" opacity="0.3" strokeLinecap="round" />
-              <path d="M120 70 Q124 84 124 96" fill="none" stroke="#fff" strokeWidth="2" opacity="0.3" strokeLinecap="round" />
+              <path d="M86 48 Q75 66 74 100 L83 101 Q85 82 91 52 Z" fill={armMain} stroke={armDark} strokeWidth="2" />
+              <path d="M114 48 Q125 66 126 100 L117 101 Q115 82 109 52 Z" fill={armMain} stroke={armDark} strokeWidth="2" />
+              <path d="M80 56 Q76 70 76 96" fill="none" stroke="#fff" strokeWidth="2" opacity="0.3" strokeLinecap="round" />
+              <path d="M120 56 Q124 70 124 96" fill="none" stroke="#fff" strokeWidth="2" opacity="0.3" strokeLinecap="round" />
             </g>
           )}
-          {/* Guardian pauldrons, drawn AFTER hair so long hair can never
-              hide them. Big steel, both looks, all hairstyles, with
-              rivets and a gem stud each. */}
+          {/* Guardian pauldrons, drawn AFTER the arms so they cover the
+              arm tops, and BEFORE the hanging hair (hangingHair), so
+              long hair falls IN FRONT of them like the reference
+              sheets. RAISED to chin height (cy52, tops y44, only 2
+              units below the chin at y42) — they flank the HEAD now,
+              not the chest. Big steel, both looks, all hairstyles,
+              with rivets and a gem stud each. */}
           {g.classId === 'Guardian' && (
             <g>
-              <ellipse cx={100 - pauldronDx} cy="65" rx={pauldronRx} ry={isFemale ? 7.5 : 8} fill={STEEL} stroke={dark} strokeWidth="2" />
-              <ellipse cx={100 + pauldronDx} cy="65" rx={pauldronRx} ry={isFemale ? 7.5 : 8} fill={STEEL} stroke={dark} strokeWidth="2" />
-              <circle cx={100 - pauldronDx} cy="65" r="2.5" fill={gem} />
-              <circle cx={100 + pauldronDx} cy="65" r="2.5" fill={gem} />
-              <circle cx={100 - pauldronDx - 5} cy="62" r="1.2" fill={STEEL_DARK} />
-              <circle cx={100 - pauldronDx + 5} cy="62" r="1.2" fill={STEEL_DARK} />
-              <circle cx={100 + pauldronDx - 5} cy="62" r="1.2" fill={STEEL_DARK} />
-              <circle cx={100 + pauldronDx + 5} cy="62" r="1.2" fill={STEEL_DARK} />
+              <ellipse cx={100 - pauldronDx} cy="52" rx={pauldronRx} ry={isFemale ? 7.5 : 8} fill={STEEL} stroke={dark} strokeWidth="2" />
+              <ellipse cx={100 + pauldronDx} cy="52" rx={pauldronRx} ry={isFemale ? 7.5 : 8} fill={STEEL} stroke={dark} strokeWidth="2" />
+              <circle cx={100 - pauldronDx} cy="52" r="2.5" fill={gem} />
+              <circle cx={100 + pauldronDx} cy="52" r="2.5" fill={gem} />
+              <circle cx={100 - pauldronDx - 5} cy="49" r="1.2" fill={STEEL_DARK} />
+              <circle cx={100 - pauldronDx + 5} cy="49" r="1.2" fill={STEEL_DARK} />
+              <circle cx={100 + pauldronDx - 5} cy="49" r="1.2" fill={STEEL_DARK} />
+              <circle cx={100 + pauldronDx + 5} cy="49" r="1.2" fill={STEEL_DARK} />
             </g>
           )}
           {/* Guardian chest plate over the tunic, with emblem, etched
@@ -865,15 +906,21 @@ export default function GuardianAvatar({
             <g>
               {/* Tapered at the top, so it reads as armour, not a bib.
                   Narrower than v56/v57 (was x84-116) so the head
-                  does not look tiny next to it. */}
-              <path d="M90 62 L110 62 L113 86 L100 95 L87 86 Z" fill={STEEL} stroke={STEEL_DARK} strokeWidth="2" opacity="0.95" />
-              <path d="M90 62 L110 62 L112 74 L88 74 Z" fill={main} opacity="0.85" />
-              <path d="M94 66 L92 84 M106 66 L108 84" stroke={STEEL_DARK} strokeWidth="1.5" opacity="0.6" strokeLinecap="round" />
+                  does not look tiny next to it. Raised 10 with the
+                  shoulders (top y50, was y62) so the chin sits just
+                  above it. */}
+              <path d="M90 50 L110 50 L113 76 L100 86 L87 76 Z" fill={STEEL} stroke={STEEL_DARK} strokeWidth="2" opacity="0.95" />
+              <path d="M90 50 L110 50 L112 62 L88 62 Z" fill={main} opacity="0.85" />
+              <path d="M94 54 L92 74 M106 54 L108 74" stroke={STEEL_DARK} strokeWidth="1.5" opacity="0.6" strokeLinecap="round" />
               <g className="guardian-gem">
-                <circle cx="100" cy="84" r="4" fill={gem} stroke="#fff" strokeWidth="1.5" />
+                <circle cx="100" cy="76" r="4" fill={gem} stroke="#fff" strokeWidth="1.5" />
               </g>
             </g>
           )}
+          {/* Hanging hair in front of the armour (Guardian only — the
+              Ranger hood and Spellweaver hat have no pauldrons to
+              swallow them, so their hair stays in the early block). */}
+          {g.classId === 'Guardian' && hangingHair}
           {/* Ranger quiver strap, diagonal across the chest */}
           {g.classId === 'Ranger' && (
             <path d="M84 62 L116 100" fill="none" stroke={WOOD_DARK} strokeWidth="4" opacity="0.7" strokeLinecap="round" />
