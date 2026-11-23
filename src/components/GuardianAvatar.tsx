@@ -403,33 +403,42 @@ export default function GuardianAvatar({
   // LONG hair (Derek, Nov 22 9:18 PM: "The long hair looks weird";
   // live check Nov 22 9:45 PM: it read as TWO separate side locks
   // with armour showing between them at the neck/chest, not one
-  // mass; live check Nov 22 9:58 PM, v75: STILL two locks). Why the
-  // v75 band was invisible: the band was a thin crescent, top y48
-  // dipping to ~y51.5 at the centre, bottom y55 — only ~2.5 units
-  // thick at the centre, 12 wide, drawn BEFORE the locks, so the
-  // locks covered its ends and only a sliver showed; below y55 the
-  // pale chest plate showed FULLY between the locks. A join that is
-  // 2.5 units tall at the centre cannot join two locks that end at
-  // y54 with a 12-wide gap between them.
-  // The fix (v76): the locks JOIN IN FRONT, visibly:
-  //  - Female locks are wider inward (inner edge x97 left / x103
-  //    right, was x94 / x106), so the gap between them is only 6;
-  //  - a FRONT HAIR PANEL, Female only, hangs down the CENTRE chest
-  //    in front of the torso/chest plate: top y49, just below the
-  //    collar clasp at (100,47) so the clasp stays visible, sides
-  //    x90-110 at the top so it overlaps both locks by ~6 units
-  //    each side, tapering to a rounded tip at y64. It is drawn
-  //    AFTER the torso/chest plate (Guardian hangingHair, and again
-  //    in the late front-panel block below, so Ranger/Spellweaver
-  //    get it in front of the quiver strap / equip trim too), never
-  //    behind it. The chest gem at (100,70) stays visible below
-  //    the panel tip. Face stays clear, pauldrons stay visible at
-  //    the sides. Male Long keeps the old band only: it PASSED live
-  //    (beard bridges the locks at the chin), so it is untouched.
+  // mass; live check Nov 22 9:58 PM, v75: STILL two locks; live
+  // check Nov 22 10:06 PM, v76/commit 99ec9e6f: STILL two locks).
+  // ROOT CAUSE (measured in the shipped render, GuardianAvatar.tsx
+  // lines 429-433, 1145-1152, and pixel-sampled in the 800px render):
+  // the v76 front panel was NOT covered over by anything later —
+  // it IS in the shipped bundle (dist index-C3bzgNZO.js contains
+  // "M91 49...") and it IS drawn twice, after the chest plate.
+  // It was simply TOO SMALL to read as a hair mass: 20 wide
+  // (x90-110) x 15 tall (y49-64), tapering to a POINT at y64.
+  // Pixel samples (800px render, viewBox*4): centre x100 is brown
+  // only at viewBox y67-79 (figure y50-62), and at viewBox y80
+  // (figure y63) only x100 itself is brown — a 1-2px point.
+  // Below figure y64 there is NO hair at all, so the full chest
+  // plate (silver, blue circle gem at y70, white chevron) shows
+  // between where the locks end (y54). At 100px preview the panel
+  // is ~10x7px and at 56px ~6x4px: it reads as a small brown patch
+  // / bib under the throat, exactly what Derek reported live.
+  // The fix (v77): the panel is now a BROAD CURTAIN, 32 wide
+  // (x84-116) x 30 tall (y48-78), with a broad ROUNDED bottom
+  // (not a point), so from figure y48 to y78 the centre chest is
+  // brown across x85-115 continuously — no steel window at all.
+  // The locks (ending y54) + panel union is continuous x79-121
+  // at y48-54 and x84-116 at y55-78. The chest-plate gem at
+  // (100,70) is now covered by the hair (as long hair covers
+  // armour), so it is re-drawn ON the panel as a gem brooch at
+  // (100,68), keeping the gem/glow cue. Face stays clear,
+  // collar clasp at (100,47) stays visible just above the panel
+  // top (y48), pauldrons stay visible at the sides. Male Long
+  // keeps the old band only: it PASSED live, so it is untouched.
   const longFrontPanel = (
     <g fill={HAIR_C}>
-      <path d="M91 49 Q100 51 109 49 L110 58 Q109 63 100 64 Q91 63 90 58 Z" />
-      <path d="M96 52 Q95 59 97 62 M100 52 L100 62 M104 52 Q105 59 103 62" fill="none" stroke={HAIR_L} strokeWidth="1.8" opacity="0.6" strokeLinecap="round" />
+      <path d="M85 48 Q100 50 115 48 L116 66 Q115 76 100 78 Q85 76 84 66 Z" />
+      <path d="M92 52 Q91 62 93 73 M97 52 Q96 63 98 74 M100 52 L100 75 M103 52 Q104 63 102 74 M108 52 Q109 62 107 73" fill="none" stroke={HAIR_L} strokeWidth="1.8" opacity="0.6" strokeLinecap="round" />
+      <g className="guardian-gem">
+        <circle cx="100" cy="68" r="4" fill={gem} stroke="#fff" strokeWidth="1.5" />
+      </g>
     </g>
   );
   const longHair = (topY = 30, endY = 54) => {
@@ -1255,20 +1264,18 @@ export default function GuardianAvatar({
               )}
               {equippedWeaponKind === 'staff' && (
                 <g>
-                  {/* Staff, STRAIGHT and star ON the shaft: the old
-                      version rotated the whole group 7 degrees and
-                      put the star at (handRx+10, 18), diagonally off
-                      the shaft top, so the star floated beside the
-                      stick and the shaft leaned across the robe. Now
-                      the shaft is vertical, top y20, and the star is
-                      centred on the shaft axis at (handRx, 17), its
-                      bottom overlapping the shaft top. */}
-                  <rect x={handRx - 3} y="20" width="6" height="64" rx="3" fill={WOOD} stroke={WOOD_DARK} strokeWidth="1.5" />
+                  {/* Staff, STRAIGHT and star MOUNTED on the shaft (see
+                      class staff below): star centre (handRx,21),
+                      r7.5, shaft top y14, so the shaft runs through
+                      the star body — the old (handRx,17)/r9 star
+                      only touched the shaft's narrow bottom point
+                      and read as floating live. */}
+                  <rect x={handRx - 3} y="14" width="6" height="70" rx="3" fill={WOOD} stroke={WOOD_DARK} strokeWidth="1.5" />
                   <rect x={handRx - 3} y="96" width="6" height="50" rx="3" fill={WOOD} stroke={WOOD_DARK} strokeWidth="1.5" />
                   <path d={`M${handRx - 3} 44 L${handRx + 3} 44 M${handRx - 3} 58 L${handRx + 3} 58 M${handRx - 3} 72 L${handRx + 3} 72`} stroke={weaponTier ?? GOLD} strokeWidth="3.5" />
                   <g className="guardian-gem">
-                    <circle cx={handRx} cy="17" r="14" fill={weaponTier ?? gem} opacity="0.45" />
-                    <polygon points={starPoints(handRx, 17, 9)} fill={weaponTier ?? gem} stroke="#fff" strokeWidth="2" />
+                    <circle cx={handRx} cy="21" r="10" fill={weaponTier ?? gem} opacity="0.45" />
+                    <polygon points={starPoints(handRx, 21, 7.5)} fill={weaponTier ?? gem} stroke="#fff" strokeWidth="2" />
                   </g>
                 </g>
               )}
@@ -1340,18 +1347,27 @@ export default function GuardianAvatar({
             <g>
               {/* Staff: held in the image-right hand, shaft split at the
                   grip so the hand reads as holding it. STRAIGHT, star
-                  ON the shaft axis: the old version rotated the group
-                  7 degrees and put the star at (handRx+10, 18), so
-                  the star floated diagonally off the shaft top and
-                  the shaft leaned across the robe. Now the shaft is
-                  vertical from y20 to the grip, and the star sits
-                  centred at (handRx, 17), r9, clear of the face
-                  (face top y16, star left edge x110-111 at y8-17,
-                  above the face) with a soft gem glow behind it. */}
+                  ON the shaft axis — and now MOUNTED on it, not
+                  floating above it (live check Nov 22 10:06 PM:
+                  star floated above and slightly left of the shaft
+                  tip, with a gap). ROOT CAUSE (measured in the
+                  shipped render): the old star was centred at
+                  (handRx,17), r9, with the shaft top at y20 — so
+                  the shaft only touched the star's narrow BOTTOM
+                  POINT (2-4 units wide at y20-26), while the star
+                  itself was 18 wide and the glow disc r14 made it
+                  a separate orb. At 100px/56px that point contact
+                  vanishes and the star reads detached. Fix: star
+                  centre (handRx,21), r7.5, glow disc r10, shaft
+                  top raised to y14, so the 6-wide shaft runs
+                  THROUGH the star body (overlap y14-28.5, star
+                  ~12-14 wide at y20-24) with broad contact, no
+                  side gaps. Star top y13.5, left tip x111.9 — clear
+                  of the face (face right edge x108.3 at y19). */}
               <g>
-                <rect x={handRx - 3} y="20" width="6" height="64" rx="3" fill={WOOD} stroke={WOOD_DARK} strokeWidth="1.5" />
+                <rect x={handRx - 3} y="14" width="6" height="70" rx="3" fill={WOOD} stroke={WOOD_DARK} strokeWidth="1.5" />
                 <rect x={handRx - 3} y="96" width="6" height="50" rx="3" fill={WOOD} stroke={WOOD_DARK} strokeWidth="1.5" />
-                <rect x={handRx - 1} y="22" width="2" height="60" fill="#a8763e" opacity="0.7" />
+                <rect x={handRx - 1} y="16" width="2" height="66" fill="#a8763e" opacity="0.7" />
                 <rect x={handRx - 1} y="98" width="2" height="46" fill="#a8763e" opacity="0.7" />
                 {/* Carved rings, GOLD and BOLD — the old dark thin bands
                     were invisible on the brown wood at preview size
@@ -1360,10 +1376,10 @@ export default function GuardianAvatar({
                 <path d={`M${handRx - 3} 44 L${handRx + 3} 44 M${handRx - 3} 58 L${handRx + 3} 58 M${handRx - 3} 72 L${handRx + 3} 72 M${handRx - 3} 118 L${handRx + 3} 118`} stroke={GOLD} strokeWidth="3.5" />
                 <path d={`M${handRx - 3} 106 L${handRx + 3} 108 M${handRx - 3} 112 L${handRx + 3} 114`} stroke={WOOD_DARK} strokeWidth="2.5" />
                 <g className="guardian-gem">
-                  <circle cx={handRx} cy="17" r="14" fill={gem} opacity="0.45" />
-                  <polygon points={starPoints(handRx, 17, 9)} fill={gem} stroke="#fff" strokeWidth="2" />
+                  <circle cx={handRx} cy="21" r="10" fill={gem} opacity="0.45" />
+                  <polygon points={starPoints(handRx, 21, 7.5)} fill={gem} stroke="#fff" strokeWidth="2" />
                 </g>
-                <polygon points={`${handRx},12 ${handRx + 3},17 ${handRx},22 ${handRx - 3},17`} fill="#fff" opacity="0.5" />
+                <polygon points={`${handRx},16 ${handRx + 3},21 ${handRx},26 ${handRx - 3},21`} fill="#fff" opacity="0.5" />
               </g>
             </g>
           )}
