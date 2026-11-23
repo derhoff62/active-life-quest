@@ -234,7 +234,7 @@ export default function Armor({ ctx }: { ctx: Ctx }) {
             <GuardianAvatar guardian={draft} level={levelForXp(doc.xp)} size="medium" label={`${draft.name.trim() || 'Your guardian'} the ${draft.classId} · Level ${levelForXp(doc.xp)}`} />
           )}
           {draft.avatarStyle === 'generated' && !generatedImageFor(draft) && (
-            <p className="small">Generated art is ready for 3 combos so far. This combo still shows the classic guardian until its picture is made.</p>
+            <p className="small">This hairstyle has no generated picture yet, so the classic guardian shows instead. Pick one of the 18 generated combos below.</p>
           )}
           <label>Guardian style</label>
           <div className="row">
@@ -247,7 +247,7 @@ export default function Armor({ ctx }: { ctx: Ctx }) {
           </div>
           {draft.avatarStyle === 'generated' && (
             <>
-              <p className="small muted">Generated art is a finished picture with its own background. Only 3 combos are ready so far — tap one. Skin, build, colors, gem and cape are baked into the picture and do not change it.</p>
+              <p className="small muted">Generated art is a finished picture with its own background. All 18 combos are ready — tap one. Skin color works on the generated picture too (it recolors the face and hands). Build, colors, gem and cape are baked into the picture and do not change it.</p>
               <label>Generated combos</label>
               <div className="row">
                 {GENERATED_COMBOS.map((c) => (
@@ -290,16 +290,6 @@ export default function Armor({ ctx }: { ctx: Ctx }) {
               </button>
             ))}
           </div>
-          {draft.avatarStyle !== 'generated' && (
-            <>
-          <label>Build</label>
-          <div className="row">
-            {BUILD_OPTIONS.map((b) => (
-              <button key={b} type="button" onClick={() => setDraft((d) => ({ ...d, build: b }))} style={draft.build === b ? { background: '#124571', color: '#fff' } : {}}>
-                {b}
-              </button>
-            ))}
-          </div>
           <label>Skin color</label>
           <div className="row">
             {SKIN_TONES.map((s) => (
@@ -312,6 +302,16 @@ export default function Armor({ ctx }: { ctx: Ctx }) {
               >
                 <span aria-hidden style={{ display: 'inline-block', width: 14, height: 14, borderRadius: '50%', background: SKIN_HEX[s], marginRight: 6, verticalAlign: 'middle', border: '1px solid #5b6b7a' }} />
                 {s}
+              </button>
+            ))}
+          </div>
+          {draft.avatarStyle !== 'generated' && (
+            <>
+          <label>Build</label>
+          <div className="row">
+            {BUILD_OPTIONS.map((b) => (
+              <button key={b} type="button" onClick={() => setDraft((d) => ({ ...d, build: b }))} style={draft.build === b ? { background: '#124571', color: '#fff' } : {}}>
+                {b}
               </button>
             ))}
           </div>
@@ -385,7 +385,7 @@ export default function Armor({ ctx }: { ctx: Ctx }) {
             </>
           )}
           {draft.avatarStyle === 'generated' && (
-            <p className="small muted">Skin, build, colors, gem and cape only change the classic guardian. The generated picture is finished as it is. Switch back to Classic to change them.</p>
+            <p className="small muted">Build, colors, gem and cape only change the classic guardian. Skin color works on the generated picture too. Switch back to Classic to change the rest.</p>
           )}
           {doc.guardian && draft.classId !== doc.guardian.classId && (
             <p className="small">Switching to {draft.classId} changes your spells, class weapon, and workout focus. Your XP, level, and armor stay.</p>
