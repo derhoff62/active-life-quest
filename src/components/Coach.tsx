@@ -6,6 +6,7 @@ import Metrics, { latestMetric, TrendChart, metricSeries } from './Metrics';
 import type { ProfileDoc } from '../lib/store';
 import { checkinPreferenceText, checkinFrequenciesForMode, normalizeCheckinFrequency, normalizeProfile, phaseForDoc, recoveryScoreForDoc, cardioCreditedSum } from '../lib/store';
 import { coachReminders, retestWeeksDue } from '../lib/coachReminders';
+import GuardianEmote from './GuardianEmote';
 
 interface ClientRow {
   id: string;
@@ -597,6 +598,11 @@ export default function Coach({ ctx }: { ctx: Ctx }) {
           {selected.data.messages.length === 0 && <p className="muted">No messages yet.</p>}
           {selected.data.messages.map((m) => (
             <div key={m.id} style={{ borderTop: '1px solid #d7e3ee', padding: '8px 0' }}>
+              {m.emote && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                  <GuardianEmote emote={m.emote as never} guardian={selected.data.guardian} size={44} />
+                </div>
+              )}
               <p><strong>{m.kind === 'video-call-request' ? 'Video call request' : m.kind}:</strong> {m.body}</p>
               {m.kind === 'video-call-request' && m.callStatus === 'confirmed' && m.callTime && <p className="ok">Confirmed: {m.callTime}</p>}
               {m.video && api.getMode() === 'server' && (

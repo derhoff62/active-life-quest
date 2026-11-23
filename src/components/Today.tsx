@@ -7,6 +7,7 @@ import { phaseForDoc, recoveryScore, levelForXp, titleForLevel, metCompanionIds,
 import { cycleForWeek, nextRetestWeek, nextBossWeek, nextRetestLabel, nextBossLabel, isDeloadWeek, challengeForWeek } from '../lib/yearPlan';
 import type { AssessmentVideo } from '../lib/store';
 import GuardianAvatar from './GuardianAvatar';
+import GuardianEmote, { EMOTES } from './GuardianEmote';
 
 export default function Today({ ctx }: { ctx: Ctx }) {
   const { doc, update, go, toast } = ctx;
@@ -99,6 +100,23 @@ export default function Today({ ctx }: { ctx: Ctx }) {
   const xpPct = Math.min(100, Math.max(0, (xpIntoLevel / needForNext) * 100));
 
   const met = metCompanionIds(doc);
+
+  function sendEmote(emoteId: string) {
+    const emote = EMOTES.find((e) => e.id === emoteId);
+    if (!emote) return;
+    const quillBonus = met.has('quill');
+    update((d) => {
+      d.messages.unshift({
+        id: `m${Date.now()}`,
+        kind: 'message',
+        body: `Sent an emote: ${emote.text}`,
+        date: new Date().toISOString(),
+        emote: emote.id,
+      });
+      d.xp += quillBonus ? 10 : 5;
+    });
+    toast(quillBonus ? `Emote sent. +10 XP.` : 'Emote sent. +5 XP.');
+  }
 
   function sendMessage() {
     if (!msgBody.trim()) return;
@@ -490,9 +508,36 @@ export default function Today({ ctx }: { ctx: Ctx }) {
         <button className="primary" style={{ marginTop: 10 }} onClick={sendMessage}>
           {msgMode === 'question' ? 'Send question' : 'Send message'}
         </button>
+        {/* Custom guardian emotes: one row of 6, your guardian's own face,
+            not generic emoji. Tapping one sends it as a message to Derek,
+            same +5 XP as a typed message. No custom upload. */}
+        <div style={{ marginTop: 12 }}>
+          <h4 style={{ margin: '0 0 4px' }}>Send a quick emote instead</h4>
+          <p className="small muted">Your guardian's face, not a generic emoji. Tap one and it goes to Derek as a message.</p>
+          <div className="row" style={{ gap: 6 }}>
+            {EMOTES.map((e) => (
+              <button
+                key={e.id}
+                type="button"
+                onClick={() => sendEmote(e.id)}
+                aria-label={`Send ${e.label} emote`}
+                title={e.label}
+                style={{ padding: 4, lineHeight: 0, minWidth: 0 }}
+              >
+                <GuardianEmote emote={e.id} guardian={doc.guardian} size={44} />
+                <span style={{ display: 'block', fontSize: 11, lineHeight: '14px', marginTop: 2 }}>{e.label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
         {met.has('quill') && <p className="small muted">Quill carries your message to Derek (+5 XP).</p>}
         {doc.messages.slice(0, 5).map((m) => (
           <div key={m.id} style={{ borderTop: '1px solid #d7e3ee', padding: '8px 0' }}>
+            {m.emote && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                <GuardianEmote emote={m.emote as never} guardian={doc.guardian} size={44} />
+              </div>
+            )}
             <p><strong>{m.kind === 'question' ? 'Question' : m.kind === 'video-call-request' ? 'Video call request' : 'Message'}:</strong> {m.body}</p>
             {m.kind === 'video-call-request' && m.callStatus === 'confirmed' && m.callTime && <p className="ok">Confirmed: video call on {m.callTime}. Derek will send the call link.</p>}
             {m.kind === 'video-call-request' && m.callStatus !== 'confirmed' && <p className="small muted">Request sent. Derek will reply within one business day to set a time.</p>}

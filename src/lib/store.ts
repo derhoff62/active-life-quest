@@ -40,6 +40,10 @@ export interface ClientMessage {
   video?: AssessmentVideo;
   callStatus?: 'requested' | 'confirmed';
   callTime?: string;
+  // Custom guardian emote id, e.g. 'celebrate'. The body always carries
+  // a plain-text fallback ("Sent an emote: Celebrate") so the message
+  // still reads if the face ever fails to render.
+  emote?: string;
 }
 
 export interface LogEntry {
