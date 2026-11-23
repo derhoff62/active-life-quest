@@ -218,6 +218,28 @@ export default function GuardianAvatar({
   const caption = label ?? `${name} · Level ${level}`;
   const uid = useId().replace(/[^a-zA-Z0-9]/g, '');
   const id = (n: string) => `${n}-${uid}`;
+  // GLOW v2 (Derek, Nov 23 3:14 PM: keep fixing the glow — live Nov 23
+  // 3:10 PM it was still flat: no pulse, only a faint wash. DIAGNOSIS
+  // (pixel-measured at the LIVE sizes, 96px/180px, not 800px): the v1
+  // gradient disc DID render — the scan shows a pale fade — but (a) its
+  // colour #8db4f2 at 0.5 opacity over steel plate / steel-blue sky is
+  // only ~20-40 RGB units from the background, (b) it fades to
+  // transparent by 45-100% of its radius, so the bright part is only
+  // ~2-3px at 96px, and (c) the CSS pulse (scale 1->1.22, opacity
+  // .55->.95) moves that faint edge by ~2px, below perception in a
+  // 5s-apart live check. Fix: bigger discs, a SOLID translucent core
+  // (a solid disc cannot wash out the way a gradient does), a white
+  // inner ring, brighter gradient stops, and a much bigger pulse
+  // (scale 1->1.35, opacity .6->1.0 in styles.css). The gem/orb itself
+  // is drawn AFTER this, so it covers the centre. No permanent
+  // whole-figure halo — per-gem only, per Derek Nov 22. */
+  const glowDisc = (cx: number, cy: number, r: number, fillUrl: string, light: string) => (
+    <g className="guardian-glow-pulse">
+      <circle cx={cx} cy={cy} r={r} fill={fillUrl} />
+      <circle cx={cx} cy={cy} r={r * 0.62} fill={light} opacity="0.5" />
+      <circle cx={cx} cy={cy} r={r * 0.42} fill="#ffffff" opacity="0.35" />
+    </g>
+  );
   const scene: GuardianScene = background ?? CLASS_SCENE[g.classId] ?? 'guardian';
   const isFemale = g.look === 'Female';
   const browCoreWidth = isFemale ? 2.4 : 3.0;
@@ -468,12 +490,13 @@ export default function GuardianAvatar({
             the orb itself stays static. */}
         <defs>
           <radialGradient id={id('glowOrb')} cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stopColor={shade(glowFill, 80)} stopOpacity="0.95" />
-            <stop offset="45%" stopColor={glowFill} stopOpacity="0.5" />
+            <stop offset="0%" stopColor={shade(glowFill, 80)} stopOpacity="1" />
+            <stop offset="35%" stopColor={glowFill} stopOpacity="0.8" />
+            <stop offset="70%" stopColor={glowFill} stopOpacity="0.3" />
             <stop offset="100%" stopColor={glowFill} stopOpacity="0" />
           </radialGradient>
         </defs>
-        <g className="guardian-glow-pulse"><circle cx={ox} cy={oy} r="18" fill={`url(#${id('glowOrb')})`} /></g>
+        {glowDisc(ox, oy, 22, `url(#${id('glowOrb')})`, shade(glowFill, 80))}
         {/* Crystal orb, DOWN between the prongs: centre (ox,28),
             r8.5, bottom y36.5 overlaps the cup and the shaft top,
             so it is mounted, not floating. */}
@@ -1003,13 +1026,15 @@ export default function GuardianAvatar({
               / aura ring around the whole figure — glow stays
               per-gem, contextual, per Derek Nov 22. */}
           <radialGradient id={id('glowGem')} cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stopColor={gemLight} stopOpacity="0.95" />
-            <stop offset="45%" stopColor={gemLight} stopOpacity="0.5" />
+            <stop offset="0%" stopColor={gemLight} stopOpacity="1" />
+            <stop offset="35%" stopColor={gemLight} stopOpacity="0.8" />
+            <stop offset="70%" stopColor={gem} stopOpacity="0.3" />
             <stop offset="100%" stopColor={gem} stopOpacity="0" />
           </radialGradient>
           <radialGradient id={id('glowTier')} cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stopColor={shade(weaponTier ?? gemLight, 80)} stopOpacity="0.95" />
-            <stop offset="45%" stopColor={weaponTier ?? gem} stopOpacity="0.5" />
+            <stop offset="0%" stopColor={shade(weaponTier ?? gemLight, 80)} stopOpacity="1" />
+            <stop offset="35%" stopColor={weaponTier ?? gem} stopOpacity="0.8" />
+            <stop offset="70%" stopColor={weaponTier ?? gem} stopOpacity="0.3" />
             <stop offset="100%" stopColor={weaponTier ?? gem} stopOpacity="0" />
           </radialGradient>
         </defs>
@@ -1314,7 +1339,7 @@ export default function GuardianAvatar({
                   the plate edges onto the torso/background. It
                   pulses (.guardian-glow-pulse); the gem itself is
                   static. The old plate gem had no glow disc at all. */}
-              <g className="guardian-glow-pulse"><circle cx="100" cy="70" r="18" fill={`url(#${id('glowGem')})`} /></g>
+              {glowDisc(100, 70, 20, `url(#${id('glowGem')})`, gemLight)}
               <circle cx="100" cy="70" r="4" fill={gem} stroke="#fff" strokeWidth="1.5" />
             </g>
           )}
@@ -1325,7 +1350,7 @@ export default function GuardianAvatar({
               does not get a second gem here. */}
           {g.classId !== 'Guardian' && (
             <g>
-              <g className="guardian-glow-pulse"><circle cx="100" cy="71" r="18" fill={`url(#${id('glowGem')})`} /></g>
+              {glowDisc(100, 71, 20, `url(#${id('glowGem')})`, gemLight)}
               <polygon points="100,62 109,71 100,80 91,71" fill={gem} stroke="#fff" strokeWidth="2" />
               <polygon points="100,66 104,71 100,76 96,71" fill="#fff" opacity="0.55" />
             </g>
@@ -1349,9 +1374,7 @@ export default function GuardianAvatar({
               <path d="M88 58 L112 58 L112 64 L88 64 Z" fill={equipTier} stroke="#fff" strokeWidth="1" opacity="0.95" />
               <circle cx="100" cy="61" r="3" fill="#fff" stroke={equipTier} strokeWidth="1.5" />
               {(equippedArmor.tier === 'Legendary' || equippedArmor.tier === 'Mythical') && (
-                <g className="guardian-glow-pulse">
-                  <circle cx="100" cy="70" r="20" fill={`url(#${id('glowTier')})`} />
-                </g>
+                glowDisc(100, 70, 24, `url(#${id('glowTier')})`, shade(weaponTier ?? gemLight, 80))
               )}
               {equippedArmorKind === 'helm' && (
                 <path d="M88 20 Q100 10 112 20 L112 15 Q100 7 88 15 Z" fill={equipTier} stroke="#fff" strokeWidth="1.5" />
@@ -1391,9 +1414,7 @@ export default function GuardianAvatar({
           {equippedWeapon && equippedWeaponKind && (
             <g>
               {(equippedWeapon.tier === 'Legendary' || equippedWeapon.tier === 'Mythical') && (
-                <g className="guardian-glow-pulse">
-                  <circle cx={equippedWeaponKind === 'bow' || equippedWeaponKind === 'staff' || equippedWeaponKind === 'shield' || equippedWeaponKind === 'lasso' ? handRx + 12 : handLx} cy="70" r="20" fill={`url(#${id('glowTier')})`} />
-                </g>
+                glowDisc(equippedWeaponKind === 'bow' || equippedWeaponKind === 'staff' || equippedWeaponKind === 'shield' || equippedWeaponKind === 'lasso' ? handRx + 12 : handLx, 70, 24, `url(#${id('glowTier')})`, shade(weaponTier ?? gemLight, 80))
               )}
               {equippedWeaponKind === 'sword' && (
                 <g transform={`rotate(-12 ${handLx} 68)`}>
@@ -1401,7 +1422,7 @@ export default function GuardianAvatar({
                   <rect x={handLx - 1} y="42" width="1.8" height="38" fill="#fff" opacity="0.7" />
                   <rect x={handLx - 10} y="82" width="20" height="6" rx="3" fill={weaponTier ?? GOLD} stroke={GOLD_DARK} strokeWidth="1.5" />
                   <rect x={handLx - 4.5} y="88" width="9" height="13" rx="3" fill={WOOD} />
-                  <g className="guardian-glow-pulse"><circle cx={handLx} cy="101" r="12" fill={`url(#${id('glowTier')})`} /></g>
+                  {glowDisc(handLx, 101, 16, `url(#${id('glowTier')})`, shade(weaponTier ?? gemLight, 80))}
                   <circle cx={handLx} cy="101" r="3.5" fill={weaponTier ?? gem} stroke="#fff" strokeWidth="1.5" />
                 </g>
               )}
@@ -1433,7 +1454,7 @@ export default function GuardianAvatar({
                   <line x1={handRx} y1="66" x2={handRx} y2="126" stroke={weaponTier ?? '#e8e2d4'} strokeWidth="2" />
                   <line x1={handRx} y1="90" x2={handRx + 24} y2="90" stroke={weaponTier ?? gem} strokeWidth="3.5" strokeLinecap="round" />
                   <polygon points={`${handRx + 24},90 ${handRx + 17},87 ${handRx + 17},93`} fill={STEEL_DARK} />
-                  <g className="guardian-glow-pulse"><circle cx={handRx + 24} cy="90" r="12" fill={`url(#${id('glowTier')})`} /></g>
+                  {glowDisc(handRx + 24, 90, 18, `url(#${id('glowTier')})`, shade(weaponTier ?? gemLight, 80))}
                   <polygon points={`${handRx + 2},90 ${handRx - 13},84 ${handRx - 13},96`} fill="#fff" opacity="0.9" />
                 </g>
               )}
@@ -1442,7 +1463,7 @@ export default function GuardianAvatar({
                 <g>
                   <path d={`M${handRx - 2} 66 L${handRx + 28} 66 L${handRx + 28} 86 Q${handRx + 13} 102 ${handRx - 2} 86 Z`} fill={STEEL} stroke={weaponTier ?? GOLD} strokeWidth="3" />
                   <path d={`M${handRx + 3} 71 L${handRx + 23} 71 L${handRx + 23} 85 Q${handRx + 13} 96 ${handRx + 3} 85 Z`} fill={main} opacity="0.9" />
-                  <g className="guardian-glow-pulse"><circle cx={handRx + 13} cy="81" r="14" fill={`url(#${id('glowTier')})`} /></g>
+                  {glowDisc(handRx + 13, 81, 18, `url(#${id('glowTier')})`, shade(weaponTier ?? gemLight, 80))}
                   <circle cx={handRx + 13} cy="81" r="5.5" fill={weaponTier ?? gem} stroke="#fff" strokeWidth="1.5" />
                 </g>
               )}
@@ -1469,7 +1490,7 @@ export default function GuardianAvatar({
                   same colour as the gem, no gradient — a flat slightly
                   larger blue disc. Now a r14 radialGradient glow,
                   light centre fading out, pulsing. */}
-              <g className="guardian-glow-pulse"><circle cx={handRx + 13} cy="81" r="14" fill={`url(#${id('glowGem')})`} /></g>
+              {glowDisc(handRx + 13, 81, 18, `url(#${id('glowGem')})`, gemLight)}
               <circle cx={handRx + 13} cy="81" r="5.5" fill={gem} stroke="#fff" strokeWidth="1.5" />
               {!equippedWeapon && (
               <g transform={`rotate(-12 ${handLx} 68)`}>
@@ -1485,7 +1506,7 @@ export default function GuardianAvatar({
                 {/* Sword pommel gem GLOW (GLOW FIX): old r6 disc was
                     the same colour as the gem, no gradient. Now a
                     r12 radialGradient glow, pulsing, gem static. */}
-                <g className="guardian-glow-pulse"><circle cx={handLx} cy="101" r="12" fill={`url(#${id('glowGem')})`} /></g>
+                {glowDisc(handLx, 101, 16, `url(#${id('glowGem')})`, gemLight)}
                 <circle cx={handLx} cy="101" r="3.5" fill={gem} stroke="#fff" strokeWidth="1.5" />
               </g>
               )}
@@ -1505,7 +1526,7 @@ export default function GuardianAvatar({
               {/* Arrow tip GLOW (GLOW FIX): the old r6 disc was a
                   ~3px pale-blue dot at 100px, not a glow. Now a r12
                   radialGradient glow, pulsing, around the arrowhead. */}
-              <g className="guardian-glow-pulse"><circle cx={handRx + 24} cy="90" r="12" fill={`url(#${id('glowGem')})`} /></g>
+              {glowDisc(handRx + 24, 90, 18, `url(#${id('glowGem')})`, gemLight)}
               {/* Fletching, BIG — the old small white triangle was
                   invisible at preview size live. A large white feather
                   at the arrow tail, with a second smaller one. */}

@@ -229,16 +229,17 @@ details summary { cursor: pointer; font-weight: 600; color: var(--navy); padding
   0%, 100% { opacity: 0.8; transform: scale(0.94); }
   50% { opacity: 1; transform: scale(1.08); }
 }
-/* GLOW FIX (Derek, Nov 23 2:55 PM): pulse the GLOW DISC only, not
-   the gem. The old .guardian-gem pulse moved the gem itself by
-   ±0.35px at 100px — invisible live. This scales the glow disc
-   1 -> 1.22 and breathes its opacity, so the light spill around
-   each gem visibly grows and shrinks. Per-gem only, never a
-   whole-figure halo. */
+/* GLOW v2 (Derek, Nov 23 3:14 PM): the v1 pulse (scale 1->1.22,
+   opacity .55->.95) moved a faint edge by ~2px at live size — invisible
+   in a 5s-apart live check. v2: scale 1->1.35 (a 35% radius change =
+   ~4-6px at live size) and opacity .6->1.0, so one crop near the dim
+   phase and one near the bright phase are unmistakably different.
+   The static glow is also much brighter now (solid core in
+   glowDisc), so even the dim phase reads as glowing. */
 .guardian-glow-pulse { animation: glow-pulse 1.8s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
 @keyframes glow-pulse {
-  0%, 100% { opacity: 0.55; transform: scale(1); }
-  50% { opacity: 0.95; transform: scale(1.22); }
+  0%, 100% { opacity: 0.6; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.35); }
 }
 .guardian-shadow { animation: shadow-pulse 2.4s ease-in-out infinite; transform-origin: center; transform-box: fill-box; }
 @keyframes shadow-pulse {
