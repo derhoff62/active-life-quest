@@ -46,18 +46,26 @@ class TabErrorBoundary extends Component<{ tab: Tab; children: ReactNode }, { fa
   }
 }
 
-const TABS: { id: Tab; label: string; icon: string }[] = [
-  { id: 'today', label: 'Today', icon: '☀' },
-  { id: 'assessment', label: 'Assessment', icon: '✓' },
-  { id: 'workouts', label: 'Workouts', icon: '◆' },
-  { id: 'cardio', label: 'Cardio', icon: '♥' },
-  { id: 'sleep', label: 'Sleep', icon: '☾' },
-  { id: 'journey', label: 'Journey', icon: '✦' },
-  { id: 'nutrition', label: 'Nutrition', icon: '●' },
-  { id: 'progress', label: 'Progress', icon: '▲' },
-  { id: 'armor', label: 'Armor', icon: '⬢' },
-  { id: 'faq', label: 'FAQ', icon: '?' },
-  { id: 'coach', label: 'Coach', icon: '★' },
+/* Short display labels for the nav: the full words do not fit on one line
+   in a 6-column grid on a phone, and the old `overflow-wrap: anywhere`
+   split them mid-word ("Assessm/ent", "Workout/s" on Derek's phone, Nov 22).
+   So "Assessment" shows as "Assess" and "Workouts" as "Workout" here; the
+   full word is still the page heading inside the tab, and the aria-label
+   below uses it too. `white-space: nowrap` means a label can never split
+   mid-word again — the ellipsis is only a backstop if a phone ever renders
+   a label wider than its tab. */
+const TABS: { id: Tab; label: string; full: string; icon: string }[] = [
+  { id: 'today', label: 'Today', full: 'Today', icon: '☀' },
+  { id: 'assessment', label: 'Assess', full: 'Assessment', icon: '✓' },
+  { id: 'workouts', label: 'Workout', full: 'Workouts', icon: '◆' },
+  { id: 'cardio', label: 'Cardio', full: 'Cardio', icon: '♥' },
+  { id: 'sleep', label: 'Sleep', full: 'Sleep', icon: '☾' },
+  { id: 'journey', label: 'Journey', full: 'Journey', icon: '✦' },
+  { id: 'nutrition', label: 'Nutrition', full: 'Nutrition', icon: '●' },
+  { id: 'progress', label: 'Progress', full: 'Progress', icon: '▲' },
+  { id: 'armor', label: 'Armor', full: 'Armor', icon: '⬢' },
+  { id: 'faq', label: 'FAQ', full: 'FAQ', icon: '?' },
+  { id: 'coach', label: 'Coach', full: 'Coach', icon: '★' },
 ];
 
 export interface Ctx {
@@ -482,7 +490,7 @@ export default function App() {
               onPointerCancel={() => setPressedTab(null)}
               onClick={() => { setPressedTab(null); go(t.id); }}
               aria-current={tab === t.id ? 'page' : undefined}
-              aria-label={badge ? `${t.label}, ${badge.count ? `${badge.count} things to do` : 'needs attention'}` : t.label}
+              aria-label={badge ? `${t.full}, ${badge.count ? `${badge.count} things to do` : 'needs attention'}` : t.full}
             >
               <span className="nav-icon" aria-hidden="true">{t.icon}</span>
               <span className="nav-label">{t.label}</span>
