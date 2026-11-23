@@ -384,36 +384,73 @@ export default function GuardianAvatar({
       </g>
     );
   };
-  // LONG hair (Derek, Nov 22 9:18 PM: "The long hair looks weird"):
-  // the old long locks were two straight, uniform-width straps hanging
-  // to mid-chest (y57-60), dangling OVER the chest plate like ties,
-  // with no taper, no curve, and no centre part — the cap dome and the
-  // two rectangles read as separate pieces. Each new lock is widest
-  // at the temple, curves slightly outward as it falls, tapers to a
-  // rounded tip, and ends ON the pauldron (tip y54 Guardian/Ranger,
-  // y46 under the hat brim) — hair resting on the shoulders, never
-  // dangling over the armour. A skin-coloured centre part at the crown
-  // splits the cap in two, so the top reads as long hair, not a dome.
-  const longLock = (left: boolean, topY = 30) => {
-    const d = left
-      ? `M86 ${topY - 1} Q81 ${topY + 9} 82 ${topY + 17} Q83 ${topY + 24} 87 ${topY + 24} Q91 ${topY + 23} 91 ${topY + 15} Q91 ${topY + 6} 90 ${topY} Z`
-      : `M114 ${topY - 1} Q119 ${topY + 9} 118 ${topY + 17} Q117 ${topY + 24} 113 ${topY + 24} Q109 ${topY + 23} 109 ${topY + 15} Q109 ${topY + 6} 110 ${topY} Z`;
-    const strand = left
-      ? `M85 ${topY + 8} Q84 ${topY + 16} 86 ${topY + 21}`
-      : `M115 ${topY + 8} Q116 ${topY + 16} 114 ${topY + 21}`;
+  // LONG hair (Derek, Nov 22 9:18 PM: "The long hair looks weird";
+  // live check Nov 22 9:45 PM: it read as TWO separate side locks
+  // with armour showing between them at the neck/chest, not one
+  // mass). The old locks were two thin (9-wide) straps, x81-91 /
+  // 109-119, hanging to y54 with an 18-wide armour gap between
+  // them. The new hair is ONE connected mass, drawn as a single
+  // group:
+  //  - each lock is ~15 wide (outer x79-80, inner x94-95 left /
+  //    105-106 right), hugging the face side so the jaw is framed,
+  //    tapering to a rounded tip ending ON the pauldron (tip y54
+  //    Guardian/Ranger, y54 under the hat brim for Spellweaver —
+  //    the old Spellweaver locks stopped at y46, visibly shorter
+  //    than the other classes, so endY is now 54 for all three),
+  //    never dangling over the chest plate;
+  //  - a band joins the two locks UNDER the chin (top y48 at the
+  //    sides, dipping to ~y51.5 at the centre, bottom y55), so the
+  //    locks are connected at the top (cap) AND at the bottom, and
+  //    the neck/collar show through the V opening above the band —
+  //    the collar clasp at (100,47) stays visible, the face stays
+  //    clear, and at 56px the whole thing reads as one brown mass,
+  //    not two strands. The band is drawn first, the locks over
+  //    it, so no seam shows. Male Long has a beard (bottom y44.5):
+  //    the band top (y48) starts just below it, so beard and hair
+  //    meet at the chin, never overlap.
+  const longHair = (topY = 30, endY = 54) => {
+    // Band joining the locks under the chin: a DEEP-V crescent at
+    // the base only (top y48 at the sides, dipping to ~y51.5 at
+    // the centre, bottom y55), so the neck and the collar clasp
+    // at (100,47) stay visible in the V opening and the hair does
+    // NOT read as a bib/turtleneck across the chest — the first
+    // version had a flat top at y45 and covered the clasp. The
+    // locks still join at the bottom, so the mass is connected
+    // at the top (cap) and at the bottom (band).
+    const bandTop = endY - 6;
+    const bandDip = endY + 1;
+    const bandBottom = endY + 1;
+    const lock = (left: boolean) => {
+      const d = left
+        ? `M86 ${topY - 1} Q79 ${topY + 8} 80 ${topY + 17} Q81 ${endY} 87 ${endY} Q93 ${endY} 94 ${topY + 16} Q94 ${topY + 6} 90 ${topY} Z`
+        : `M114 ${topY - 1} Q121 ${topY + 8} 120 ${topY + 17} Q119 ${endY} 113 ${endY} Q107 ${endY} 106 ${topY + 16} Q106 ${topY + 6} 110 ${topY} Z`;
+      const strand = left
+        ? `M84 ${topY + 8} Q83 ${topY + 16} 85 ${endY - 3}`
+        : `M116 ${topY + 8} Q117 ${topY + 16} 115 ${endY - 3}`;
+      const strand2 = left
+        ? `M90 ${topY + 10} Q90 ${topY + 17} 91 ${endY - 4}`
+        : `M110 ${topY + 10} Q110 ${topY + 17} 109 ${endY - 4}`;
+      return (
+        <g fill={HAIR_C}>
+          <path d={d} />
+          <path d={strand} fill="none" stroke={HAIR_L} strokeWidth="2" opacity="0.7" strokeLinecap="round" />
+          <path d={strand2} fill="none" stroke={HAIR_L} strokeWidth="1.6" opacity="0.55" strokeLinecap="round" />
+        </g>
+      );
+    };
     return (
-      <g fill={HAIR_C}>
-        <path d={d} />
-        <path d={strand} fill="none" stroke={HAIR_L} strokeWidth="2" opacity="0.7" strokeLinecap="round" />
+      <g>
+        {/* Band joining the locks under the chin. */}
+        <path d={`M93 ${bandTop} Q100 ${bandDip} 107 ${bandTop} L107 ${bandBottom - 1} Q100 ${bandBottom + 1} 93 ${bandBottom - 1} Z`} fill={HAIR_C} />
+        {lock(true)}
+        {lock(false)}
       </g>
     );
   };
-  const longLocks = (topY = 30) => (
-    <g>
-      {longLock(true, topY)}
-      {longLock(false, topY)}
-    </g>
-  );
+  // longLocks keeps the old call shape: Guardian/Ranger pass topY
+  // only (endY = topY + 24 = 54); Spellweaver passes topY 22 AND
+  // endY 54, so its locks hang to the pauldrons like the others.
+  const longLocks = (topY = 30, endY = topY + 24) => longHair(topY, endY);
   // Short side locks (Bun / Topknot / ManBun / ShortBob): same anchored
   // shape, ending a little higher (y54) so they read as short, not long.
   const shortLocks = (
@@ -580,7 +617,7 @@ export default function GuardianAvatar({
   // cone tip where it reads as one bun.
   const spellweaverHair = (
     <g>
-      {hair === 'Long' && longLocks(22)}
+      {hair === 'Long' && longLocks(22, 54)}
       {hair === 'Ponytail' && ponytailTail}
       {hair === 'Braided' && braid}
       {hair === 'Curly' && curlySides}
