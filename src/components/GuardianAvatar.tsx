@@ -138,6 +138,7 @@ export default function GuardianAvatar({
   face?: GuardianMood;
 }) {
   const g = guardian ?? DEFAULT_GUARDIAN;
+  const isRanger = g.classId === 'Ranger';
   const main = COLOR_MAP[g.bodyColor ?? g.color] ?? COLOR_MAP.Navy;
   const light = shade(main, 100);
   const dark = shade(main, -45);
@@ -261,8 +262,8 @@ export default function GuardianAvatar({
   );
   const scene: GuardianScene = background ?? CLASS_SCENE[g.classId] ?? 'guardian';
   const isFemale = g.look === 'Female';
-  const browCoreWidth = isFemale ? 2.4 : 3.0;
-  const browHaloWidth = isFemale ? 4.6 : 5.2;
+  const browCoreWidth = isRanger ? (isFemale ? 1.8 : 2.2) : isFemale ? 2.4 : 3.0;
+  const browHaloWidth = isRanger ? (isFemale ? 3.8 : 4.4) : isFemale ? 4.6 : 5.2;
   const hair = hairForLook(g.look, g.hair);
   const hasBeard = !isFemale && HAIR_WITH_BEARD.includes(hair);
   const bw = buildWidth(g.build);
@@ -291,38 +292,64 @@ export default function GuardianAvatar({
   // dark-skin halo + core so they read on every tone; closed/half-closed
   // eyes get the same halo treatment. No nose, no ears, no white sclera.
   const faceId: GuardianMood = face ?? g.mood ?? 'determined';
-  const browD: Record<GuardianMood, string> = {
-    determined: 'M88.5 22.5 L95.5 25 M104.5 25 L111.5 22.5',
-    celebrate: 'M88.5 21 L95.5 19.5 M104.5 19.5 L111.5 21',
-    tired: 'M88.5 23.5 L95.5 23.5 M104.5 23.5 L111.5 23.5',
-    strong: 'M88.5 20 L95.5 22.5 M104.5 25 L111.5 22.5',
-    struggling: 'M88.5 24 L95.5 21 M104.5 21 L111.5 24',
-    'thumbs-up': 'M88.5 20.5 L95.5 19 M104.5 19 L111.5 20.5',
-  };
+  // RANGER FACE (Derek, Nov 23 6:44 PM: "Ranger needs touch ups:
+  // eyebrows, hair, the beard isn't on the face, you can't see the
+  // eyes"). Measured in the renders: the shared brows are thick
+  // bars (Female 2.4 / Male 3.0) angled steeply down at y22.5-25,
+  // sitting directly ON the eyes (eye top y24.8, cy27.5 r2.7), so
+  // brow + eye merge into one dark angry mass, and the hood's
+  // narrow inner opening (x90-110) pinches the outer eye corners.
+  // Ranger-only: brows raised ~2.5 units, shorter (5.5 vs 7 long),
+  // shallower angle (drop 1.5, not 2.5), thinner (1.8 / 2.2), and
+  // the eyes moved DOWN to cy29, bigger (r3.0) with a small glint
+  // dot — so there is a clear skin gap between brow and eye on
+  // every mood. Guardian / Spellweaver keep the shared geometry.
+  const browD: Record<GuardianMood, string> = isRanger
+    ? {
+        determined: 'M90 20 L95.5 21.5 M104.5 21.5 L110 20',
+        celebrate: 'M90 18.5 L95.5 17 M104.5 17 L110 18.5',
+        tired: 'M90 21 L95.5 21 M104.5 21 L110 21',
+        strong: 'M90 17.5 L95.5 20 M104.5 22.5 L110 20',
+        struggling: 'M90 21.5 L95.5 18.5 M104.5 18.5 L110 21.5',
+        'thumbs-up': 'M90 18 L95.5 16.5 M104.5 16.5 L110 18',
+      }
+    : {
+        determined: 'M88.5 22.5 L95.5 25 M104.5 25 L111.5 22.5',
+        celebrate: 'M88.5 21 L95.5 19.5 M104.5 19.5 L111.5 21',
+        tired: 'M88.5 23.5 L95.5 23.5 M104.5 23.5 L111.5 23.5',
+        strong: 'M88.5 20 L95.5 22.5 M104.5 25 L111.5 22.5',
+        struggling: 'M88.5 24 L95.5 21 M104.5 21 L111.5 24',
+        'thumbs-up': 'M88.5 20.5 L95.5 19 M104.5 19 L111.5 20.5',
+      };
+  const eyeCy = isRanger ? 29 : 27.5;
+  const eyeR = isRanger ? 3 : 2.7;
   const faceArt = (
     <g>
       {browHalo && (
         <path d={browD[faceId]} fill="none" stroke={browHalo} strokeWidth={browHaloWidth} strokeLinecap="round" />
       )}
       <path d={browD[faceId]} fill="none" stroke={browCore} strokeWidth={browCoreWidth} strokeLinecap="round" />
-      {isFemale && faceId === 'determined' && (
+      {isFemale && faceId === 'determined' && !isRanger && (
         <path d="M90 24.5 L88.5 22.5 M110 24.5 L111.5 22.5" fill="none" stroke={browCore} strokeWidth="1.8" strokeLinecap="round" />
+      )}
+      {isFemale && faceId === 'determined' && isRanger && (
+        <path d="M90 26 L88.5 24 M110 26 L111.5 24" fill="none" stroke={browCore} strokeWidth="1.6" strokeLinecap="round" />
       )}
       {faceId === 'celebrate' ? (
         <>
           {browHalo && (
-            <path d="M89 27.5 Q92.5 24 96 27.5 M104 27.5 Q107.5 24 111 27.5" fill="none" stroke={browHalo} strokeWidth="4.4" strokeLinecap="round" />
+            <path d={`M89 ${eyeCy} Q92.5 ${eyeCy - 3.5} 96 ${eyeCy} M104 ${eyeCy} Q107.5 ${eyeCy - 3.5} 111 ${eyeCy}`} fill="none" stroke={browHalo} strokeWidth="4.4" strokeLinecap="round" />
           )}
-          <path d="M89 27.5 Q92.5 24 96 27.5 M104 27.5 Q107.5 24 111 27.5" fill="none" stroke="#1c2b3a" strokeWidth="2.2" strokeLinecap="round" />
+          <path d={`M89 ${eyeCy} Q92.5 ${eyeCy - 3.5} 96 ${eyeCy} M104 ${eyeCy} Q107.5 ${eyeCy - 3.5} 111 ${eyeCy}`} fill="none" stroke="#1c2b3a" strokeWidth="2.2" strokeLinecap="round" />
           <path d="M94 32 Q100 39.5 106 32 Q100 35.5 94 32 Z" fill={mouthStroke} />
         </>
       ) : faceId === 'tired' ? (
         <>
           {browHalo && (
-            <path d="M89.5 27.5 L95.5 27.5 M104.5 27.5 L110.5 27.5" fill="none" stroke={browHalo} strokeWidth="4.4" strokeLinecap="round" />
+            <path d={`M89.5 ${eyeCy} L95.5 ${eyeCy} M104.5 ${eyeCy} L110.5 ${eyeCy}`} fill="none" stroke={browHalo} strokeWidth="4.4" strokeLinecap="round" />
           )}
-          <path d="M89.5 27.5 L95.5 27.5 M104.5 27.5 L110.5 27.5" fill="none" stroke="#1c2b3a" strokeWidth="2" strokeLinecap="round" />
-          <path d="M89.5 27.5 Q92.5 29.8 95.5 27.5 M104.5 27.5 Q107.5 29.8 110.5 27.5" fill="none" stroke="#1c2b3a" strokeWidth="1.6" strokeLinecap="round" />
+          <path d={`M89.5 ${eyeCy} L95.5 ${eyeCy} M104.5 ${eyeCy} L110.5 ${eyeCy}`} fill="none" stroke="#1c2b3a" strokeWidth="2" strokeLinecap="round" />
+          <path d={`M89.5 ${eyeCy} Q92.5 ${eyeCy + 2.3} 95.5 ${eyeCy} M104.5 ${eyeCy} Q107.5 ${eyeCy + 2.3} 110.5 ${eyeCy}`} fill="none" stroke="#1c2b3a" strokeWidth="1.6" strokeLinecap="round" />
           <path d="M96 35 L104 35" fill="none" stroke={mouthStroke} strokeWidth={mouthWidth} strokeLinecap="round" />
           {/* "Z" sits in clear sky: top-right for Guardian/Ranger, but
               top-LEFT for Spellweaver, whose staff orb glow disc sits
@@ -331,8 +358,14 @@ export default function GuardianAvatar({
         </>
       ) : (
         <>
-          <circle cx="92.5" cy="27.5" r="2.7" fill="#1c2b3a" />
-          <circle cx="107.5" cy="27.5" r="2.7" fill="#1c2b3a" />
+          <circle cx="92.5" cy={eyeCy} r={eyeR} fill="#1c2b3a" />
+          <circle cx="107.5" cy={eyeCy} r={eyeR} fill="#1c2b3a" />
+          {isRanger && (
+            <g fill="#fff" opacity="0.9">
+              <circle cx="91.3" cy={eyeCy - 1} r="0.9" />
+              <circle cx="106.3" cy={eyeCy - 1} r="0.9" />
+            </g>
+          )}
           {faceId === 'determined' && (
             <path d="M96 34.5 L104 34.5" fill="none" stroke={mouthStroke} strokeWidth={mouthWidth} strokeLinecap="round" />
           )}
@@ -393,6 +426,18 @@ export default function GuardianAvatar({
   const handLx = isFemale ? 81 : 76;
   const handRx = isFemale ? 119 : 124;
   const handR = isFemale ? 5 : 5.5;
+  // RANGER BOW RAISED (Derek, Nov 23 6:44 PM: "the bow is held at a
+  // higher spot"): the class bow was gripped at the waist (y90, arrow
+  // across the belt). Ranger-only, class bow only: the grip moves to
+  // shoulder height y60 — bow arc y38-82, arrow horizontal at y60,
+  // just above the chest gem (top y62) so the arrow never crosses
+  // it, bow top tip at (handRx,38) clear of the face (right edge
+  // x113). With an equipped weapon the hands stay at the waist (y87)
+  // where the equipped weapon is drawn.
+  const rangerBowRaised = isRanger && !equippedWeapon;
+  const bowY = rangerBowRaised ? 60 : 90;
+  const bowTopY = rangerBowRaised ? 38 : 70;
+  const bowBottomY = rangerBowRaised ? 82 : 112;
   // ACTION POSES (Derek, Nov 23 4:29 PM: "Action poses, one per
   // class"). Guardian: sword raised, shield forward, wide planted
   // stance. Ranger: bow drawn — string pulled back to the left
@@ -403,7 +448,24 @@ export default function GuardianAvatar({
   // about centre 100 (y untouched, feet stay on the ground, belt
   // still covers the leg tops). Poses are a clear ready/action
   // stance, not a lunge or jump — nothing contorted at 100px.
-  const legSpread = g.classId === 'Guardian' ? 1.25 : g.classId === 'Ranger' ? 1.12 : 1;
+  const legSpread = g.classId === 'Guardian' ? 1 : g.classId === 'Ranger' ? 1.12 : 1;
+  // GUARDIAN STANCE (Derek, Nov 23 6:46 PM: fix the Guardian stance).
+  // The old 1.25x legSpread did NOT read wide live (Nov 23 6:32 PM
+  // check: "legs are vertical and parallel, tan boots close together,
+  // feet together"). Measured why: Female legs are x88-95 / x105-112,
+  // gap 10 units; 1.25x about centre 100 moves the centres only
+  // ~2 units out (gap 12.5), AND it scales the boots wider too
+  // (rx 10 -> 12.5), so the boots OVERLAP by ~2.5 units and read as
+  // one tan patch. Scaling alone can never open a boot gap.
+  // Fix: Guardian legs are now ANGLED trapezoids, not vertical
+  // rectangles — hips stay under the belt (tops x89-95 / x105-111
+  // Female), ankles splay out ~12 units each side (bottoms x79-89 /
+  // x111-121 Female), ~15 degrees, boots centred on the ankles
+  // (cx84 / cx116 Female) rotated 18 degrees toes-out, with a clear
+  // 16-unit gap between the boots (~8px at 100px). No scale transform
+  // on Guardian legs any more (legSpread 1), so boots keep their
+  // size and the angle is not distorted. Ranger keeps its 1.12x
+  // scale, Spellweaver its robe.
   // Spellweaver casting hand: out to the left, raised to chest
   // height, with a glow (see the hands block). Null for other
   // classes, so their hands are untouched.
@@ -475,9 +537,10 @@ export default function GuardianAvatar({
     // Fix: the whole staff TOP moves right, ox = handRx+17 (was +2),
     // while the GRIP stays at (handRx-2,90) so the fist still holds
     // it — the shaft now leans gently right from grip to knob instead
-    // of bending left over the face. Orb centre (ox,28) r7.5: left
-    // edge ox-7.5 = 128.5 Female / 133.5 Male, clear of the face by
-    // 15+ and of the hat brim by ~9. Fork arms are THINNER (8/5.5,
+    // of bending left over the face. Orb centre (ox,28) r8.5: left
+    // edge ox-8.5 = 127.5 Female / 132.5 Male, clear of the face by
+    // 14.5+ and of the hat brim (ends x126 after the Nov 23 brim
+    // widening, rx26) by ~1.5 Female / ~6.5 Male. Fork arms are THINNER (8/5.5,
     // was 10/7) so a sky gap fits: left arm centre ~122.5 at y27
     // (left edge 118.5, clear of the face by 5.5; inner edge 126.5,
     // ~2 units of sky to the orb), right arm centre ~150.5 (inner
@@ -779,36 +842,98 @@ export default function GuardianAvatar({
     </g>
   );
 
+  // RANGER HAIR (Derek, Nov 23 6:44 PM: "Ranger needs touch ups:
+  // eyebrows, hair"). Measured in the renders: the shared Long locks
+  // are 18-wide brown curtains (x79-97 / 103-121, y29-58) covering
+  // the cheeks and hanging to the chest, so the face is a narrow
+  // pale oval squeezed between two brown slabs; the Ponytail gem
+  // ties (r3 + white ring) read as a blue eyeball on the tail; the
+  // Braid is a short brown stub on the shoulder; Curly sides are two
+  // big brown pom-poms (r5.5 at cx86/114) sitting ON the jaw; and
+  // the hood's inner opening (x90-110) pinches the face. Ranger-only
+  // versions, all moved OUTWARD so the inner edge stays at x89/110,
+  // clear of the face edge (x87/113): narrower locks, smaller gem
+  // ties, smaller curls, and a wider hood opening (x88-112).
+  // Male Long gets NO under-chin band here — the shared band merges
+  // with the beard into a bib (see the Ranger beard below).
+  const rangerLongLocks = (
+    <g fill={HAIR_C}>
+      <path d="M87 30 Q78 38 79 50 Q80 57 87 57 Q90 50 90 38 Q90 31 87 30 Z" />
+      <path d="M113 30 Q122 38 121 50 Q120 57 113 57 Q110 50 110 38 Q110 31 113 30 Z" />
+      <path d="M84 40 Q84 48 85 54 M116 40 Q116 48 115 54" fill="none" stroke={HAIR_L} strokeWidth="2" opacity="0.7" strokeLinecap="round" />
+    </g>
+  );
+  const rangerSideLock = (left: boolean) => (
+    <g fill={HAIR_C}>
+      {left ? (
+        <path d="M87 31 Q80 38 80 48 Q81 53 87 52 Q89 44 89 36 Z" />
+      ) : (
+        <path d="M113 31 Q120 38 120 48 Q119 53 113 52 Q111 44 111 36 Z" />
+      )}
+    </g>
+  );
+  const rangerCurlySides = (
+    <g fill={HAIR_C}>
+      <circle cx="82" cy="36" r="4.5" />
+      <circle cx="118" cy="36" r="4.5" />
+      <circle cx="81" cy="44" r="4" />
+      <circle cx="119" cy="44" r="4" />
+      <circle cx="83" cy="52" r="4" />
+      <circle cx="117" cy="52" r="4" />
+    </g>
+  );
+  const rangerPonytailTail = (
+    <g>
+      <path d="M114 25 Q120 31 120 46 Q120 56 116 58 Q112 57 113 47 Q113 34 112 28 Z" fill={HAIR_C} />
+      <path d="M117 36 Q118 46 117 54" fill="none" stroke={HAIR_L} strokeWidth="2" opacity="0.7" strokeLinecap="round" />
+      <circle cx="117" cy="34" r="2" fill={gem} stroke="#fff" strokeWidth="0.8" />
+      <circle cx="117" cy="55" r="2" fill={gem} stroke="#fff" strokeWidth="0.8" />
+    </g>
+  );
+  const rangerBraid = (
+    <g fill={HAIR_C}>
+      <path d="M114 32 Q118 44 116 58 L113 58 Q111 44 113 32 Z" />
+      <circle cx="116" cy="37" r="3.2" />
+      <circle cx="115" cy="43" r="3.2" />
+      <circle cx="116" cy="50" r="3.2" />
+      <circle cx="116" cy="56" r="3" />
+      <path d="M113 41 L119 41 M113 48 L119 48 M113 55 L119 55" fill="none" stroke={HAIR_L} strokeWidth="1.6" opacity="0.8" strokeLinecap="round" />
+      <circle cx="116" cy="59" r="2.5" fill={gem} stroke="#fff" strokeWidth="1" />
+    </g>
+  );
   // Ranger hood: the hood frames the face, so only the bits that peek out
   // are drawn — side locks, a braid, a bob, curls, or a knot poking above
   // the hood. Buzz / Short / Bald show nothing extra.
   const hoodHair = (
     <g>
-      <path d="M85 46 Q80 15 100 15 Q120 15 115 46 L110 36 Q108 21 100 21 Q92 21 90 36 Z" fill={capeMain} stroke={dark} strokeWidth="2.5" />
+      <path d="M85 46 Q80 15 100 15 Q120 15 115 46 L112 36 Q110 20 100 20 Q90 20 88 36 Z" fill={capeMain} stroke={dark} strokeWidth="2.5" />
       <path d="M91 23 Q95 20 100 20" fill="none" stroke={light} strokeWidth="2" opacity="0.6" strokeLinecap="round" />
-      {isFemale && hair === 'Long' && longLocks()}
-      {isFemale && hair === 'Ponytail' && ponytailTail}
+      {isFemale && hair === 'Long' && rangerLongLocks}
+      {isFemale && hair === 'Ponytail' && rangerPonytailTail}
       {isFemale && hair === 'Bun' && (
         <g>
           {knot(false)}
-          {shortLocks}
+          {rangerSideLock(true)}
+          {rangerSideLock(false)}
         </g>
       )}
-      {isFemale && hair === 'Curly' && curlySides}
-      {isFemale && hair === 'Braided' && braid}
-      {isFemale && hair === 'ShortBob' && (<g>{sideLock(true, 48)}{sideLock(false, 48)}</g>)}
+      {isFemale && hair === 'Curly' && rangerCurlySides}
+      {isFemale && hair === 'Braided' && rangerBraid}
+      {isFemale && hair === 'ShortBob' && (<g>{rangerSideLock(true)}{rangerSideLock(false)}</g>)}
       {isFemale && hair === 'Topknot' && (
         <g>
           {knot(true)}
-          {shortLocks}
+          {rangerSideLock(true)}
+          {rangerSideLock(false)}
         </g>
       )}
-      {!isFemale && hair === 'Curly' && curlySides}
-      {!isFemale && hair === 'Long' && longLocks()}
+      {!isFemale && hair === 'Curly' && rangerCurlySides}
+      {!isFemale && hair === 'Long' && rangerLongLocks}
       {!isFemale && hair === 'ManBun' && (
         <g>
           {knot(true)}
-          {shortLocks}
+          {rangerSideLock(true)}
+          {rangerSideLock(false)}
         </g>
       )}
     </g>
@@ -1082,7 +1207,7 @@ export default function GuardianAvatar({
         {/* Thin gold frame, the one epic touch kept: flat, clean, reads at any size */}
         <rect x="2" y="2" width="196" height="196" rx="16" fill="none" stroke={GOLD} strokeWidth="3" opacity="0.8" />
         {/* Ground shadow */}
-        <ellipse className="guardian-shadow" cx="100" cy="172" rx="44" ry="6" fill="#124571" opacity="0.18" />
+        <ellipse className="guardian-shadow" cx="100" cy="172" rx={g.classId === 'Guardian' ? 56 : 44} ry="6" fill="#124571" opacity="0.18" />
 
         {/* Compact figure: the whole figure is shifted down 17 in the
             frame by this plain wrapper <g> (no CSS class — the
@@ -1162,22 +1287,67 @@ export default function GuardianAvatar({
           {/* Legs, with a shade strip and a knee band each, so they read
               as armoured legs, not plain sticks (Derek's screenshot:
               long plain red rectangles, no knees, no shading). */}
-          {/* POSE: legs widen about centre 100 (Guardian 1.25, Ranger
-              1.12, Spellweaver 1) — y untouched, feet stay on the
-              ground, belt (drawn after, not in this group) still
+          {/* POSE: Ranger legs widen 1.12x about centre 100, Spellweaver
+              1; Guardian legs are ANGLED trapezoids (see legSpread
+              comment above), not scaled — y untouched, feet stay on
+              the ground, belt (drawn after, not in this group) still
               covers the leg tops. */}
           <g transform={legSpread !== 1 ? `translate(100 0) scale(${legSpread} 1) translate(-100 0)` : undefined}>
+          {g.classId === 'Guardian' ? (
+            <>
+              <path d={isFemale ? 'M89 94 L79 142 L89 142 L95 94 Z' : 'M87 94 L77 142 L88 142 L97 94 Z'} fill={legMain} stroke={legDark} strokeWidth="1.5" />
+              <path d={isFemale ? 'M105 94 L111 142 L121 142 L111 94 Z' : 'M103 94 L112 142 L123 142 L113 94 Z'} fill={legMain} stroke={legDark} strokeWidth="1.5" />
+              <path d={isFemale ? 'M92 96 L84 140 L87 140 L95 96 Z' : 'M91 96 L82 140 L85 140 L94 96 Z'} fill="#000" opacity="0.14" />
+              <path d={isFemale ? 'M108 96 L116 140 L113 140 L105 96 Z' : 'M109 96 L117 140 L114 140 L106 96 Z'} fill="#000" opacity="0.14" />
+              <path d={isFemale ? 'M83.5 120 L90 120 M108.5 120 L115 120' : 'M81.5 120 L92 120 M108 120 L118.5 120'} fill="none" stroke={legDark} strokeWidth="2.5" opacity="0.85" strokeLinecap="round" />
+              <ellipse cx={isFemale ? 84 : 82.5} cy="148" rx="10" ry="4.5" fill={BOOT} transform={`rotate(-18 ${isFemale ? 84 : 82.5} 148)`} />
+              <ellipse cx={isFemale ? 116 : 117.5} cy="148" rx="10" ry="4.5" fill={BOOT} transform={`rotate(18 ${isFemale ? 116 : 117.5} 148)`} />
+              <g transform={`rotate(-18 ${isFemale ? 84 : 82.5} 148)`}>
+                <path d={`M${(isFemale ? 84 : 82.5) - 8} 145 L${(isFemale ? 84 : 82.5) + 8} 145`} stroke="#d9a441" strokeWidth="3" opacity="1" />
+                <path d={`M${(isFemale ? 84 : 82.5) - 8} 150 L${(isFemale ? 84 : 82.5) + 8} 150`} stroke="#d9a441" strokeWidth="2.5" opacity="0.9" />
+              </g>
+              <g transform={`rotate(18 ${isFemale ? 116 : 117.5} 148)`}>
+                <path d={`M${(isFemale ? 116 : 117.5) - 8} 145 L${(isFemale ? 116 : 117.5) + 8} 145`} stroke="#d9a441" strokeWidth="3" opacity="1" />
+                <path d={`M${(isFemale ? 116 : 117.5) - 8} 150 L${(isFemale ? 116 : 117.5) + 8} 150`} stroke="#d9a441" strokeWidth="2.5" opacity="0.9" />
+              </g>
+            </>
+          ) : (
+            <>
           <path d={isFemale ? 'M89 94 L88 142 L95 142 L95 94 Z' : 'M87 94 L86 142 L97 142 L97 94 Z'} fill={legMain} stroke={legDark} strokeWidth="1.5" />
           <path d={isFemale ? 'M105 94 L105 142 L112 142 L111 94 Z' : 'M103 94 L103 142 L114 142 L113 94 Z'} fill={legMain} stroke={legDark} strokeWidth="1.5" />
           <rect x={isFemale ? 92 : 94} y="96" width="3" height="44" fill="#000" opacity="0.14" />
           <rect x={isFemale ? 109 : 111} y="96" width="3" height="44" fill="#000" opacity="0.14" />
           <path d={isFemale ? 'M88.5 120 L95 120 M105 120 L111.5 120' : 'M86.5 120 L97 120 M103 120 L113.5 120'} fill="none" stroke={legDark} strokeWidth="2.5" opacity="0.85" strokeLinecap="round" />
-          <ellipse cx="91" cy="148" rx="10" ry="4.5" fill={BOOT} />
-          <ellipse cx="109" cy="148" rx="10" ry="4.5" fill={BOOT} />
-          {/* Boot straps, BOLD and bright — the old thin tan lines were
-              invisible at preview size live. */}
-          <path d="M83 145 L99 145 M101 145 L117 145" stroke="#d9a441" strokeWidth="3" opacity="1" />
-          <path d="M83 150 L99 150 M101 150 L117 150" stroke="#d9a441" strokeWidth="2.5" opacity="0.9" />
+          {/* RANGER BOOTS (Derek, Nov 23 6:44 PM: "the feet look
+              weird"): the shared boots are flat brown ellipses
+              (rx10, ry4.5) with TWO thick gold straps each — at
+              large size they read as one long gold/brown plank
+              across both feet, legs ending flat with no ankle or
+              toe, and the two boots touching in the middle. Ranger-
+              only: each boot is a foot-shaped rounded rect (12
+              wide, y142-152) with a toe pointing outward, a dark
+              sole line at y150, ONE gold strap at y145, and a clear
+              gap between the boots. Guardian / Spellweaver keep
+              the shared ellipses + straps. */}
+          {isRanger ? (
+            <g>
+              <path d="M84 142 L96 142 Q98 142 98 146 L98 149 Q98 152 94 152 L86 152 Q82 152 82 149 L82 146 Q82 142 84 142 Z" fill={BOOT} stroke={shade(BOOT, -20)} strokeWidth="1.5" />
+              <path d="M102 142 L116 142 Q118 142 118 146 L118 149 Q118 152 114 152 L106 152 Q102 152 102 149 L102 146 Q102 142 104 142 Z" fill={BOOT} stroke={shade(BOOT, -20)} strokeWidth="1.5" />
+              <path d="M82 150 L98 150 M102 150 L118 150" stroke="#1e1206" strokeWidth="1.5" opacity="0.8" />
+              <path d="M85 145 L95 145 M105 145 L115 145" stroke="#d9a441" strokeWidth="2.5" opacity="1" />
+            </g>
+          ) : (
+            <g>
+              <ellipse cx="91" cy="148" rx="10" ry="4.5" fill={BOOT} />
+              <ellipse cx="109" cy="148" rx="10" ry="4.5" fill={BOOT} />
+              {/* Boot straps, BOLD and bright — the old thin tan lines were
+                  invisible at preview size live. */}
+              <path d="M83 145 L99 145 M101 145 L117 145" stroke="#d9a441" strokeWidth="3" opacity="1" />
+              <path d="M83 150 L99 150 M101 150 L117 150" stroke="#d9a441" strokeWidth="2.5" opacity="0.9" />
+            </g>
+          )}
+            </>
+          )}
           </g>
           {/* Spellweaver wizard robe: flows from the waist to the ankles
               over the legs, boots peeking out below. Flat, with fold
@@ -1264,12 +1434,15 @@ export default function GuardianAvatar({
               small buckle jewel (r2.8, on gold, not on the brim), and
               the dark arc line across the brim is gone, so the brim
               reads as one clean brim, not a second disc. Brim bottom
-              stays y22.5, just above the brows (y22.5-25). */}
+              stays y22.5, just above the brows (y22.5-25). Brim
+              widened (Derek, Nov 23 6:44 PM: "make the brim bigger"):
+              rx20 -> rx26, 52 wide, ends x74/126, extending past the
+              hair on both sides; cone, gold band and gem unchanged. */}
           {g.classId === 'Spellweaver' && (
             <g>
               <path d="M82 18 C85 9 92 0 101 -4 C110 -1 115 8 118 18 Z" fill={light} stroke={dark} strokeWidth="2" strokeLinejoin="round" />
               <path d="M88 13 Q94 6 99 1" fill="none" stroke="#fff" strokeWidth="2" opacity="0.55" strokeLinecap="round" />
-              <ellipse cx="100" cy="18" rx="20" ry="4.5" fill={light} stroke={dark} strokeWidth="2" />
+              <ellipse cx="100" cy="18" rx="26" ry="4.5" fill={light} stroke={dark} strokeWidth="2" />
               <path d="M85 13.5 Q100 11 115 13.5 L115 18 L85 18 Z" fill={GOLD} stroke={GOLD_DARK} strokeWidth="1" />
               <circle cx="100" cy="15.5" r="2.8" fill={gem} stroke="#fff" strokeWidth="1" />
             </g>
@@ -1309,8 +1482,27 @@ export default function GuardianAvatar({
               Female never has a beard. */}
           {hasBeard && (
             <g fill={BEARD_C}>
-              <path d="M91 37 Q89.5 43 100 44.5 Q110.5 43 109 37 Q105 39.5 100 39.5 Q95 39.5 91 37 Z" stroke={beardStroke} strokeWidth="1" />
-              <path d="M95 40.5 L95 43.2 M98.5 40.5 L98.5 43.5 M101.5 40.5 L101.5 43.5 M105 40.5 L105 43.2" fill="none" stroke={HAIR_L} strokeWidth="1.6" opacity="0.9" strokeLinecap="round" />
+              {/* RANGER BEARD (Derek, Nov 23 6:44 PM: "the beard isn't
+                  on the face"): the shared beard is a wide flat band
+                  (x91-109, y37-44.5) below the mouth, reading as a
+                  separate brown collar strap, and on Male Long it
+                  merges with the under-chin hair band into a bib.
+                  Ranger-only: narrower (x93-107, 14 wide), top edge
+                  following the jaw curve up at the corners (y37.5)
+                  so it hugs the chin, bottom y43.5 (1.5 below the
+                  chin), skin showing at both jaw corners, mouth
+                  clear, two short texture lines only. */}
+              {isRanger ? (
+                <>
+                  <path d="M93 37.5 Q92 42 100 43.5 Q108 42 107 37.5 Q104 39.5 100 39.5 Q96 39.5 93 37.5 Z" stroke={beardStroke} strokeWidth="1" />
+                  <path d="M97 40.5 L97 42.5 M103 40.5 L103 42.5" fill="none" stroke={HAIR_L} strokeWidth="1.6" opacity="0.9" strokeLinecap="round" />
+                </>
+              ) : (
+                <>
+                  <path d="M91 37 Q89.5 43 100 44.5 Q110.5 43 109 37 Q105 39.5 100 39.5 Q95 39.5 91 37 Z" stroke={beardStroke} strokeWidth="1" />
+                  <path d="M95 40.5 L95 43.2 M98.5 40.5 L98.5 43.5 M101.5 40.5 L101.5 43.5 M105 40.5 L105 43.2" fill="none" stroke={HAIR_L} strokeWidth="1.6" opacity="0.9" strokeLinecap="round" />
+                </>
+              )}
             </g>
           )}
           {/* Crown, Level 10+, Guardian only (the hat is the Spellweaver's
@@ -1359,10 +1551,16 @@ export default function GuardianAvatar({
             <g>
               {g.classId === 'Spellweaver' ? (
                 <path d="M95 52 Q88 42 79 54 Q72 58 71 62 L79 68 Q86 60 95 52 Z" fill={armLight} stroke={armDark} strokeWidth="2" />
+              ) : rangerBowRaised ? (
+                <path d="M95 52 Q86 44 78 52 Q72 56 74 62 L84 64 Q88 58 95 52 Z" fill={armLight} stroke={armDark} strokeWidth="2" />
               ) : (
                 <path d="M95 52 Q88 42 79 54 Q74 68 74 88 L84 89 Q87 72 95 52 Z" fill={armLight} stroke={armDark} strokeWidth="2" />
               )}
-              <path d="M105 52 Q112 42 121 54 Q126 68 126 88 L116 89 Q113 72 105 52 Z" fill={armLight} stroke={armDark} strokeWidth="2" />
+              {rangerBowRaised ? (
+                <path d="M105 52 Q114 44 122 52 Q128 56 126 62 L116 64 Q112 58 105 52 Z" fill={armLight} stroke={armDark} strokeWidth="2" />
+              ) : (
+                <path d="M105 52 Q112 42 121 54 Q126 68 126 88 L116 89 Q113 72 105 52 Z" fill={armLight} stroke={armDark} strokeWidth="2" />
+              )}
               <path d="M80 56 Q77 66 77 84" fill="none" stroke="#fff" strokeWidth="2" opacity="0.3" strokeLinecap="round" />
               <path d="M120 56 Q123 66 123 84" fill="none" stroke="#fff" strokeWidth="2" opacity="0.3" strokeLinecap="round" />
             </g>
@@ -1370,10 +1568,16 @@ export default function GuardianAvatar({
             <g>
               {g.classId === 'Spellweaver' ? (
                 <path d="M92 52 Q84 41 76 54 Q68 58 66 62 L74 68 Q84 60 92 52 Z" fill={armLight} stroke={armDark} strokeWidth="2" />
+              ) : rangerBowRaised ? (
+                <path d="M92 52 Q84 41 76 54 Q68 58 70 62 L80 64 Q84 58 92 52 Z" fill={armLight} stroke={armDark} strokeWidth="2" />
               ) : (
                 <path d="M92 52 Q84 41 76 54 Q70 68 70 88 L80 89 Q83 72 92 52 Z" fill={armLight} stroke={armDark} strokeWidth="2" />
               )}
-              <path d="M108 52 Q116 41 124 54 Q130 68 130 88 L120 89 Q117 72 108 52 Z" fill={armLight} stroke={armDark} strokeWidth="2" />
+              {rangerBowRaised ? (
+                <path d="M108 52 Q116 41 124 54 Q130 58 128 62 L118 64 Q114 58 108 52 Z" fill={armLight} stroke={armDark} strokeWidth="2" />
+              ) : (
+                <path d="M108 52 Q116 41 124 54 Q130 68 130 88 L120 89 Q117 72 108 52 Z" fill={armLight} stroke={armDark} strokeWidth="2" />
+              )}
               <path d="M76 56 Q73 66 73 84" fill="none" stroke="#fff" strokeWidth="2" opacity="0.3" strokeLinecap="round" />
               <path d="M124 56 Q127 66 127 84" fill="none" stroke="#fff" strokeWidth="2" opacity="0.3" strokeLinecap="round" />
             </g>
@@ -1602,27 +1806,30 @@ export default function GuardianAvatar({
                   fletching and a GLOWING tip (gem glow — a spell-like
                   effect, not a halo). */}
               {/* POSE (Ranger): bow DRAWN — the string is pulled back
-                  in a V to the left hand (handLx+4, 90), and the
-                  arrow is a long shaft from the fletching at that
-                  hand to a tip 30 units past the bow, instead of a
-                  short arrow with a straight vertical string. The
-                  right hand still holds the bow at (handRx, 90). */}
-              <path d={`M${handRx} 70 Q${handRx + 28} 90 ${handRx} 112`} fill="none" stroke={WOOD} strokeWidth="4.5" strokeLinecap="round" />
-              <path d={`M${handRx} 70 Q${handRx + 22} 90 ${handRx} 112`} fill="none" stroke="#a8763e" strokeWidth="2" strokeLinecap="round" />
-              <line x1={handRx} y1="70" x2={handLx + 4} y2="90" stroke="#e8e2d4" strokeWidth="2" />
-              <line x1={handRx} y1="112" x2={handLx + 4} y2="90" stroke="#e8e2d4" strokeWidth="2" />
-              <path d={`M${handRx - 3} 86 L${handRx + 3} 86 M${handRx - 3} 94 L${handRx + 3} 94`} stroke={WOOD_DARK} strokeWidth="2" />
-              <line x1={handLx + 4} y1="90" x2={handRx + 30} y2="90" stroke={gem} strokeWidth="3.5" strokeLinecap="round" />
-              <polygon points={`${handRx + 30},90 ${handRx + 23},87 ${handRx + 23},93`} fill={STEEL_DARK} />
+                  in a V to the left hand, and the arrow is a long
+                  shaft from the fletching at that hand to a tip 30
+                  units past the bow, instead of a short arrow with
+                  a straight vertical string. BOW RAISED (Derek, Nov
+                  23 6:44 PM): the grip is now at shoulder height
+                  (bowY 60, arc y38-82) instead of the waist (y90),
+                  so the bow is held high and the arrow runs across
+                  the upper chest, just above the chest gem. */}
+              <path d={`M${handRx} ${bowTopY} Q${handRx + 28} ${bowY} ${handRx} ${bowBottomY}`} fill="none" stroke={WOOD} strokeWidth="4.5" strokeLinecap="round" />
+              <path d={`M${handRx} ${bowTopY} Q${handRx + 22} ${bowY} ${handRx} ${bowBottomY}`} fill="none" stroke="#a8763e" strokeWidth="2" strokeLinecap="round" />
+              <line x1={handRx} y1={bowTopY} x2={handLx + 4} y2={bowY} stroke="#e8e2d4" strokeWidth="2" />
+              <line x1={handRx} y1={bowBottomY} x2={handLx + 4} y2={bowY} stroke="#e8e2d4" strokeWidth="2" />
+              <path d={`M${handRx - 3} ${bowY - 4} L${handRx + 3} ${bowY - 4} M${handRx - 3} ${bowY + 4} L${handRx + 3} ${bowY + 4}`} stroke={WOOD_DARK} strokeWidth="2" />
+              <line x1={handLx + 4} y1={bowY} x2={handRx + 30} y2={bowY} stroke={gem} strokeWidth="3.5" strokeLinecap="round" />
+              <polygon points={`${handRx + 30},${bowY} ${handRx + 23},${bowY - 3} ${handRx + 23},${bowY + 3}`} fill={STEEL_DARK} />
               {/* Arrow tip GLOW (GLOW FIX): the old r6 disc was a
                   ~3px pale-blue dot at 100px, not a glow. Now a r12
                   radialGradient glow, pulsing, around the arrowhead. */}
-              {glowDisc(handRx + 30, 90, 18, `url(#${id('glowGem')})`, gemLight)}
+              {glowDisc(handRx + 30, bowY, 18, `url(#${id('glowGem')})`, gemLight)}
               {/* Fletching, BIG — the old small white triangle was
                   invisible at preview size live. A large white feather
                   at the arrow tail, with a second smaller one. */}
-              <polygon points={`${handLx + 6},90 ${handLx - 9},84 ${handLx - 9},96`} fill="#fff" opacity="0.9" />
-              <polygon points={`${handLx + 6},90 ${handLx - 5},92 ${handLx - 5},98`} fill="#dfe8f0" opacity="0.9" />
+              <polygon points={`${handLx + 6},${bowY} ${handLx - 9},${bowY - 6} ${handLx - 9},${bowY + 6}`} fill="#fff" opacity="0.9" />
+              <polygon points={`${handLx + 6},${bowY} ${handLx - 5},${bowY + 2} ${handLx - 5},${bowY + 8}`} fill="#dfe8f0" opacity="0.9" />
             </g>
           )}
           {/* POSE (Spellweaver): staff RAISED — tilted -8° about the
@@ -1710,12 +1917,16 @@ export default function GuardianAvatar({
                   the left hand stays on its weapon, so the casting
                   hand only applies when no weapon is equipped. */}
               {castHand && !equippedWeapon && glowDisc(castHand.x, castHand.y, 14, `url(#${id('glowGem')})`, gemLight)}
-              <circle cx={castHand && !equippedWeapon ? castHand.x : handLx} cy={castHand && !equippedWeapon ? castHand.y : 87} r={handR} fill={SKIN} />
-              <path d={`M${(castHand && !equippedWeapon ? castHand.x : handLx) - handR} ${castHand && !equippedWeapon ? castHand.y : 87} A${handR} ${handR} 0 0 0 ${(castHand && !equippedWeapon ? castHand.x : handLx) + handR} ${castHand && !equippedWeapon ? castHand.y : 87}`} fill="none" stroke={dark} strokeWidth="1" strokeLinecap="round" />
+              {/* Ranger raised bow: the left (draw) hand sits at the
+                  string V (handLx+4, 60) and the right hand grips
+                  the bow at (handRx, 60) — both on the raised sleeves
+                  above, never floating at the waist. */}
+              <circle cx={castHand && !equippedWeapon ? castHand.x : rangerBowRaised ? handLx + 4 : handLx} cy={castHand && !equippedWeapon ? castHand.y : rangerBowRaised ? 60 : 87} r={handR} fill={SKIN} />
+              <path d={`M${(castHand && !equippedWeapon ? castHand.x : rangerBowRaised ? handLx + 4 : handLx) - handR} ${castHand && !equippedWeapon ? castHand.y : rangerBowRaised ? 60 : 87} A${handR} ${handR} 0 0 0 ${(castHand && !equippedWeapon ? castHand.x : rangerBowRaised ? handLx + 4 : handLx) + handR} ${castHand && !equippedWeapon ? castHand.y : rangerBowRaised ? 60 : 87}`} fill="none" stroke={dark} strokeWidth="1" strokeLinecap="round" />
               {!shieldCoversRightHand && (
                 <g>
-                  <circle cx={handRx} cy="87" r={handR} fill={SKIN} />
-                  <path d={`M${handRx - handR} 87 A${handR} ${handR} 0 0 0 ${handRx + handR} 87`} fill="none" stroke={dark} strokeWidth="1" strokeLinecap="round" />
+                  <circle cx={handRx} cy={rangerBowRaised ? 60 : 87} r={handR} fill={SKIN} />
+                  <path d={`M${handRx - handR} ${rangerBowRaised ? 60 : 87} A${handR} ${handR} 0 0 0 ${handRx + handR} ${rangerBowRaised ? 60 : 87}`} fill="none" stroke={dark} strokeWidth="1" strokeLinecap="round" />
                 </g>
               )}
             </g>
