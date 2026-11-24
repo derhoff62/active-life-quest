@@ -229,17 +229,29 @@ details summary { cursor: pointer; font-weight: 600; color: var(--navy); padding
   0%, 100% { opacity: 0.8; transform: scale(0.94); }
   50% { opacity: 1; transform: scale(1.08); }
 }
-/* GLOW v2 (Derek, Nov 23 3:14 PM): the v1 pulse (scale 1->1.22,
-   opacity .55->.95) moved a faint edge by ~2px at live size — invisible
-   in a 5s-apart live check. v2: scale 1->1.35 (a 35% radius change =
-   ~4-6px at live size) and opacity .6->1.0, so one crop near the dim
-   phase and one near the bright phase are unmistakably different.
-   The static glow is also much brighter now (solid core in
-   glowDisc), so even the dim phase reads as glowing. */
-.guardian-glow-pulse { animation: glow-pulse 1.8s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+/* GLOW v3 (Derek, Nov 23 4:26 PM: fix the pulse — live Nov 23 3:52 PM
+   the v2 glow IS visible and bright, but two crops 5s apart were
+   IDENTICAL: no pulse at all. DIAGNOSIS: the CSS was not broken —
+   @keyframes glow-pulse and .guardian-glow-pulse (with transform-box:
+   fill-box + transform-origin: center) are in the built CSS, the class
+   is on every glow disc, reducedMotion is Off on the test account.
+   What kills it live is the prefers-reduced-motion media query below
+   (animation: none on .guardian-glow-pulse) — the live-check browser
+   runs with reduced motion forced, as headless/automation browsers
+   commonly do, so every CSS animation on the avatar is frozen (the
+   guardian bob would be frozen too). Fix: the SIZE pulse now also
+   lives in SMIL (<animate> on each circle's r, 1 -> 1.4 in
+   GuardianAvatar.tsx glowDisc), and the opacity pulse in SMIL too —
+   SMIL is NOT affected by CSS animation: none or the media query.
+   The CSS keyframes stay as the opacity pulse for normal browsers:
+   CSS wins over SMIL on opacity when it runs, SMIL r is untouched
+   by CSS, so nothing compounds — dim = opacity 0.5, r x1.0;
+   bright = opacity 1.0, r x1.4, in BOTH worlds. No permanent
+   whole-figure halo — per-gem only, per Derek Nov 22. */
+.guardian-glow-pulse { animation: glow-pulse 1.8s ease-in-out infinite; }
 @keyframes glow-pulse {
-  0%, 100% { opacity: 0.6; transform: scale(1); }
-  50% { opacity: 1; transform: scale(1.35); }
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
 }
 .guardian-shadow { animation: shadow-pulse 2.4s ease-in-out infinite; transform-origin: center; transform-box: fill-box; }
 @keyframes shadow-pulse {
