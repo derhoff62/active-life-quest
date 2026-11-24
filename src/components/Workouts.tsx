@@ -3,7 +3,7 @@ import type { Ctx } from '../App';
 import { WORKOUTS, CORE_BALANCE_WORKOUT, REFERENCE_TRACKS, PHASES, PHASE_WEEKLY_SETS, PHASE_VOLUME_RANGE, VOLUME_MUSCLES, weeklyVolumeForSplit, filterGroupForExercise, exerciseNeeds, daysForTime, splitForDays, TRAINING_STYLES, CES_TEMPLATES, EQUIPMENT_NOTES, effectiveEquipment, resolveExercise, findExerciseByName, CLASS_WORKOUT_FOCUS, applyClassFocus, GOAL_FINISHERS } from '../lib/data';
 import type { TrainingStyle, FilterGroup } from '../lib/data';
 import type { ExerciseFeedback } from '../lib/store';
-import { phaseForDoc, hasFullAccess, metCompanionIds, lastTimeFor, awardBadges, daysInMonthSet, currentWeekForDoc } from '../lib/store';
+import { phaseForDoc, hasFullAccess, metCompanionIds, lastTimeFor, awardBadges, daysInMonthSet, currentWeekForDoc, hasApprovedRetest, hasCleanApprovedRetest } from '../lib/store';
 import { cardioThisWeek } from '../lib/badges';
 import BackToTop from './BackToTop';
 import { cycleForWeek, nextRetestWeek, nextRetestLabel, isDeloadWeek } from '../lib/yearPlan';
@@ -138,8 +138,8 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
     : '';
   const unlocked = (w: Workout) =>
     w.phase <= phase &&
-    !(w.phase === 4 && !doc.retests.some((r) => (r as { week?: number }).week === 12)) &&
-    !(w.phase === 5 && !(doc.retests.some((r) => (r as { clean?: boolean }).clean === true) && doc.phase5Approved)) &&
+    !(w.phase === 4 && !hasApprovedRetest(doc, 12)) &&
+    !(w.phase === 5 && !(hasCleanApprovedRetest(doc) && doc.phase5Approved)) &&
     (full || w.id === 'day1-first') &&
     w.exercises.every((e) => !resolveExercise(e, doc.equipment).unavailable);
   const best: Workout | null = useMemo(() => {
@@ -195,12 +195,12 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
       setNotice('Do the assessment first. It sets your starting phase.');
       return;
     }
-    if (w.phase === 4 && !doc.retests.some((r) => (r as { week?: number }).week === 12)) {
-      setNotice('Phase 4 unlocks after Phase 3 and your Week 12 retest.');
+    if (w.phase === 4 && !hasApprovedRetest(doc, 12)) {
+      setNotice('Phase 4 unlocks after Phase 3 and your Week 12 retest is approved by Derek.');
       return;
     }
     if (w.phase === 5) {
-      const clean = doc.retests.some((r) => (r as { clean?: boolean }).clean === true);
+      const clean = hasCleanApprovedRetest(doc);
       if (!clean || !doc.phase5Approved) {
         setNotice('Phase 5 is locked until a clean form retest AND Derek approves it in Coach.');
         return;
@@ -867,8 +867,8 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
         return byMuscle && byEquip;
       }).map((w) => {
         const locked =
-          (w.phase === 4 && !doc.retests.some((r) => (r as { week?: number }).week === 12)) ||
-          (w.phase === 5 && !(doc.retests.some((r) => (r as { clean?: boolean }).clean === true) && doc.phase5Approved));
+          (w.phase === 4 && !hasApprovedRetest(doc, 12)) ||
+          (w.phase === 5 && !(hasCleanApprovedRetest(doc) && doc.phase5Approved));
         const resolved = w.exercises.map((e) => resolveForDoc(e, doc));
         const swapped = resolved.filter((r) => r.swappedFrom);
         return (

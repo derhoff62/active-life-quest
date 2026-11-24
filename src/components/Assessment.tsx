@@ -2,7 +2,7 @@ import { useState } from 'react';
 import type { Ctx } from '../App';
 import * as api from '../lib/api';
 import { ASSESSMENT_EXAMPLES, ASSESSMENT_QUESTIONS, CES_TEMPLATES, CONTRAINDICATIONS, DEFAULT_EQUIPMENT, EQUIPMENT_NOTES, EQUIPMENT_OPTIONS, FOCUS_AREAS, recommendPhase } from '../lib/data';
-import { currentWeekForDoc, awardBadges, phaseForDoc, bestBalanceSec, lastLoggedLabel } from '../lib/store';
+import { currentWeekForDoc, bestBalanceSec, lastLoggedLabel, hasApprovedRetest, pendingRetests, retestStatus, retestNextPhase } from '../lib/store';
 import { RETEST_WEEKS, weekLabel } from '../lib/yearPlan';
 import type { FindingId, FormRating } from '../lib/types';
 import ExampleVideo from './ExampleVideo';
@@ -179,9 +179,8 @@ export default function Assessment({ ctx }: { ctx: Ctx }) {
 
   if (result && (done || doc.assessmentDone) && !retaking) {
     const templates = CES_TEMPLATES.filter((t) => result.findings.includes(t.id));
-    // Week 13 only pops up after the Week 12 retest, same as Today.
-    // A plan picked earlier still shows its saved line, but no pick buttons.
-    const week12Done = doc.retests.some((r) => (r as { week?: number }).week === 12);
+    // Week 13 only pops up after the Week 12 retest is approved, same as Today.
+    const week12Done = hasApprovedRetest(doc, 12);
     return (
       <div>
         <div className="card gold-frame">
@@ -206,7 +205,19 @@ export default function Assessment({ ctx }: { ctx: Ctx }) {
         </div>
         <div className="card" id="retest">
           <h3>Retest (Weeks 4, 8, and 12 of each cycle)</h3>
-          <p className="small muted">A retest is a short check, not the full assessment. Do it at Weeks 4, 8, and 12 of each 12-week cycle. There is a review retest too, then you keep going with a new goal. A clean retest moves you to the next phase and moves your corrective steps one step forward. Week 12 of each cycle is also a deload week: lighter loads that week. The next cycle only opens after that cycle's retest.</p>
+          <p className="small muted">A retest is a short check, not the full assessment. Do it at Weeks 4, 8, and 12 of each 12-week cycle. There is a review retest too, then you keep going with a new goal. You may not be able to see your own imbalance, so Derek reviews your movement screen before your phase moves. A retest Derek approves as clean moves you to the next phase and moves your corrective steps one step forward. Week 12 of each cycle is also a deload week: lighter loads that week. The next cycle only opens after that cycle's retest is approved.</p>
+          {pendingRetests(doc).length > 0 && (
+            <p className="notice">Waiting for Derek to review: {pendingRetests(doc).map((r) => weekLabel(Number((r as { week?: number }).week || 0))).join(', ')}. Your phase does not move until he approves it.</p>
+          )}
+          {[...doc.retests].reverse().slice(0, 5).map((r) => {
+            const w = Number((r as { week?: number }).week || 0);
+            const st = retestStatus(r as never);
+            return (
+              <p key={`${w}-${String(r.date)}`} className="small" style={{ margin: '2px 0' }}>
+                {weekLabel(w)} retest · {new Date(String(r.date)).toLocaleDateString()} · {st === 'pending' ? 'Waiting for Derek to review' : st === 'approved' ? 'Approved by Derek' : 'Not yet. Keep working on your patterns. Derek will check again at your next retest.'}
+              </p>
+            );
+          })}
           <label>Which week are you retesting?</label>
           <div className="row">
             {RETEST_WEEKS.map((w) => (
@@ -220,15 +231,18 @@ export default function Assessment({ ctx }: { ctx: Ctx }) {
           </div>
           <label style={{ display: 'flex', gap: 10, alignItems: 'flex-start', fontWeight: 400 }}>
             <input type="checkbox" checked={retestClean} onChange={(e) => setRetestClean(e.target.checked)} style={{ width: 'auto', minHeight: 0, marginTop: 4 }} />
-            My movement screen is clean this time (no patterns to work on).
+            I think my movement looks clean this time.
           </label>
+          <p className="small muted">That is your view, not the verdict. Derek reviews every retest, because you cannot always see your own imbalance. For sharp, new, or worsening pain, see a doctor or physical therapist.</p>
           {retestMsg && <p className="notice">{retestMsg}</p>}
           <button
             className="primary"
             onClick={() => {
               // One retest per week, in order, across all four cycles.
               // Saving Week 8 before Week 4, or the same week twice, used
-              // to hand out +20 XP and a phase jump every tap.
+              // to hand out +20 XP and a phase jump every tap. A saved
+              // retest now sits PENDING: no phase move, no corrective
+              // step, no XP until Derek reviews it in Coach.
               const doneWeeks = new Set(doc.retests.map((r) => (r as { week?: number }).week));
               if (doneWeeks.has(retestWeek)) {
                 setRetestMsg(`${weekLabel(retestWeek)} retest is already saved. Pick the next week.`);
@@ -240,29 +254,15 @@ export default function Assessment({ ctx }: { ctx: Ctx }) {
                 setRetestMsg(`Do the ${weekLabel(prevRetest)} retest first.`);
                 return;
               }
-              // Weeks 4, 8, and 12 move the phase. Later retests keep the
-              // phase you are in: Phase 5 still needs a clean retest and
-              // Derek's approval, and later cycles build on what you have.
-              const currentPhase = phaseForDoc(doc);
-              const nextPhase = retestWeek === 4 ? 2 : retestWeek === 8 ? 3 : retestWeek === 12 ? 4 : currentPhase;
+              const nextPhase = retestNextPhase(doc, retestWeek);
               update((d) => {
-                d.retests.push({ week: retestWeek, date: new Date().toISOString(), clean: retestClean, balanceLeftSec: Number(retestBalL) || 0, balanceRightSec: Number(retestBalR) || 0 } as never);
+                d.retests.push({ week: retestWeek, date: new Date().toISOString(), clean: retestClean, balanceLeftSec: Number(retestBalL) || 0, balanceRightSec: Number(retestBalR) || 0, status: 'pending' } as never);
                 if (Number(retestBalL) || Number(retestBalR)) {
                   d.balanceBaseline = { left: Number(retestBalL) || 0, right: Number(retestBalR) || 0 };
                 }
-                if (retestClean) {
-                  d.phaseOverride = nextPhase;
-                  for (const t of CES_TEMPLATES) {
-                    const cur = d.cesStep?.[t.id] || 0;
-                    d.cesStep = { ...(d.cesStep || {}), [t.id]: Math.min(cur + 1, t.progression.length - 1) };
-                  }
-                  d.xp += 20;
-                }
-                awardBadges(d);
               });
-              const phaseMoved = retestWeek <= 12 && nextPhase !== currentPhase;
-              setRetestMsg(retestClean ? (phaseMoved ? `Retest saved. You move to Phase ${nextPhase}. Your corrective steps moved one step forward. +20 XP.` : `Retest saved. You stay in Phase ${currentPhase} and move to the next stretch. Your corrective steps moved one step forward. +20 XP.`) : 'Retest saved. Keep working on your patterns. You stay in your current phase until a clean retest.');
-              toast(retestClean ? (phaseMoved ? `Retest saved. You move to Phase ${nextPhase}. +20 XP.` : 'Retest saved. +20 XP.') : 'Retest saved.');
+              setRetestMsg(`Retest saved. Derek will review your movement before your phase moves. If he approves it as clean, you move to Phase ${nextPhase} and earn +20 XP.`);
+              toast('Retest saved. Waiting for Derek to review it.');
             }}
           >
             Save my retest

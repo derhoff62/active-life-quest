@@ -224,6 +224,16 @@ export async function coachSetPhase5(userId: string, approved: boolean) {
     body: JSON.stringify({ userId, approved }),
   });
 }
+
+// Coach-only: review one pending retest. Approved and clean moves the
+// client's phase, corrective steps and XP on the server, the same as
+// the local applyRetestReview helper. Not approved leaves the phase put.
+export async function coachReviewRetest(userId: string, week: number, approved: boolean) {
+  return req<{ ok: boolean; week: number; approved: boolean }>('/api/coach/retest', {
+    method: 'POST',
+    body: JSON.stringify({ userId, week, approved }),
+  });
+}
 export async function coachSaveCesSheet(userId: string, marks: string[], notes: string, sides?: Record<string, 'right' | 'left' | 'both'>, davies?: { right: number | null; left: number | null }) {
   return req<{ ok: boolean }>('/api/coach/ces-sheet', {
     method: 'POST',

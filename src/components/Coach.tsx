@@ -4,7 +4,8 @@ import * as api from '../lib/api';
 import { CES_TEMPLATES } from '../lib/data';
 import Metrics, { latestMetric, TrendChart, metricSeries } from './Metrics';
 import type { ProfileDoc } from '../lib/store';
-import { checkinPreferenceText, checkinFrequenciesForMode, normalizeCheckinFrequency, normalizeProfile, phaseForDoc, recoveryScoreForDoc, cardioCreditedSum } from '../lib/store';
+import { checkinPreferenceText, checkinFrequenciesForMode, normalizeCheckinFrequency, normalizeProfile, phaseForDoc, recoveryScoreForDoc, cardioCreditedSum, pendingRetests, applyRetestReview, hasCleanApprovedRetest, retestNextPhase } from '../lib/store';
+import { weekLabel } from '../lib/yearPlan';
 import { coachReminders, retestWeeksDue } from '../lib/coachReminders';
 import GuardianEmote from './GuardianEmote';
 
@@ -34,6 +35,7 @@ export default function Coach({ ctx }: { ctx: Ctx }) {
   const [daviesL, setDaviesL] = useState('');
   const [cesNotes, setCesNotes] = useState('');
   const [phase5Msg, setPhase5Msg] = useState('');
+  const [retestMsg, setRetestMsg] = useState('');
   const [cesSaved, setCesSaved] = useState('');
   const [videoMsg, setVideoMsg] = useState('');
   const [nudgeMsg, setNudgeMsg] = useState('');
@@ -367,8 +369,67 @@ export default function Coach({ ctx }: { ctx: Ctx }) {
           </div>
 
           <div className="card">
+            <h4 style={{ margin: '0 0 4px' }}>Retests to review</h4>
+            <p className="small muted">A client cannot always see their own imbalance, so no retest moves a phase until you review it. Approve a clean one and the phase, corrective steps and +20 XP apply. Not yet leaves the phase put. If you need to see the movement, ask for a form-check clip in Messages, or watch an assessment video below.</p>
+            {pendingRetests(selected.data).length === 0 && (
+              <p className="small"><strong>No retests waiting for review.</strong></p>
+            )}
+            {pendingRetests(selected.data).map((r) => {
+              const w = Number((r as { week?: number }).week || 0);
+              const balL = Number((r as { balanceLeftSec?: number }).balanceLeftSec || 0);
+              const balR = Number((r as { balanceRightSec?: number }).balanceRightSec || 0);
+              const base = selected.data.assessment;
+              return (
+                <div key={`${w}-${String(r.date)}`} style={{ borderTop: '1px solid #d7e3ee', padding: '8px 0' }}>
+                  <p className="small" style={{ margin: '2px 0' }}><strong>{weekLabel(w)} retest</strong> · {new Date(String(r.date)).toLocaleDateString()}</p>
+                  <p className="small" style={{ margin: '2px 0' }}>Balance: {balL}s left, {balR}s right{base ? ` (was ${base.balanceLeftSec}s left, ${base.balanceRightSec}s right)` : ''}.</p>
+                  <p className="small" style={{ margin: '2px 0' }}>Client said: {(r as { clean?: boolean }).clean ? 'I think my movement looks clean.' : 'I did not say my movement looks clean.'}</p>
+                  <p className="small muted" style={{ margin: '2px 0' }}>Approving a clean one moves them to Phase {retestNextPhase(selected.data, w)}.</p>
+                  <div className="row">
+                    <button
+                      className="primary"
+                      disabled={busy === `retest-${w}`}
+                      onClick={() => withBusy(`retest-${w}`, async () => {
+                        try {
+                          const clean = (r as { clean?: boolean }).clean === true;
+                          if (api.getMode() === 'server') await api.coachReviewRetest(selected.id, w, true);
+                          if (api.getMode() === 'local') update((d) => { applyRetestReview(d, w, true); });
+                          const patch = (d: ProfileDoc) => { const next = JSON.parse(JSON.stringify(d)) as ProfileDoc; applyRetestReview(next, w, true); return next; };
+                          setClients((prev) => prev.map((cl) => (cl.id === selected.id ? { ...cl, data: patch(cl.data) } : cl)));
+                          setSelected((prev) => (prev ? { ...prev, data: patch(prev.data) } : prev));
+                          setRetestMsg(clean ? `${weekLabel(w)} retest approved. Client moves to Phase ${retestNextPhase(selected.data, w)}. +20 XP.` : `${weekLabel(w)} retest approved. Client did not say clean, so the phase stays put.`);
+                          toast('Retest approved.');
+                        } catch { setRetestMsg('That could not be saved. Try again.'); }
+                      })}
+                    >
+                      {busy === `retest-${w}` ? 'Saving…' : 'Approve'}
+                    </button>
+                    <button
+                      disabled={busy === `retest-${w}`}
+                      onClick={() => withBusy(`retest-${w}`, async () => {
+                        try {
+                          if (api.getMode() === 'server') await api.coachReviewRetest(selected.id, w, false);
+                          if (api.getMode() === 'local') update((d) => { applyRetestReview(d, w, false); });
+                          const patch = (d: ProfileDoc) => { const next = JSON.parse(JSON.stringify(d)) as ProfileDoc; applyRetestReview(next, w, false); return next; };
+                          setClients((prev) => prev.map((cl) => (cl.id === selected.id ? { ...cl, data: patch(cl.data) } : cl)));
+                          setSelected((prev) => (prev ? { ...prev, data: patch(prev.data) } : prev));
+                          setRetestMsg(`${weekLabel(w)} retest marked not yet. Client stays in their phase until the next retest.`);
+                          toast('Retest marked not yet.');
+                        } catch { setRetestMsg('That could not be saved. Try again.'); }
+                      })}
+                    >
+                      {busy === `retest-${w}` ? 'Saving…' : 'Not yet'}
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+            {retestMsg && <p className="ok">{retestMsg}</p>}
+          </div>
+
+          <div className="card">
             <h4 style={{ margin: '0 0 4px' }}>Phase 5 approval</h4>
-            <p className="small muted">Phase 5 also needs a clean form retest. {selected.data.retests.some((r) => (r as { clean?: boolean }).clean === true) ? 'This client has a clean retest.' : 'No clean retest yet.'}</p>
+            <p className="small muted">Phase 5 also needs a clean form retest. {hasCleanApprovedRetest(selected.data) ? 'This client has a clean approved retest.' : 'No clean approved retest yet.'}</p>
             <p className="small"><strong>{selected.data.phase5Approved ? 'Approved for Phase 5.' : 'Not approved for Phase 5.'}</strong></p>
             <div className="row">
               <button

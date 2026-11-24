@@ -2,7 +2,7 @@
 // It is saved to the server (Neon profiles.data) when the API is available,
 // and always to localStorage so the app works offline and before deploy.
 import type { AssessmentResult, FindingId, GoalType } from './types';
-import { ARMOR, CREATURES } from './data';
+import { ARMOR, CES_TEMPLATES, CREATURES } from './data';
 import type { TrainingStyle } from './data';
 import { HAIR_OPTIONS, SKIN_TONES } from './guardianOptions';
 
@@ -272,6 +272,16 @@ export function normalizeProfile(raw: unknown): ProfileDoc {
   for (const f of arrFields) {
     if (!Array.isArray((r as Record<string, unknown>)[f])) (out as unknown as Record<string, unknown>)[f] = [];
   }
+  // Retests saved before coach review existed have no status: they were
+  // saved under the old instant-advance system, so they count as
+  // approved. A status that is not one of the three known values is
+  // treated the same way, never as pending.
+  for (const rt of out.retests as Record<string, unknown>[]) {
+    if (rt && typeof rt === 'object') {
+      const s = rt.status;
+      if (s !== 'pending' && s !== 'approved' && s !== 'not-yet') rt.status = 'approved';
+    }
+  }
   out.body = { ...base.body, ...((r.body as object) || {}) };
   out.reminderTimes = { ...base.reminderTimes, ...((r.reminderTimes as object) || {}) };
   if (!out.bossHp || typeof out.bossHp !== 'object') out.bossHp = {};
@@ -434,6 +444,71 @@ export function phaseForDoc(doc: ProfileDoc): number {
   return doc.assessment?.startingPhase ?? 1;
 }
 
+// ---------- Coach-reviewed retests (Derek, Nov 24, 2026) ----------
+// A client cannot always see their own imbalance, so a retest is never
+// self-graded. The client saves balance numbers plus their own view
+// ("I think my movement looks clean"), and the retest sits PENDING until
+// Derek reviews it in Coach. Only an APPROVED retest moves the phase,
+// moves the corrective steps, or earns XP. Legacy retests saved before
+// this change have no status field: they were saved under the old
+// instant-advance system, so they count as approved.
+export type RetestStatus = 'pending' | 'approved' | 'not-yet';
+
+export function retestStatus(r: { status?: unknown }): RetestStatus {
+  const s = (r as { status?: string }).status;
+  return s === 'pending' || s === 'approved' || s === 'not-yet' ? s : 'approved';
+}
+
+export function approvedRetests(doc: ProfileDoc): LogEntry[] {
+  return (doc.retests || []).filter((r) => retestStatus(r as never) === 'approved');
+}
+
+export function pendingRetests(doc: ProfileDoc): LogEntry[] {
+  return (doc.retests || []).filter((r) => retestStatus(r as never) === 'pending');
+}
+
+export function hasApprovedRetest(doc: ProfileDoc, week: number): boolean {
+  return approvedRetests(doc).some((r) => Number((r as { week?: number }).week || 0) === week);
+}
+
+export function hasCleanApprovedRetest(doc: ProfileDoc): boolean {
+  return approvedRetests(doc).some((r) => (r as { clean?: boolean }).clean === true);
+}
+
+/** Phase a retest week moves to, once Derek approves it. Weeks 4, 8 and
+ * 12 move the phase; later retests keep the phase the client is in
+ * (later cycles build on what they have, and Week 13 plans move phases). */
+export function retestNextPhase(doc: ProfileDoc, week: number): number {
+  return week === 4 ? 2 : week === 8 ? 3 : week === 12 ? 4 : phaseForDoc(doc);
+}
+
+/** Apply Derek's review of one pending retest. Returns false when there
+ * is no pending retest for that week (already reviewed, or never saved).
+ * Approve, clean: phase moves, every corrective step moves one step
+ * forward, +20 XP, badges are re-checked. Approve, not clean: the retest
+ * is recorded, but the phase, corrective steps and XP stay put. Not yet:
+ * nothing moves; the client stays in their phase until the next retest. */
+export function applyRetestReview(doc: ProfileDoc, week: number, approved: boolean): boolean {
+  const entry = (doc.retests || []).find(
+    (r) => Number((r as { week?: number }).week || 0) === week && retestStatus(r as never) === 'pending',
+  );
+  if (!entry) return false;
+  (entry as Record<string, unknown>).status = approved ? 'approved' : 'not-yet';
+  (entry as Record<string, unknown>).reviewedAt = new Date().toISOString();
+  if (!approved) return true;
+  const clean = (entry as { clean?: boolean }).clean === true;
+  if (clean) {
+    doc.phaseOverride = retestNextPhase(doc, week);
+    for (const t of CES_TEMPLATES) {
+      const cur = doc.cesStep?.[t.id] || 0;
+      doc.cesStep = { ...(doc.cesStep || {}), [t.id]: Math.min(cur + 1, t.progression.length - 1) };
+    }
+    doc.xp += 20;
+  }
+  awardBadges(doc);
+  return true;
+}
+
 /** Mana refills to full once a day. Call on save; harmless if already done today. */
 export function refillMana(doc: ProfileDoc): void {
   const today = new Date().toISOString().slice(0, 10);
@@ -570,8 +645,9 @@ export function earnedArmorIds(doc: ProfileDoc): string[] {
   const bossesBeaten = Object.values(doc.bossHp || {}).filter((hp) => hp <= 0).length;
   const balanceBest = Math.max(doc.balanceBaseline?.left || 0, doc.balanceBaseline?.right || 0);
   const checkinStreak = checkins.length;
-  const retests = doc.retests || [];
-  const hasRetest = (w: number) => retests.some((r) => (r as { week?: number }).week === w);
+  // Only Derek-approved retests count for gear: a pending retest has
+  // not been reviewed yet, so it earns nothing.
+  const hasRetest = (w: number) => hasApprovedRetest(doc, w);
   const bossBeaten = (id: string) => (doc.bossHp || {})[id] !== undefined && (doc.bossHp || {})[id]! <= 0;
   const cardioTotal = cardioCreditedSum(cardio);
   const out = new Set<string>();
@@ -648,7 +724,6 @@ export function awardBadges(doc: ProfileDoc): string[] {
   const workouts = doc.workouts || [];
   const cardio = doc.cardio || [];
   const prs = doc.prs || [];
-  const retests = doc.retests || [];
   if (!Array.isArray(doc.badges)) doc.badges = [];
   const workoutsWeek = workouts.filter((w) => new Date(String(w.date)).getTime() >= weekAgo).length;
   const cardioWeek = cardioCreditedSum(cardio, weekAgo);
@@ -663,19 +738,19 @@ export function awardBadges(doc: ProfileDoc): string[] {
   add('150-club', cardioWeek >= 150);
   add('first-pr', prs.length >= 1);
   add('five-prs', prs.length >= 5);
-  // Balance Breakthrough means a retest beat the assessment baseline, not
-  // just starting out with a long hold.
+  // Balance Breakthrough means an approved retest beat the assessment
+  // baseline, not just starting out with a long hold.
   const baseBest = Math.max(doc.assessment?.balanceLeftSec || 0, doc.assessment?.balanceRightSec || 0);
   const retestBest = Math.max(
     0,
-    ...retests.map((r) => Math.max(Number((r as { balanceLeftSec?: number }).balanceLeftSec || 0), Number((r as { balanceRightSec?: number }).balanceRightSec || 0))),
+    ...approvedRetests(doc).map((r) => Math.max(Number((r as { balanceLeftSec?: number }).balanceLeftSec || 0), Number((r as { balanceRightSec?: number }).balanceRightSec || 0))),
   );
-  add('balance-breakthrough', retests.length >= 1 && retestBest > baseBest);
+  add('balance-breakthrough', approvedRetests(doc).length >= 1 && retestBest > baseBest);
   add('phase-1-finisher', phaseForDoc(doc) >= 2);
   add('phase-2-finisher', phaseForDoc(doc) >= 3);
-  add('phase-3-finisher', retests.some((r) => (r as { week?: number }).week === 12));
+  add('phase-3-finisher', hasApprovedRetest(doc, 12));
   // Year badges: one per cycle milestone, plus monthly result badges.
-  const hasRetest = (w: number) => retests.some((r) => (r as { week?: number }).week === w);
+  const hasRetest = (w: number) => hasApprovedRetest(doc, w);
   add('cycle-1-finisher', hasRetest(12));
   add('cycle-2-finisher', hasRetest(24));
   add('cycle-3-finisher', hasRetest(36));
@@ -697,7 +772,7 @@ export function awardBadges(doc: ProfileDoc): string[] {
 // Companions are met gradually by this week, and companion effects only
 // apply once the companion is met. One place, so every tab agrees.
 export function currentWeekForDoc(doc: ProfileDoc): number {
-  const weeks = (doc.retests || []).map((r) => (r as { week?: number }).week || 0);
+  const weeks = approvedRetests(doc).map((r) => (r as { week?: number }).week || 0);
   const max = Math.max(0, ...weeks);
   const phase = phaseForDoc(doc);
   return max > 0 ? Math.min(52, max + 1) : phase >= 4 ? 13 : phase === 3 ? 9 : phase === 2 ? 5 : 1;

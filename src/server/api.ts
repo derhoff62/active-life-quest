@@ -1391,6 +1391,70 @@ app.post("/api/coach/phase5", async (c) => {
   return c.json({ ok: true, approved });
 });
 
+
+// Coach-only: review one pending retest. A client cannot always see
+// their own imbalance, so no retest moves a phase until Derek reviews
+// it. This mirrors applyRetestReview in lib/store.ts: approve a clean
+// retest and the phase moves (Week 4 to Phase 2, Week 8 to Phase 3,
+// Week 12 to Phase 4; later retests keep the phase), every corrective
+// step moves one step forward (all CES progressions are 3 steps, so the
+// cap is index 2), and +20 XP is earned. Approve a retest the client
+// did not call clean, or mark it not yet, and the phase stays put.
+// Retests saved before coach review existed have no status and count
+// as already approved, so only a pending entry can be reviewed here.
+app.post("/api/coach/retest", async (c) => {
+  const db = getDb(c);
+  if (!db) {
+    return dbMissing(c);
+  }
+  if (!(await hasCoachSession(c, db))) {
+    return c.json({ error: "Coach sign-in is required." }, 401);
+  }
+  const body = await readJson(c);
+  const userId = body && typeof body.userId === "string" ? body.userId : "";
+  const week = body && typeof body.week === "number" ? body.week : 0;
+  const approved = body && body.approved === true;
+  if (!userId || !week) {
+    return c.json({ error: "Pick a client and a retest week." }, 400);
+  }
+  const doc = await getProfileDoc(db, userId);
+  if (!doc) {
+    return c.json({ error: "Client not found." }, 404);
+  }
+  const retests = Array.isArray(doc.retests) ? (doc.retests as Record<string, unknown>[]) : [];
+  const entry = retests.find((r) => Number(r.week || 0) === week && r.status === "pending");
+  if (!entry) {
+    return c.json({ error: "That retest is not waiting for review." }, 400);
+  }
+  entry.status = approved ? "approved" : "not-yet";
+  entry.reviewedAt = new Date().toISOString();
+  if (approved && entry.clean === true) {
+    const nextPhase = week === 4 ? 2 : week === 8 ? 3 : week === 12 ? 4 : Number(doc.phaseOverride || (doc.assessment as Record<string, unknown> | undefined)?.startingPhase || 1);
+    doc.phaseOverride = nextPhase;
+    const cesIds = ["feet-turn-out", "heel-rise", "overpronation", "knee-dominance", "knee-valgus", "knee-varus", "asymmetric-weight-shift", "excessive-anterior-pelvic-tilt", "excessive-forward-trunk-lean", "excessive-posterior-pelvic-tilt", "arms-fall-forward", "scapular-winging", "shoulder-elevation-forward-head", "shoulder-elevation-no-forward-head", "elbow-flexion", "non-neutral-wrist", "forward-head-posture"];
+    const cesStep = ((doc.cesStep as Record<string, number> | undefined) || {}) as Record<string, number>;
+    for (const id of cesIds) cesStep[id] = Math.min((cesStep[id] || 0) + 1, 2);
+    doc.cesStep = cesStep;
+    doc.xp = Number(doc.xp || 0) + 20;
+    const badges = Array.isArray(doc.badges) ? (doc.badges as string[]) : [];
+    const addBadge = (id: string) => { if (!badges.includes(id)) badges.push(id); };
+    if (nextPhase >= 2) addBadge("phase-1-finisher");
+    if (nextPhase >= 3) addBadge("phase-2-finisher");
+    if (week === 12) { addBadge("phase-3-finisher"); addBadge("cycle-1-finisher"); }
+    if (week === 24) addBadge("cycle-2-finisher");
+    if (week === 36) addBadge("cycle-3-finisher");
+    if (week === 48) addBadge("cycle-4-finisher");
+    if (week === 52) addBadge("year-finisher");
+    const assessment = (doc.assessment || {}) as Record<string, unknown>;
+    const baseBest = Math.max(Number(assessment.balanceLeftSec || 0), Number(assessment.balanceRightSec || 0));
+    const retestBest = Math.max(0, ...retests.filter((r) => r.status === "approved").map((r) => Math.max(Number(r.balanceLeftSec || 0), Number(r.balanceRightSec || 0))));
+    if (retestBest > baseBest) addBadge("balance-breakthrough");
+    doc.badges = badges;
+  }
+  await saveProfileDoc(db, userId, doc);
+  return c.json({ ok: true, week, approved });
+});
+
 // Coach-only: save the CES assessment check sheet to the client file.
 app.post("/api/coach/ces-sheet", async (c) => {
   const db = getDb(c);

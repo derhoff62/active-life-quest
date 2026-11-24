@@ -13,7 +13,7 @@ import {
   weighInDue,
   workoutDueToday,
 } from './badges';
-import { loggedToday, type ProfileDoc } from './store';
+import { loggedToday, hasApprovedRetest, type ProfileDoc } from './store';
 import type { Tab } from '../App';
 
 export interface NoticeAction {
@@ -76,7 +76,7 @@ export function tabNotice(doc: ProfileDoc, tab: Tab): TabNotice | null {
           actions: [{ label: 'Do the retest', anchor: 'retest' }],
         };
       }
-      const week12Done = (doc.retests || []).some((r) => (r as { week?: number }).week === 12);
+      const week12Done = hasApprovedRetest(doc, 12);
       if (week12Done && !doc.week13Goal) {
         return {
           text: 'Your next stretch is ready. Pick what comes next.',

@@ -3,7 +3,7 @@ import type { Ctx } from '../App';
 import * as api from '../lib/api';
 import { PHASES, WORKOUTS, CORE_BALANCE_WORKOUT, WEEK13, CLASS_GOOD_FOR, GOAL_TYPES, splitForDays, foodQuestForDate } from '../lib/data';
 import type { TrainingStyle } from '../lib/data';
-import { phaseForDoc, recoveryScore, levelForXp, titleForLevel, metCompanionIds, currentWeekForDoc, checkinPreferenceText, checkinFrequenciesForMode, normalizeCheckinFrequency, loggedToday, streakDaysForDoc, lastLoggedLabel, cardioCreditedSum } from '../lib/store';
+import { phaseForDoc, recoveryScore, levelForXp, titleForLevel, metCompanionIds, currentWeekForDoc, checkinPreferenceText, checkinFrequenciesForMode, normalizeCheckinFrequency, loggedToday, streakDaysForDoc, lastLoggedLabel, cardioCreditedSum, hasApprovedRetest, pendingRetests } from '../lib/store';
 import { cycleForWeek, nextRetestWeek, nextBossWeek, nextRetestLabel, nextBossLabel, isDeloadWeek, challengeForWeek } from '../lib/yearPlan';
 import type { AssessmentVideo } from '../lib/store';
 import GuardianAvatar from './GuardianAvatar';
@@ -63,7 +63,7 @@ export default function Today({ ctx }: { ctx: Ctx }) {
         })()
         : phaseWorkouts[(lastIdx + 1) % Math.max(1, phaseWorkouts.length)] || WORKOUTS.find((w) => w.phase === phase);
   const unfinished = doc.sessions;
-  const week12Done = doc.retests.some((r) => (r as { week?: number }).week === 12);
+  const week12Done = hasApprovedRetest(doc, 12);
   // Where you are in this stretch, and results so far, not
   // just XP. Waist change comes from first vs latest measurement.
   const yearWeek = currentWeekForDoc(doc);
@@ -266,6 +266,7 @@ export default function Today({ ctx }: { ctx: Ctx }) {
           <h3 style={{ margin: 0 }}>Where you are: Week {weekInCycle} · {yearCycle.name}</h3>
           <p className="small">Week {weekInCycle} of this stretch{isReview ? ' · Review stretch' : ''}. This stretch's goal: <strong>{yearCycle.goal}</strong> · {yearCycle.phases} · {yearCycle.track}</p>
           <p className="small">{nextRetestLabel(yearNextRetest)} {nextBossLabel(yearNextBoss)}</p>
+          {pendingRetests(doc).length > 0 && <p className="small"><strong>Retest waiting for Derek to review:</strong> {pendingRetests(doc).map((r) => `Week ${Number((r as { week?: number }).week || 0)}`).join(', ')}. Your phase does not move until he approves it.</p>}
           {isDeloadWeek(yearWeek) && <p className="small"><strong>Deload week.</strong> Lighter loads this week, then your retest.</p>}
           <p className="small muted">Results so far: {doc.prs.length} personal record{doc.prs.length === 1 ? '' : 's'} · {yearCardioTotal.toLocaleString()} cardio minutes · Streak {yearStreak} {yearStreak === 1 ? 'day' : 'days'}{yearWaistChange !== null ? ` · Waist ${yearWaistChange > 0 ? '+' : ''}${yearWaistChange} in since your first measurement` : ''} · {doc.badges.length} badges</p>
           <p className="small">This month's challenge: <strong>{yearChallenge.title}</strong> · {yearChallenge.detail}</p>

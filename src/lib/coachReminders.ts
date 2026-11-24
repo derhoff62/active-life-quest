@@ -10,7 +10,7 @@ import {
   recoveryScoreForDoc,
   trialEndsAt,
   hasFullAccess,
-  phaseForDoc,
+  pendingRetests,
   type ProfileDoc,
 } from './store';
 import { nextRetestDueWeek } from './badges';
@@ -22,9 +22,9 @@ export interface CoachReminder {
     | 'low-recovery'
     | 'trial-ending'
     | 'retest-due'
+    | 'retest-review'
     | 'doctor-clearance'
     | 'unfinished-workout'
-    | 'phase-ready'
     | 'balance-skipped'
     | 'week13'
     | 'hurts';
@@ -76,12 +76,11 @@ export function coachRemindersForClient(data: ProfileDoc, displayName: string): 
   if (data.sessions) {
     out.push({ kind: 'unfinished-workout', text: `Unfinished workout for ${name}` });
   }
-  // Phase-ready: a clean retest passed, but the phase has not moved yet.
-  const cleanWeeks = (data.retests || []).filter((r) => (r as { clean?: boolean }).clean).map((r) => (r as { week?: number }).week || 0);
-  const nextPhase = cleanWeeks.includes(12) ? 4 : cleanWeeks.includes(8) ? 3 : cleanWeeks.includes(4) ? 2 : 0;
-  const curPhase = phaseForDoc(data);
-  if (nextPhase > curPhase) {
-    out.push({ kind: 'phase-ready', text: `${name} passed a retest and is ready for Phase ${nextPhase}` });
+  // Retests waiting for Derek's review: a client saved one, and no
+  // phase moves until Derek approves it. One reminder per pending retest.
+  for (const r of pendingRetests(data)) {
+    const w = Number((r as { week?: number }).week || 0);
+    out.push({ kind: 'retest-review', text: w === 52 ? `${name} sent a review retest to review` : `${name} sent the Week ${w} retest to review` });
   }
   // Balance skipped: no balance quest and no balance test in the last 7 days.
   if (data.assessmentDone) {
