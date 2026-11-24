@@ -139,6 +139,10 @@ export interface ProfileDoc {
   calorieCalcEnabled: boolean;
   largeText: boolean;
   reminderTimes: { workout: string; checkin: string; streak: string };
+  reminderPhone: string;
+  reminderEmail: string;
+  reminderEmailOk: boolean;
+  reminderTextOk: boolean;
   checkinFrequency: 'daily' | '1x-month' | '2x-month' | '3x-month' | '4x-month';
   checkinMode: 'text' | 'live-call';
   trainingDays: number;
@@ -221,6 +225,10 @@ export function defaultProfile(email = '', displayName = ''): ProfileDoc {
     calorieCalcEnabled: false,
     largeText: false,
     reminderTimes: { workout: '07:30', checkin: '20:00', streak: '18:00' },
+    reminderPhone: '',
+    reminderEmail: '',
+    reminderEmailOk: false,
+    reminderTextOk: false,
     checkinFrequency: 'daily',
     checkinMode: 'text',
     trainingDays: 3,
@@ -284,6 +292,21 @@ export function normalizeProfile(raw: unknown): ProfileDoc {
   }
   out.body = { ...base.body, ...((r.body as object) || {}) };
   out.reminderTimes = { ...base.reminderTimes, ...((r.reminderTimes as object) || {}) };
+  // Reminder contact (Derek, Nov 24, 2026): optional email and phone so
+  // reminders can be sent later if a client forgets to log in. Nothing
+  // is sent yet. Old profiles have neither field, so the sign-up email
+  // pre-fills the reminder email and the phone starts empty.
+  if (typeof out.reminderPhone !== 'string') out.reminderPhone = '';
+  else out.reminderPhone = out.reminderPhone.trim();
+  if (typeof out.reminderEmail !== 'string' || !out.reminderEmail.trim()) {
+    out.reminderEmail = typeof out.email === 'string' ? out.email.trim() : '';
+  } else {
+    out.reminderEmail = out.reminderEmail.trim();
+  }
+  // Reminder permissions (Derek, Nov 24, 2026): both off unless the
+  // client turned them on. Old profiles have neither flag.
+  if (typeof out.reminderEmailOk !== 'boolean') out.reminderEmailOk = false;
+  if (typeof out.reminderTextOk !== 'boolean') out.reminderTextOk = false;
   if (!out.bossHp || typeof out.bossHp !== 'object') out.bossHp = {};
   if (!out.focus || typeof out.focus !== 'object') out.focus = {};
   if (!out.cesStep || typeof out.cesStep !== 'object') out.cesStep = {};

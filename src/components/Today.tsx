@@ -79,6 +79,20 @@ export default function Today({ ctx }: { ctx: Ctx }) {
   const yearWaists = (doc.measurements || []).map((m) => Number((m as { waist?: string }).waist || 0)).filter((w) => w > 0);
   const yearWaistChange = yearWaists.length >= 2 ? yearWaists[yearWaists.length - 1] - yearWaists[0] : null;
   const yearChallenge = challengeForWeek(yearWeek);
+  // Today journey features. All read-only: no XP, no badges, no
+  // programming changes. Guarded against empty arrays throughout.
+  const firstWeekWorkoutDone = (doc.workouts || []).length > 0;
+  const firstWeekCheckinDone = (doc.checkins || []).length > 0;
+  const firstWeekBalanceDone = (doc.balanceTests || []).length > 0 || ((doc.balanceBaseline?.left || 0) > 0 || (doc.balanceBaseline?.right || 0) > 0);
+  const firstWeekDoneCount = [firstWeekWorkoutDone, firstWeekCheckinDone, firstWeekBalanceDone].filter(Boolean).length;
+  const strengthDaysThisWeek = doc.trainingDays || 3;
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const yesterdayDate = new Date();
+  yesterdayDate.setDate(yesterdayDate.getDate() - 1);
+  const yesterdayStr = yesterdayDate.toISOString().slice(0, 10);
+  const checkinDates = (doc.checkins || []).map((c) => String(c.date || '').slice(0, 10));
+  const missedYesterday =
+    checkinDates.length > 0 && !checkinDates.includes(yesterdayStr) && !checkinDates.includes(todayStr);
   const lastSleep = doc.sleep[doc.sleep.length - 1] as { hours?: number } | undefined;
   // Recovery score comes from the last check-in you actually logged, not
   // from the slider positions. Until the first check-in, it uses last
@@ -237,6 +251,19 @@ export default function Today({ ctx }: { ctx: Ctx }) {
         </div>
       </div>
 
+      {yearWeek === 1 && (
+        <div className="card gold-frame">
+          <h3 style={{ margin: 0 }}>Your first week</h3>
+          <p>You did {firstWeekDoneCount} of 3 this week.</p>
+          {firstWeekDoneCount === 3 && <p><strong>First week done. Nice start.</strong></p>}
+          <ul>
+            <li>1 short workout: {firstWeekWorkoutDone ? 'Done' : 'Not done yet'}</li>
+            <li>1 check-in: {firstWeekCheckinDone ? 'Done' : 'Not done yet'}</li>
+            <li>1 balance hold: {firstWeekBalanceDone ? 'Done' : 'Not done yet'}</li>
+          </ul>
+        </div>
+      )}
+
       {unfinished && (
         <div className="card gold-frame" id="resume-workout">
           <h3 style={{ margin: 0 }}>Continue where you left off</h3>
@@ -274,6 +301,14 @@ export default function Today({ ctx }: { ctx: Ctx }) {
         </div>
       )}
 
+      {doc.assessmentDone && (
+        <div className="card">
+          <h3 style={{ margin: 0 }}>Your week at a glance</h3>
+          <p>This week: {strengthDaysThisWeek} strength, 2 walks, 1 check-in.</p>
+          <p className="small muted">Cardio target: 150 minutes this week. Weigh in once, same day each week. Take 1 to 2 rest days between strength days.</p>
+        </div>
+      )}
+
       {doc.nudges.filter((n) => !n.read).map((n) => (
         <div className="notice" key={n.id}>
           <strong>From Derek:</strong> {n.text}
@@ -299,6 +334,10 @@ export default function Today({ ctx }: { ctx: Ctx }) {
           <h3>Your next step</h3>
           <p>New goal: {doc.week13Goal}. Derek has your request for the next plan.</p>
         </div>
+      )}
+
+      {missedYesterday && (
+        <p className="notice">Missed yesterday? No problem, do today's check-in, don't try to catch up.</p>
       )}
 
       <div className="card" id="today-checkin">

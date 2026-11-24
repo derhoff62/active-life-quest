@@ -46,6 +46,9 @@ export default function Onboarding({ ctx }: { ctx: Ctx }) {
   const [equipment, setEquipment] = useState<string[]>([...DEFAULT_EQUIPMENT]);
   const [checkinMode, setCheckinMode] = useState<'text' | 'live-call'>('text');
   const [checkinFrequency, setCheckinFrequency] = useState<'daily' | '1x-month' | '2x-month' | '3x-month' | '4x-month'>('daily');
+  const [reminderPhone, setReminderPhone] = useState('');
+  const [reminderEmailOk, setReminderEmailOk] = useState(false);
+  const [reminderTextOk, setReminderTextOk] = useState(false);
 
   const EQUIP = EQUIPMENT_OPTIONS;
 
@@ -235,6 +238,19 @@ export default function Onboarding({ ctx }: { ctx: Ctx }) {
           </label>
         ))}
       </div>
+      <h4 style={{ margin: '14px 0 4px' }}>Reminders</h4>
+      <p className="small muted">Optional. We only use these to remind you if you forget to log in or check in. Nothing is sent yet.</p>
+      <label htmlFor="g-reminder-phone">Phone (optional)</label>
+      <input id="g-reminder-phone" type="tel" value={reminderPhone} onChange={(e) => { setReminderPhone(e.target.value); if (!e.target.value.trim()) setReminderTextOk(false); }} placeholder="Phone (optional)" />
+      <label style={{ display: 'flex', gap: 10, alignItems: 'flex-start', margin: 0 }}>
+        <input type="checkbox" checked={reminderEmailOk} onChange={(e) => setReminderEmailOk(e.target.checked)} style={{ width: 'auto', minHeight: 0 }} />
+        <span>Email me a reminder if I forget to log in or check in.</span>
+      </label>
+      <label style={{ display: 'flex', gap: 10, alignItems: 'flex-start', margin: 0 }}>
+        <input type="checkbox" checked={reminderTextOk} disabled={!reminderPhone.trim()} onChange={(e) => setReminderTextOk(e.target.checked)} style={{ width: 'auto', minHeight: 0 }} />
+        <span>Text me a reminder if I forget to log in or check in.</span>
+      </label>
+      {!reminderPhone.trim() && <p className="small muted">Add a phone number above to turn this on.</p>}
       <div className="row" style={{ marginTop: 14 }}>
         <button
           className="primary"
@@ -246,6 +262,11 @@ export default function Onboarding({ ctx }: { ctx: Ctx }) {
               d.equipment = equipment;
               d.checkinMode = checkinMode;
               d.checkinFrequency = checkinFrequency;
+              const phone = reminderPhone.trim();
+              d.reminderPhone = phone;
+              d.reminderEmailOk = reminderEmailOk;
+              d.reminderTextOk = phone ? reminderTextOk : false;
+              if (phone && !(d.reminderEmail || '').trim() && (d.email || '').trim()) d.reminderEmail = d.email.trim();
               const gt = GOAL_TYPES.find((g) => g.id === goal);
               d.goals = [{ type: goal as never, label: gt?.label || 'My goal', why, started: new Date().toISOString() }];
               d.mainGoal = gt?.label || '';

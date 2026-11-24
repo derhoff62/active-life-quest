@@ -197,6 +197,13 @@ export default function Coach({ ctx }: { ctx: Ctx }) {
         <div className="card gold-frame">
           <h3>{selected.displayName || selected.email}</h3>
           <p>Phase {phaseForDoc(selected.data)} · Findings: {selected.data.assessment?.findings.join(', ') || 'none'} · Workouts: {selected.data.workouts.length} · Check-ins: {selected.data.checkins.length} · Cardio: {cardioCreditedSum(selected.data.cardio)} min</p>
+          {(() => {
+            const parts = [(selected.data.reminderEmail || '').trim(), (selected.data.reminderPhone || '').trim()].filter(Boolean);
+            const emailOk = selected.data.reminderEmailOk === true;
+            const textOk = selected.data.reminderTextOk === true;
+            if (parts.length === 0 && !emailOk && !textOk) return <p className="small">Reminders: none given yet.</p>;
+            return <p className="small">Reminders: {parts.length ? parts.join(' · ') : 'no contact given'} (email reminders: {emailOk ? 'on' : 'off'}, text reminders: {textOk ? 'on' : 'off'})</p>;
+          })()}
           <p className="small"><strong>Check-in preference: {checkinPreferenceText(selected.data).replace('Your check-ins: ', '')}</strong></p>
           <div className="card">
             <h4 style={{ margin: '0 0 4px' }}>Change this client's check-ins</h4>
@@ -370,7 +377,7 @@ export default function Coach({ ctx }: { ctx: Ctx }) {
 
           <div className="card">
             <h4 style={{ margin: '0 0 4px' }}>Retests to review</h4>
-            <p className="small muted">A client cannot always see their own imbalance, so no retest moves a phase until you review it. Approve a clean one and the phase, corrective steps and +20 XP apply. Not yet leaves the phase put. If you need to see the movement, ask for a form-check clip in Messages, or watch an assessment video below.</p>
+            <p className="small muted">A client cannot always see their own imbalance, so no retest moves a phase until you review it. Approve a clean one and the phase, corrective steps and +20 XP apply. Not yet leaves the phase put. If you need to see the movement, ask for a form-check clip in Messages, or watch an assessment video below. Video: the client emails it to activelifepersonal@gmail.com – check there if you need to see the movement.</p>
             {pendingRetests(selected.data).length === 0 && (
               <p className="small"><strong>No retests waiting for review.</strong></p>
             )}
@@ -382,7 +389,7 @@ export default function Coach({ ctx }: { ctx: Ctx }) {
               return (
                 <div key={`${w}-${String(r.date)}`} style={{ borderTop: '1px solid #d7e3ee', padding: '8px 0' }}>
                   <p className="small" style={{ margin: '2px 0' }}><strong>{weekLabel(w)} retest</strong> · {new Date(String(r.date)).toLocaleDateString()}</p>
-                  <p className="small" style={{ margin: '2px 0' }}>Balance: {balL}s left, {balR}s right{base ? ` (was ${base.balanceLeftSec}s left, ${base.balanceRightSec}s right)` : ''}.</p>
+                  <p className="small" style={{ margin: '2px 0' }}>Balance: {balL}s left, {balR}s right{base && ((Number(base.balanceLeftSec || 0) > 0) || (Number(base.balanceRightSec || 0) > 0)) ? ` (was ${base.balanceLeftSec}s left, ${base.balanceRightSec}s right)` : ''}.</p>
                   <p className="small" style={{ margin: '2px 0' }}>Client said: {(r as { clean?: boolean }).clean ? 'I think my movement looks clean.' : 'I did not say my movement looks clean.'}</p>
                   <p className="small muted" style={{ margin: '2px 0' }}>Approving a clean one moves them to Phase {retestNextPhase(selected.data, w)}.</p>
                   <div className="row">

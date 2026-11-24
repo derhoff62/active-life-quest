@@ -1823,19 +1823,18 @@ export default function GuardianAvatar({
                   <rect x={handLx - 3} y="40" width="6" height="44" rx="3" fill={equippedWeapon.id === 'epic-excalibur' ? GOLD : STEEL} stroke={weaponTier ?? STEEL_DARK} strokeWidth="2" />
                   <rect x={handLx - 1} y="42" width="1.8" height="38" fill="#fff" opacity="0.7" />
                   <rect x={handLx - 10} y="82" width="20" height="6" rx="3" fill={weaponTier ?? GOLD} stroke={GOLD_DARK} strokeWidth="1.5" />
-                  <rect x={handLx - 4.5} y="88" width="9" height="13" rx="3" fill={WOOD} />
-                  {/* CROTCH GLOW FIX (Derek, Nov 23 10:18 PM: "make it
-                      so it doesn't look like the avatars crotch is
-                      glowing"): the pommel gem used to sit at
-                      (handLx,101) with a r12 glow disc. After the
-                      -12° rotation about (handLx,68) that renders at
-                      ~(handLx+7,100) — just below the belt, over the
-                      left leg top, and the glow disc spanned the gap
-                      between the legs. The gem now sits on the LEFT
-                      TIP of the crossguard (handLx-9,85), clearly on
-                      the sword and clear of the body, and the glow
-                      disc is GONE — a sword pommel does not glow. */}
-                  <circle cx={handLx - 9} cy="85" r="3.5" fill={weaponTier ?? gem} stroke="#fff" strokeWidth="1.5" />
+                  <rect x={handLx - 4.5} y="88" width="9" height="8" rx="3" fill={WOOD} />
+                  {/* SWORD BOTTOM FIX (Derek, Nov 24 7:58 AM): same as
+                      the class sword — the gem sat on the crossguard
+                      tip (handLx-9,85), rendering at ~(handLx-5,86),
+                      a blue dot floating left of the fist, while the
+                      bare grip bottom dangled at ~(handLx+7,100).
+                      Grip shortened to end at y96, gold pommel cap,
+                      gem set in the cap at (handLx,97.8), rendering
+                      at ~(handLx+6,97) on the grip axis just below
+                      the fist. NO glow disc on the pommel. */}
+                  <rect x={handLx - 5.5} y="95" width="11" height="5.5" rx="2.5" fill={weaponTier ?? GOLD} stroke={GOLD_DARK} strokeWidth="1.5" />
+                  <circle cx={handLx} cy="97.8" r="3" fill={weaponTier ?? gem} stroke="#fff" strokeWidth="1.5" />
                 </g>
               )}
               {equippedWeaponKind === 'dagger' && (
@@ -1921,20 +1920,27 @@ export default function GuardianAvatar({
                 <rect x={handLx - 10} y="82" width="20" height="6" rx="3" fill={GOLD} stroke={GOLD_DARK} strokeWidth="1.5" />
                 {/* Grip, BOLDER wrap — the old thin lines were invisible
                     at preview size live (grip read as solid brown). */}
-                <rect x={handLx - 4.5} y="88" width="9" height="13" rx="3" fill={WOOD} />
-                <path d={`M${handLx - 4.5} 90 L${handLx + 4.5} 92 M${handLx - 4.5} 94 L${handLx + 4.5} 96 M${handLx - 4.5} 98 L${handLx + 4.5} 100`} stroke={WOOD_DARK} strokeWidth="2.5" />
-                {/* Sword pommel gem — CROTCH GLOW FIX (Derek, Nov 23
-                    10:18 PM): the gem used to sit at (handLx,101)
-                    with a r12 glow disc. After the -48° pose rotation
-                    about (handLx,90) that renders at ~(handLx+8,97)
-                    — just below the belt, over the left leg top — and
-                    the glow disc (r12, pulsing to r14.4) spanned
-                    x75-104, y83-112, covering the gap between the
-                    legs: a glowing crotch. The gem now sits on the
-                    LEFT TIP of the crossguard (handLx-9,85), clearly
-                    on the sword and clear of the body, and the glow
-                    disc is GONE — a sword pommel does not glow. */}
-                <circle cx={handLx - 9} cy="85" r="3.5" fill={gem} stroke="#fff" strokeWidth="1.5" />
+                <rect x={handLx - 4.5} y="88" width="9" height="8" rx="3" fill={WOOD} />
+                <path d={`M${handLx - 4.5} 90 L${handLx + 4.5} 92 M${handLx - 4.5} 93 L${handLx + 4.5} 95`} stroke={WOOD_DARK} strokeWidth="2.5" />
+                {/* Sword pommel — SWORD BOTTOM FIX (Derek, Nov 24
+                    7:58 AM: "The bottom of the sword got moved to a
+                    weird spot"). The crotch-glow fix moved the gem to
+                    the LEFT TIP of the crossguard (handLx-9,85), but
+                    after the -48° pose rotation that renders at
+                    ~(handLx-10,93) — ~10 units left and ~6 below the
+                    fist, hanging off the end of a 6-unit-thick bar, so
+                    it read as a blue dot floating left of the hand.
+                    And the grip bottom was a bare brown stub rendering
+                    at ~(handLx+8,97), dangling down-right toward the
+                    belt. The gem belongs on the POMMEL, on the sword
+                    axis just below the fist: grip shortened to end at
+                    y96, gold pommel cap at y95-100.5, gem set in the
+                    cap at (handLx,97.8), rendering at ~(handLx+6,95)
+                    — on the grip axis, attached via cap and grip to
+                    the hand. NO glow disc: a pommel gem is solid, and
+                    the old r12 disc is what glowed in the crotch. */}
+                <rect x={handLx - 5.5} y="95" width="11" height="5.5" rx="2.5" fill={GOLD} stroke={GOLD_DARK} strokeWidth="1.5" />
+                <circle cx={handLx} cy="97.8" r="3" fill={gem} stroke="#fff" strokeWidth="1.5" />
               </g>
               )}
             </g>

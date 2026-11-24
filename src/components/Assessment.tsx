@@ -33,7 +33,7 @@ export default function Assessment({ ctx }: { ctx: Ctx }) {
   const [focus, setFocus] = useState<Record<string, number>>(doc.focus || {});
   const [socialPerm, setSocialPerm] = useState<boolean>(doc.socialPermission || false);
   const [retestWeek, setRetestWeek] = useState(4);
-  const [retestClean, setRetestClean] = useState(true);
+  const [retestClean, setRetestClean] = useState(false);
   const [retestBalL, setRetestBalL] = useState('');
   const [retestBalR, setRetestBalR] = useState('');
   const [retestMsg, setRetestMsg] = useState('');
@@ -189,7 +189,7 @@ export default function Assessment({ ctx }: { ctx: Ctx }) {
           <p className="muted small">Total time: 30 to 45 minutes, goals and history plus the movement screen. The first assessment earns 60 XP.</p>
           {result.findings.length === 0 && <p>Your screen was clean. No corrective templates were flagged.</p>}
           {result.findings.length > 0 && <p>Movement patterns to work on: {result.findings.map((f) => FINDING_LABELS.find((x) => x.id === f)?.label).join(', ')}.</p>}
-          <p>Balance baseline: {result.balanceLeftSec}s left, {result.balanceRightSec}s right. This is a general balance check, not a formal test.</p>
+          <p>Balance baseline: {(result.balanceLeftSec || 0) > 0 || (result.balanceRightSec || 0) > 0 ? `${result.balanceLeftSec}s left, ${result.balanceRightSec}s right. This is a general balance check, not a formal test.` : 'not set yet. This is a general balance check, not a formal test.'}</p>
           <p>Your equipment: Workouts swap out moves you cannot do with this gear.</p>
           <div className="equip-list">
             {(doc.equipment && doc.equipment.length > 0 ? doc.equipment : DEFAULT_EQUIPMENT).map((e) => (
@@ -226,14 +226,15 @@ export default function Assessment({ ctx }: { ctx: Ctx }) {
           </div>
           <label>Balance now (seconds each side, general check)</label>
           <div className="grid2">
-            <input inputMode="numeric" value={retestBalL} onChange={(e) => setRetestBalL(e.target.value)} placeholder={`Left (was ${result.balanceLeftSec}s)`} />
-            <input inputMode="numeric" value={retestBalR} onChange={(e) => setRetestBalR(e.target.value)} placeholder={`Right (was ${result.balanceRightSec}s)`} />
+            <input inputMode="numeric" value={retestBalL} onChange={(e) => setRetestBalL(e.target.value)} placeholder={(result.balanceLeftSec || 0) > 0 || (result.balanceRightSec || 0) > 0 ? `Left (was ${result.balanceLeftSec}s)` : 'Left (no baseline yet)'} />
+            <input inputMode="numeric" value={retestBalR} onChange={(e) => setRetestBalR(e.target.value)} placeholder={(result.balanceLeftSec || 0) > 0 || (result.balanceRightSec || 0) > 0 ? `Right (was ${result.balanceRightSec}s)` : 'Right (no baseline yet)'} />
           </div>
           <label style={{ display: 'flex', gap: 10, alignItems: 'flex-start', fontWeight: 400 }}>
             <input type="checkbox" checked={retestClean} onChange={(e) => setRetestClean(e.target.checked)} style={{ width: 'auto', minHeight: 0, marginTop: 4 }} />
             I think my movement looks clean this time.
           </label>
           <p className="small muted">That is your view, not the verdict. Derek reviews every retest, because you cannot always see your own imbalance. For sharp, new, or worsening pain, see a doctor or physical therapist.</p>
+          <p className="small muted">If Derek asks to see your movement, film your overhead squat and single-leg squat and email the video to activelifepersonal@gmail.com. Put your name and the week in the subject, like: Your Name – Week 4 Retest.</p>
           {retestMsg && <p className="notice">{retestMsg}</p>}
           <button
             className="primary"
@@ -263,6 +264,11 @@ export default function Assessment({ ctx }: { ctx: Ctx }) {
               });
               setRetestMsg(`Retest saved. Derek will review your movement before your phase moves. If he approves it as clean, you move to Phase ${nextPhase} and earn +20 XP.`);
               toast('Retest saved. Waiting for Derek to review it.');
+              // Reset the form so the next retest starts unchecked too:
+              // a leftover tick from this save must never carry over.
+              setRetestClean(false);
+              setRetestBalL('');
+              setRetestBalR('');
             }}
           >
             Save my retest

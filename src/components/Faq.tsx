@@ -43,6 +43,22 @@ export default function Faq({ ctx }: { ctx: Ctx }) {
           />
         </div>
         <p className="small muted">Reduced motion turns off the bobbing, glowing, and shimmer animations. Bigger text is the same switch as the one in Progress.</p>
+        <h4>Reminders</h4>
+        <p>Email and phone for reminders if you forget to log in. We only use them to remind you, never to share them.</p>
+        <label htmlFor="reminder-email">Email for reminders</label>
+        <input id="reminder-email" type="email" value={doc.reminderEmail || ''} onChange={(e) => { update((d) => { d.reminderEmail = e.target.value; }); toast('Reminder contact saved.'); }} />
+        <label htmlFor="reminder-phone">Phone for reminders</label>
+        <input id="reminder-phone" type="tel" value={doc.reminderPhone || ''} onChange={(e) => { update((d) => { d.reminderPhone = e.target.value; if (!e.target.value.trim()) d.reminderTextOk = false; }); toast('Reminder contact saved.'); }} />
+        <label style={{ display: 'flex', gap: 10, alignItems: 'flex-start', margin: 0 }}>
+          <input type="checkbox" checked={doc.reminderEmailOk === true} onChange={(e) => { update((d) => { d.reminderEmailOk = e.target.checked; }); toast('Reminder contact saved.'); }} style={{ width: 'auto', minHeight: 0 }} />
+          <span>Email me a reminder if I forget to log in or check in.</span>
+        </label>
+        <label style={{ display: 'flex', gap: 10, alignItems: 'flex-start', margin: 0 }}>
+          <input type="checkbox" checked={doc.reminderTextOk === true} disabled={!(doc.reminderPhone || '').trim()} onChange={(e) => { update((d) => { d.reminderTextOk = e.target.checked; }); toast('Reminder contact saved.'); }} style={{ width: 'auto', minHeight: 0 }} />
+          <span>Text me a reminder if I forget to log in or check in.</span>
+        </label>
+        {!(doc.reminderPhone || '').trim() && <p className="small muted">Add a phone number above to turn this on.</p>}
+        <p className="small muted">No reminders are sent yet. Derek will turn them on later.</p>
       </div>
       <div className="card gold-frame">
         <h3>Still have a question?</h3>
