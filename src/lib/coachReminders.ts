@@ -11,6 +11,7 @@ import {
   trialEndsAt,
   hasFullAccess,
   pendingRetests,
+  assessmentPending,
   type ProfileDoc,
 } from './store';
 import { nextRetestDueWeek } from './badges';
@@ -23,6 +24,7 @@ export interface CoachReminder {
     | 'trial-ending'
     | 'retest-due'
     | 'retest-review'
+    | 'assessment-review'
     | 'doctor-clearance'
     | 'unfinished-workout'
     | 'balance-skipped'
@@ -75,6 +77,11 @@ export function coachRemindersForClient(data: ProfileDoc, displayName: string): 
   // Unfinished workout still open.
   if (data.sessions) {
     out.push({ kind: 'unfinished-workout', text: `Unfinished workout for ${name}` });
+  }
+  // First assessment waiting for Derek's review: the client's phase
+  // is provisional and Week 1 is locked until Derek approves it.
+  if (assessmentPending(data)) {
+    out.push({ kind: 'assessment-review', text: `${name} sent their first assessment to review` });
   }
   // Retests waiting for Derek's review: a client saved one, and no
   // phase moves until Derek approves it. One reminder per pending retest.

@@ -3,7 +3,7 @@ import type { Ctx } from '../App';
 import * as api from '../lib/api';
 import { PHASES, WORKOUTS, CORE_BALANCE_WORKOUT, WEEK13, CLASS_GOOD_FOR, GOAL_TYPES, splitForDays, foodQuestForDate } from '../lib/data';
 import type { TrainingStyle } from '../lib/data';
-import { phaseForDoc, recoveryScore, levelForXp, titleForLevel, metCompanionIds, currentWeekForDoc, checkinPreferenceText, checkinFrequenciesForMode, normalizeCheckinFrequency, loggedToday, streakDaysForDoc, lastLoggedLabel, cardioCreditedSum, hasApprovedRetest, pendingRetests } from '../lib/store';
+import { phaseForDoc, recoveryScore, levelForXp, titleForLevel, metCompanionIds, currentWeekForDoc, checkinPreferenceText, checkinFrequenciesForMode, normalizeCheckinFrequency, loggedToday, streakDaysForDoc, lastLoggedLabel, cardioCreditedSum, hasApprovedRetest, pendingRetests, assessmentApproved, assessmentPending } from '../lib/store';
 import { cycleForWeek, nextRetestWeek, nextBossWeek, nextRetestLabel, nextBossLabel, isDeloadWeek, challengeForWeek } from '../lib/yearPlan';
 import type { AssessmentVideo } from '../lib/store';
 import GuardianAvatar from './GuardianAvatar';
@@ -240,11 +240,13 @@ export default function Today({ ctx }: { ctx: Ctx }) {
             <h2>{doc.guardian ? `${doc.guardian.name} is ready` : 'Your next step'}</h2>
             {doc.guardian && <p className="small">{CLASS_GOOD_FOR[doc.guardian.classId] || ''}</p>}
             {!doc.assessmentDone && <p>Do the assessment first. It takes 30 to 45 minutes and sets your starting phase.</p>}
-            {doc.assessmentDone && !doc.workouts.length && <p>Your next step: do Day 1. It takes about 10 to 15 minutes.</p>}
-            {doc.assessmentDone && doc.workouts.length > 0 && <p>Your next step: your Phase {phase} workout. {phaseInfo?.name}. Take 1 to 2 rest days between strength days.</p>}
+            {assessmentPending(doc) && <p className="notice">Assessment waiting for Derek to review. Your plan starts once he approves it.</p>}
+            {assessmentApproved(doc) && !doc.workouts.length && <p>Your next step: do Day 1. It takes about 10 to 15 minutes.</p>}
+            {assessmentApproved(doc) && doc.workouts.length > 0 && <p>Your next step: your Phase {phase} workout. {phaseInfo?.name}. Take 1 to 2 rest days between strength days.</p>}
             <div className="row">
               {!doc.assessmentDone && <button className="primary" onClick={() => go('assessment')}>Start the assessment</button>}
-              {doc.assessmentDone && <button className="primary" onClick={() => go('workouts')}>Start my workout</button>}
+              {assessmentPending(doc) && <button className="primary" onClick={() => go('assessment')}>See my assessment</button>}
+              {assessmentApproved(doc) && <button className="primary" onClick={() => go('workouts')}>Start my workout</button>}
               <button onClick={() => go('journey')}>See my journey</button>
             </div>
           </div>

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import type { Ctx } from '../App';
 import * as api from '../lib/api';
 import { ASSESSMENT_EXAMPLES, ASSESSMENT_QUESTIONS, CES_TEMPLATES, CONTRAINDICATIONS, DEFAULT_EQUIPMENT, EQUIPMENT_NOTES, EQUIPMENT_OPTIONS, FOCUS_AREAS, recommendPhase } from '../lib/data';
-import { currentWeekForDoc, bestBalanceSec, lastLoggedLabel, hasApprovedRetest, pendingRetests, retestStatus, retestNextPhase } from '../lib/store';
+import { currentWeekForDoc, bestBalanceSec, lastLoggedLabel, hasApprovedRetest, pendingRetests, retestStatus, retestNextPhase, assessmentStatus } from '../lib/store';
 import { RETEST_WEEKS, weekLabel } from '../lib/yearPlan';
 import type { FindingId, FormRating } from '../lib/types';
 import ExampleVideo from './ExampleVideo';
@@ -121,6 +121,9 @@ export default function Assessment({ ctx }: { ctx: Ctx }) {
         reason: rec.reason,
       };
       d.assessmentDone = true;
+      // The first assessment is provisional until Derek reviews it in
+      // Coach. A retake re-submits it for review too.
+      d.assessmentStatus = 'pending';
       // PAR-Q answers are health flags too: a yes to any of them is saved
       // on the profile so Derek sees it, not thrown away.
       d.healthFlags = [...new Set([...flags, ...parq])];
@@ -144,7 +147,7 @@ export default function Assessment({ ctx }: { ctx: Ctx }) {
     });
     setDone(true);
     setRetaking(false);
-    toast(firstTime ? 'Assessment done. +60 XP.' : 'Assessment updated.');
+    toast(firstTime ? 'Assessment saved. Derek will review your movement before your plan starts. +60 XP.' : 'Assessment saved. Derek will review your movement before your plan starts.');
   }
 
   function startRetake() {
@@ -181,12 +184,20 @@ export default function Assessment({ ctx }: { ctx: Ctx }) {
     const templates = CES_TEMPLATES.filter((t) => result.findings.includes(t.id));
     // Week 13 only pops up after the Week 12 retest is approved, same as Today.
     const week12Done = hasApprovedRetest(doc, 12);
+    const aStatus = assessmentStatus(doc);
     return (
       <div>
         <div className="card gold-frame">
-          <h2>Your assessment is done</h2>
-          <p><strong>Starting phase: Phase {result.startingPhase}.</strong> {result.reason}</p>
+          <h2>{aStatus === 'approved' ? 'Your assessment is done' : 'Assessment saved'}</h2>
+          <p><strong>Starting phase: Phase {result.startingPhase}{aStatus === 'pending' ? ' (provisional)' : ''}.</strong> {result.reason}</p>
+          {aStatus === 'pending' && (
+            <p className="notice">Assessment saved. Derek will review your movement before your plan starts. Your workouts unlock once he approves it.</p>
+          )}
+          {aStatus === 'not-yet' && (
+            <p className="notice">Keep working on your patterns. Derek will check again. Retake the assessment below when you are ready, and it goes back to Derek for review.</p>
+          )}
           <p className="muted small">Total time: 30 to 45 minutes, goals and history plus the movement screen. The first assessment earns 60 XP.</p>
+          <p className="small muted">If Derek asks to see your movement, film your overhead squat and single-leg squat and email the video to activelifepersonal@gmail.com. Put your name and the week in the subject, like: Your Name – Week 1 Assessment.</p>
           {result.findings.length === 0 && <p>Your screen was clean. No corrective templates were flagged.</p>}
           {result.findings.length > 0 && <p>Movement patterns to work on: {result.findings.map((f) => FINDING_LABELS.find((x) => x.id === f)?.label).join(', ')}.</p>}
           <p>Balance baseline: {(result.balanceLeftSec || 0) > 0 || (result.balanceRightSec || 0) > 0 ? `${result.balanceLeftSec}s left, ${result.balanceRightSec}s right. This is a general balance check, not a formal test.` : 'not set yet. This is a general balance check, not a formal test.'}</p>
@@ -239,6 +250,12 @@ export default function Assessment({ ctx }: { ctx: Ctx }) {
           <button
             className="primary"
             onClick={() => {
+              // Retests open only after Derek approves the first
+              // assessment: a pending client has no confirmed phase yet.
+              if (aStatus !== 'approved') {
+                setRetestMsg('Derek reviews your first assessment before retests open. Your workouts unlock once he approves it.');
+                return;
+              }
               // One retest per week, in order, across all four cycles.
               // Saving Week 8 before Week 4, or the same week twice, used
               // to hand out +20 XP and a phase jump every tap. A saved

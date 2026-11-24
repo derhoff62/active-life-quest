@@ -3,7 +3,7 @@ import type { Ctx } from '../App';
 import { WORKOUTS, CORE_BALANCE_WORKOUT, REFERENCE_TRACKS, PHASES, PHASE_WEEKLY_SETS, PHASE_VOLUME_RANGE, VOLUME_MUSCLES, weeklyVolumeForSplit, filterGroupForExercise, exerciseNeeds, daysForTime, splitForDays, TRAINING_STYLES, CES_TEMPLATES, EQUIPMENT_NOTES, effectiveEquipment, resolveExercise, findExerciseByName, CLASS_WORKOUT_FOCUS, applyClassFocus, GOAL_FINISHERS } from '../lib/data';
 import type { TrainingStyle, FilterGroup } from '../lib/data';
 import type { ExerciseFeedback } from '../lib/store';
-import { phaseForDoc, hasFullAccess, metCompanionIds, lastTimeFor, awardBadges, daysInMonthSet, currentWeekForDoc, hasApprovedRetest, hasCleanApprovedRetest } from '../lib/store';
+import { phaseForDoc, hasFullAccess, metCompanionIds, lastTimeFor, awardBadges, daysInMonthSet, currentWeekForDoc, hasApprovedRetest, hasCleanApprovedRetest, assessmentApproved, assessmentPending } from '../lib/store';
 import { cardioThisWeek } from '../lib/badges';
 import BackToTop from './BackToTop';
 import { cycleForWeek, nextRetestWeek, nextRetestLabel, isDeloadWeek } from '../lib/yearPlan';
@@ -143,7 +143,7 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
     (full || w.id === 'day1-first') &&
     w.exercises.every((e) => !resolveExercise(e, doc.equipment).unavailable);
   const best: Workout | null = useMemo(() => {
-    if (!doc.assessmentDone || isRestDay) return null;
+    if (!assessmentApproved(doc) || isRestDay) return null;
     const candidates = WORKOUTS.filter(unlocked);
     if (!candidates.length) return null;
     if (doc.workouts.length === 0) {
@@ -164,7 +164,7 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
     const pool = fits.length ? fits : candidates;
     return [...pool].sort((a, b) => (b.phase - a.phase) || (b.minutes - a.minutes))[0];
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [doc.assessmentDone, isRestDay, timeMin, phase, full, doc.workouts.length, doc.equipment, daysPerWeek, planned]);
+  }, [doc.assessmentDone, doc.assessmentStatus, isRestDay, timeMin, phase, full, doc.workouts.length, doc.equipment, daysPerWeek, planned]);
   const myTemplates = CES_TEMPLATES.filter((t) => doc.assessment?.findings.includes(t.id));
   const startedAt = useRef(Date.now());
 
@@ -193,6 +193,10 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
   function startWorkout(w: Workout) {
     if (!doc.assessmentDone) {
       setNotice('Do the assessment first. It sets your starting phase.');
+      return;
+    }
+    if (!assessmentApproved(doc)) {
+      setNotice('Assessment waiting for Derek to review. Your workouts unlock once he approves it.');
       return;
     }
     if (w.phase === 4 && !hasApprovedRetest(doc, 12)) {
@@ -532,6 +536,7 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
           );
         })()}
         {!doc.assessmentDone && <div className="notice">Do the assessment first. It sets your starting phase.</div>}
+        {assessmentPending(doc) && <div className="notice">Assessment waiting for Derek to review. Your workouts unlock once he approves it.</div>}
         {notice && (
           <div className="notice">
             {notice}
@@ -581,6 +586,7 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
           ))}
         </div>
         {!doc.assessmentDone && <p>Do the assessment first. It sets your starting phase, and then your best workout shows here.</p>}
+        {assessmentPending(doc) && <p>Assessment waiting for Derek to review. Your workouts unlock once he approves it.</p>}
         {doc.assessmentDone && isRestDay && (
           <div>
             <p><strong>Today is an active rest day.</strong> {style === 'ppl' || style === 'upper-lower' ? 'You trained those same muscles yesterday, so they rest today. A different muscle group is next.' : 'You trained yesterday. Take 1 to 2 rest days between strength days.'}</p>

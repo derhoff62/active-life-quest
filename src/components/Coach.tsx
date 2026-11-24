@@ -4,7 +4,7 @@ import * as api from '../lib/api';
 import { CES_TEMPLATES } from '../lib/data';
 import Metrics, { latestMetric, TrendChart, metricSeries } from './Metrics';
 import type { ProfileDoc } from '../lib/store';
-import { checkinPreferenceText, checkinFrequenciesForMode, normalizeCheckinFrequency, normalizeProfile, phaseForDoc, recoveryScoreForDoc, cardioCreditedSum, pendingRetests, applyRetestReview, hasCleanApprovedRetest, retestNextPhase } from '../lib/store';
+import { checkinPreferenceText, checkinFrequenciesForMode, normalizeCheckinFrequency, normalizeProfile, phaseForDoc, recoveryScoreForDoc, cardioCreditedSum, pendingRetests, applyRetestReview, hasCleanApprovedRetest, retestNextPhase, applyAssessmentReview, assessmentPending, assessmentStatus } from '../lib/store';
 import { weekLabel } from '../lib/yearPlan';
 import { coachReminders, retestWeeksDue } from '../lib/coachReminders';
 import GuardianEmote from './GuardianEmote';
@@ -36,6 +36,7 @@ export default function Coach({ ctx }: { ctx: Ctx }) {
   const [cesNotes, setCesNotes] = useState('');
   const [phase5Msg, setPhase5Msg] = useState('');
   const [retestMsg, setRetestMsg] = useState('');
+  const [assessmentMsg, setAssessmentMsg] = useState('');
   const [cesSaved, setCesSaved] = useState('');
   const [videoMsg, setVideoMsg] = useState('');
   const [nudgeMsg, setNudgeMsg] = useState('');
@@ -373,6 +374,62 @@ export default function Coach({ ctx }: { ctx: Ctx }) {
               );
             })()}
             <Metrics doc={selected.data} />
+          </div>
+
+          <div className="card">
+            <h4 style={{ margin: '0 0 4px' }}>First assessment to review</h4>
+            <p className="small muted">A client cannot always see their own imbalance, so the first assessment stays provisional until you review it. Approve it and their starting phase confirms and Week 1 unlocks. Not yet leaves the phase provisional and the client can re-submit. No XP here. Video: the client emails it to activelifepersonal@gmail.com, subject like Your Name – Week 1 Assessment. Check there if you need to see the movement.</p>
+            {!selected.data.assessmentDone && (
+              <p className="small"><strong>No assessment yet.</strong></p>
+            )}
+            {selected.data.assessmentDone && !assessmentPending(selected.data) && (
+              <p className="small"><strong>{assessmentStatus(selected.data) === 'approved' ? 'Assessment approved.' : 'Assessment marked not yet. The client can re-submit.'}</strong></p>
+            )}
+            {assessmentPending(selected.data) && selected.data.assessment && (
+              <div style={{ borderTop: '1px solid #d7e3ee', padding: '8px 0' }}>
+                <p className="small" style={{ margin: '2px 0' }}><strong>First assessment</strong> · Starting phase: Phase {selected.data.assessment.startingPhase}</p>
+                <p className="small" style={{ margin: '2px 0' }}>Movement patterns: {selected.data.assessment.findings.length > 0 ? selected.data.assessment.findings.map((f) => CES_TEMPLATES.find((t) => t.id === f)?.plainName || f).join(', ') : 'none flagged, clean screen'}.</p>
+                <p className="small" style={{ margin: '2px 0' }}>Balance: {selected.data.assessment.balanceLeftSec}s left, {selected.data.assessment.balanceRightSec}s right.</p>
+                <p className="small" style={{ margin: '2px 0' }}>Form: squat {selected.data.assessment.squatForm}, hinge {selected.data.assessment.hingeForm}, bench {selected.data.assessment.benchForm}. Experience: {selected.data.assessment.experience}.</p>
+                <p className="small" style={{ margin: '2px 0' }}>Health flags: {selected.data.healthFlags.length > 0 ? selected.data.healthFlags.join(', ') : 'none'}. Doctor cleared: {selected.data.doctorCleared ? 'yes' : 'no'}.</p>
+                <div className="row">
+                  <button
+                    className="primary"
+                    disabled={busy === 'assessment-review'}
+                    onClick={() => withBusy('assessment-review', async () => {
+                      try {
+                        if (api.getMode() === 'server') await api.coachReviewAssessment(selected.id, true);
+                        if (api.getMode() === 'local') update((d) => { applyAssessmentReview(d, true); });
+                        const patch = (d: ProfileDoc) => { const next = JSON.parse(JSON.stringify(d)) as ProfileDoc; applyAssessmentReview(next, true); return next; };
+                        setClients((prev) => prev.map((cl) => (cl.id === selected.id ? { ...cl, data: patch(cl.data) } : cl)));
+                        setSelected((prev) => (prev ? { ...prev, data: patch(prev.data) } : prev));
+                        setAssessmentMsg(`First assessment approved. Phase ${selected.data.assessment?.startingPhase} confirms and Week 1 unlocks.`);
+                        toast('Assessment approved.');
+                      } catch { setAssessmentMsg('That could not be saved. Try again.'); }
+                    })}
+                  >
+                    {busy === 'assessment-review' ? 'Saving…' : 'Approve'}
+                  </button>
+                  <button
+                    disabled={busy === 'assessment-review'}
+                    onClick={() => withBusy('assessment-review', async () => {
+                      try {
+                        if (api.getMode() === 'server') await api.coachReviewAssessment(selected.id, false);
+                        if (api.getMode() === 'local') update((d) => { applyAssessmentReview(d, false); });
+                        const patch = (d: ProfileDoc) => { const next = JSON.parse(JSON.stringify(d)) as ProfileDoc; applyAssessmentReview(next, false); return next; };
+                        setClients((prev) => prev.map((cl) => (cl.id === selected.id ? { ...cl, data: patch(cl.data) } : cl)));
+                        setSelected((prev) => (prev ? { ...prev, data: patch(prev.data) } : prev));
+                        setAssessmentMsg('First assessment marked not yet. The client can re-submit it.');
+                        toast('Assessment marked not yet.');
+                      } catch { setAssessmentMsg('That could not be saved. Try again.'); }
+                    })}
+                  >
+                    {busy === 'assessment-review' ? 'Saving…' : 'Not yet'}
+                  </button>
+                </div>
+              </div>
+            )}
+            {assessmentMsg && <p className="ok">{assessmentMsg}</p>}
           </div>
 
           <div className="card">

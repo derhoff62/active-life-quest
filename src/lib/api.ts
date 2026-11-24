@@ -234,6 +234,16 @@ export async function coachReviewRetest(userId: string, week: number, approved: 
     body: JSON.stringify({ userId, week, approved }),
   });
 }
+
+// Coach-only: review a pending first assessment. Approve confirms the
+// provisional phase and unlocks Week 1. Not yet leaves the phase
+// provisional and the client can re-submit. No XP here.
+export async function coachReviewAssessment(userId: string, approved: boolean) {
+  return req<{ ok: boolean; approved: boolean }>('/api/coach/assessment', {
+    method: 'POST',
+    body: JSON.stringify({ userId, approved }),
+  });
+}
 export async function coachSaveCesSheet(userId: string, marks: string[], notes: string, sides?: Record<string, 'right' | 'left' | 'both'>, davies?: { right: number | null; left: number | null }) {
   return req<{ ok: boolean }>('/api/coach/ces-sheet', {
     method: 'POST',

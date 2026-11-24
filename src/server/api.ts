@@ -1455,6 +1455,39 @@ app.post("/api/coach/retest", async (c) => {
   return c.json({ ok: true, week, approved });
 });
 
+// Coach-only: review a pending first assessment. Approve confirms the
+// provisional starting phase and unlocks Week 1. Not yet leaves the
+// phase provisional and the client can re-submit. No XP here: the +60
+// XP for the first assessment is earned on save. A profile with no
+// assessmentStatus was saved before review existed and counts as
+// approved, so it is never reviewable here.
+app.post("/api/coach/assessment", async (c) => {
+  const db = getDb(c);
+  if (!db) {
+    return dbMissing(c);
+  }
+  if (!(await hasCoachSession(c, db))) {
+    return c.json({ error: "Coach sign-in is required." }, 401);
+  }
+  const body = await readJson(c);
+  const userId = body && typeof body.userId === "string" ? body.userId : "";
+  const approved = body && body.approved === true;
+  if (!userId) {
+    return c.json({ error: "Pick a client." }, 400);
+  }
+  const doc = await getProfileDoc(db, userId);
+  if (!doc) {
+    return c.json({ error: "Client not found." }, 404);
+  }
+  if (doc.assessmentDone !== true || doc.assessmentStatus !== "pending") {
+    return c.json({ error: "That assessment is not waiting for review." }, 400);
+  }
+  doc.assessmentStatus = approved ? "approved" : "not-yet";
+  doc.assessmentReviewedAt = new Date().toISOString();
+  await saveProfileDoc(db, userId, doc);
+  return c.json({ ok: true, approved });
+});
+
 // Coach-only: save the CES assessment check sheet to the client file.
 app.post("/api/coach/ces-sheet", async (c) => {
   const db = getDb(c);

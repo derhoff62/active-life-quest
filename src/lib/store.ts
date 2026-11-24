@@ -107,6 +107,12 @@ export interface ProfileDoc {
   storySkipped: boolean;
   assessment: AssessmentResult | null;
   assessmentDone: boolean;
+  // First-assessment review (Derek, Nov 24, 2026): the first assessment
+  // is provisional until Derek reviews it in Coach. Legacy profiles
+  // saved before this field existed have no status and count as
+  // approved, so existing clients are never locked out.
+  assessmentStatus?: 'pending' | 'approved' | 'not-yet';
+  assessmentReviewedAt?: string;
   healthFlags: string[];
   contraindications: string[];
   body: { sex: string; heightIn: number | null; weightLb: number | null; goalWeightLb: number | null; age: number | null; activity: string };
@@ -279,6 +285,15 @@ export function normalizeProfile(raw: unknown): ProfileDoc {
   ] as const;
   for (const f of arrFields) {
     if (!Array.isArray((r as Record<string, unknown>)[f])) (out as unknown as Record<string, unknown>)[f] = [];
+  }
+  // First assessment saved before coach review existed has no status:
+  // it was saved under the old instant-place system, so it counts as
+  // approved. A status that is not one of the three known values is
+  // treated the same way, never as pending. A profile with no
+  // assessment yet keeps no status.
+  if (out.assessmentDone) {
+    const s = (out as { assessmentStatus?: string }).assessmentStatus;
+    if (s !== 'pending' && s !== 'approved' && s !== 'not-yet') out.assessmentStatus = 'approved';
   }
   // Retests saved before coach review existed have no status: they were
   // saved under the old instant-advance system, so they count as
@@ -465,6 +480,42 @@ export function checkinPreferenceText(doc: ProfileDoc): string {
 export function phaseForDoc(doc: ProfileDoc): number {
   if (doc.phaseOverride) return doc.phaseOverride;
   return doc.assessment?.startingPhase ?? 1;
+}
+
+// ---------- Coach-reviewed first assessment (Derek, Nov 24, 2026) ----------
+// The first assessment used to place the client in a phase the moment
+// they tapped Finish, with no Derek review. Now the placement is
+// PROVISIONAL: the client sees their starting phase, but workouts do
+// not unlock until Derek approves the assessment in Coach. Approve
+// confirms the placement and opens Week 1. Not yet leaves the
+// placement provisional and the client can re-submit the assessment.
+// No XP here: the +60 XP for the first assessment is earned on save,
+// retests are +20 only on approve.
+export type AssessmentStatus = 'pending' | 'approved' | 'not-yet';
+
+export function assessmentStatus(doc: ProfileDoc): AssessmentStatus {
+  const s = (doc as { assessmentStatus?: string }).assessmentStatus;
+  if (s === 'pending' || s === 'approved' || s === 'not-yet') return s;
+  return doc.assessmentDone ? 'approved' : 'pending';
+}
+
+export function assessmentApproved(doc: ProfileDoc): boolean {
+  return doc.assessmentDone && assessmentStatus(doc) === 'approved';
+}
+
+export function assessmentPending(doc: ProfileDoc): boolean {
+  return doc.assessmentDone && assessmentStatus(doc) === 'pending';
+}
+
+/** Apply Derek's review of a pending first assessment. Returns false
+ * when there is no pending assessment (already reviewed, or never
+ * saved). Approve confirms the provisional phase and opens Week 1.
+ * Not yet keeps the phase provisional; the client re-submits. */
+export function applyAssessmentReview(doc: ProfileDoc, approved: boolean): boolean {
+  if (!doc.assessmentDone || assessmentStatus(doc) !== 'pending') return false;
+  doc.assessmentStatus = approved ? 'approved' : 'not-yet';
+  doc.assessmentReviewedAt = new Date().toISOString();
+  return true;
 }
 
 // ---------- Coach-reviewed retests (Derek, Nov 24, 2026) ----------

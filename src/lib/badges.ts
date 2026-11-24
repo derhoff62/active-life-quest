@@ -36,6 +36,8 @@ import {
   loggedToday,
   phaseForDoc,
   cardioCreditedSum,
+  assessmentApproved,
+  assessmentPending,
   type ProfileDoc,
 } from './store';
 
@@ -65,7 +67,9 @@ export function unreadCount(doc: ProfileDoc): number {
 }
 
 export function workoutDueToday(doc: ProfileDoc): boolean {
-  if (!doc.assessmentDone) return false;
+  // Workouts are locked until Derek approves the first assessment, so
+  // a pending client is never told a workout is due.
+  if (!assessmentApproved(doc)) return false;
   if (doc.lastWorkoutDate === todayStr()) return false;
   // Rest is per muscle group: a full-body day yesterday means today is a
   // rest day; a Push/Pull/Legs, Upper/Lower, or short session yesterday
@@ -154,7 +158,7 @@ export function tabBadges(doc: ProfileDoc): Record<string, TabBadge> {
 
   return {
     today: todayCount > 0 ? { count: todayCount } : null,
-    assessment: !doc.assessmentDone || retestDue(doc) || week13Available ? {} : null,
+    assessment: !doc.assessmentDone || assessmentPending(doc) || retestDue(doc) || week13Available ? {} : null,
     workouts: workoutDue ? {} : null,
     cardio: doc.assessmentDone && cardioThisWeek(doc) < 150 ? {} : null,
     sleep: doc.assessmentDone && !loggedToday(doc.sleep) ? {} : null,
