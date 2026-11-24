@@ -629,6 +629,15 @@ export function earnedArmorIds(doc: ProfileDoc): string[] {
   add('epic-truthbound-lasso', (doc.sleep || []).length >= 30);
   add('epic-shadowstep-dagger', level >= 12);
   add('epic-feral-claws', bossesBeaten >= 3);
+  // Epic helmets: each unlock is distinct from the epic weapons and
+  // from the other helms (Excalibur is 5 boss rounds, so the Mountain
+  // King asks for 6; no other piece asks for 20 workouts, Level 11,
+  // a 60-second balance hold, or a 30-day check-in streak).
+  add('epic-helm-mountain-king', bossesBeaten >= 6);
+  add('epic-helm-horned-north', workouts.length >= 20);
+  add('epic-helm-dragonlord', level >= 11);
+  add('epic-helm-winged-swift', balanceBest >= 60);
+  add('epic-helm-first-light', checkinStreak >= 30);
   return [...out];
 }
 

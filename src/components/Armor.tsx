@@ -489,6 +489,13 @@ export default function Armor({ ctx }: { ctx: Ctx }) {
           <GearCard key={a.id} piece={a} earned={earned.has(a.id) || rarityEarned.has(a.id)} equipped={doc.guardian?.equippedWeaponId === a.id || doc.guardian?.equippedArmorId === a.id} onToggleEquip={() => toggleEquip(a)} />
         ))}
       </div>
+      <div className="card">
+        <h3>Epic helmets</h3>
+        <p className="small muted">Famous helmets, retold. Earned from real milestones, never bought. Equipping one puts a full helmet on your guardian. Legendary and Mythical pieces stay hidden until earned.</p>
+        {bySet('Epic helmets').map((a) => (
+          <GearCard key={a.id} piece={a} earned={earned.has(a.id) || rarityEarned.has(a.id)} equipped={doc.guardian?.equippedWeaponId === a.id || doc.guardian?.equippedArmorId === a.id} onToggleEquip={() => toggleEquip(a)} />
+        ))}
+      </div>
     </div>
   );
 }

@@ -7,9 +7,38 @@
 // fierce in a cartoon way, not scary-realistic. Derek Nov 22: "Things don't
 // have to look friendly" — companions have personality, bosses look stern
 // or fierce, nobody is soft/cute by default. Bosses stay enemies: sterner
-// faces and a red ring. No external images, no AI images.
+// faces and a red ring.
+// Generated images: a trial batch of six (Derek Nov 23, 2026 — companions
+// and bosses need no customization, so static generated portraits are fine
+// here, unlike the guardian). Where GENERATED_COMPANIONS has an image for
+// an id, that image is shown in the same 56x56 slot over the same coloured
+// disc, with the same red ring for bosses; everything else stays SVG.
 import { useId } from 'react';
 import type { ReactNode } from 'react';
+import { GENERATED_COMPANIONS } from '../lib/generatedCompanions';
+
+// Generated portrait in the same 56x56 circular slot as the SVG portraits:
+// the character's coloured disc behind it, the image on top (head-and-
+// shoulders cutout, transparent except the Mirror of Doubt, whose
+// grey-blue mirror glass is its background), and the red ring for bosses.
+function GeneratedPortrait({ src, pal, enemy }: { src: string; pal: Pal; enemy?: boolean }) {
+  return (
+    <div
+      style={{
+        width: 56,
+        height: 56,
+        borderRadius: '50%',
+        overflow: 'hidden',
+        backgroundColor: `${pal.glow}38`,
+        border: enemy ? '2px solid rgba(168,50,50,0.75)' : 'none',
+        boxSizing: 'border-box',
+        flexShrink: 0,
+      }}
+    >
+      <img src={src} alt="" width={56} height={56} style={{ display: 'block', objectFit: 'contain', borderRadius: '50%' }} />
+    </div>
+  );
+}
 
 function shade(hex: string, amount: number): string {
   const n = hex.replace('#', '');
@@ -166,6 +195,8 @@ function FriendlyFace({ stern }: { stern?: boolean }) {
 
 export default function CompanionAvatar({ id }: { id: string }) {
   const pal = PALS[id] ?? PALS.unknown;
+  const generated = GENERATED_COMPANIONS[id];
+  if (generated) return <GeneratedPortrait src={generated} pal={pal} />;
 
   if (id === 'unknown') {
     return (
@@ -450,6 +481,8 @@ export default function CompanionAvatar({ id }: { id: string }) {
 // a red ring, sterner faces, and no friendly smile.
 export function BossAvatar({ id }: { id: string }) {
   const pal = BOSS_PALS[id] ?? BOSS_PALS['the-slump'];
+  const generated = GENERATED_COMPANIONS[id];
+  if (generated) return <GeneratedPortrait src={generated} pal={pal} enemy />;
 
   // Cycle 2 to 4 companions: befriendable people and animals only.
   if (id === 'wren') {

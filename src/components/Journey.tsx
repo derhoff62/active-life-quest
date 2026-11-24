@@ -12,7 +12,11 @@ import BackToTop from './BackToTop';
 // HP. Bosses are challenges you beat, never friends.
 const BOSS_AVATAR: Record<string, string> = {
   'boss-week-4': 'the-slump',
-  'boss-week-8': 'achy-knees-troll',
+  // Week 8 is the Mirror of Doubt round: the generated Mirror portrait is
+  // mapped to this round specifically (Derek Nov 23, 2026). The Mirror is
+  // a display name for the round, not a monster in data.ts — the Achy
+  // Knees Troll stays its own monster in the monster list.
+  'boss-week-8': 'mirror-of-doubt',
   'boss-week-12': 'wobbly-balance-sprite',
   'boss-week-16': 'stiff-hips-goblin',
   'boss-week-20': 'tired-back-beast',

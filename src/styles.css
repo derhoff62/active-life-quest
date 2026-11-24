@@ -250,8 +250,8 @@ details summary { cursor: pointer; font-weight: 600; color: var(--navy); padding
    whole-figure halo — per-gem only, per Derek Nov 22. */
 .guardian-glow-pulse { animation: glow-pulse 1.8s ease-in-out infinite; }
 @keyframes glow-pulse {
-  0%, 100% { opacity: 0.5; }
-  50% { opacity: 1; }
+  0%, 100% { opacity: 0.7; }
+  50% { opacity: 0.95; }
 }
 .guardian-shadow { animation: shadow-pulse 2.4s ease-in-out infinite; transform-origin: center; transform-box: fill-box; }
 @keyframes shadow-pulse {

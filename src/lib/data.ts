@@ -2219,6 +2219,16 @@ export const ARMOR: ArmorPiece[] = [
   { id: 'epic-truthbound-lasso', name: 'Truthbound Lasso', tier: 'Legendary', set: 'Epic weapons', how: 'Log sleep 30 times.', effect: 'A rope that only tells the truth: rest is part of training.' },
   { id: 'epic-shadowstep-dagger', name: 'Shadowstep Dagger', tier: 'Mythical', set: 'Epic weapons', how: 'Reach Level 12.', effect: 'Quick and quiet. Twelve levels of showing up, in one small blade.' },
   { id: 'epic-feral-claws', name: 'Feral Claws', tier: 'Mythical', set: 'Epic weapons', how: 'Defeat 3 boss rounds.', effect: 'Three sharp claws, quick and fierce. For the days you need to fight through.' },
+  // Epic helmets: famous helmets, retold, same rule as the epic
+  // weapons — no movie, show, or brand names anywhere, in UI or
+  // code. Names must include "Helm" so armorKind() in equip.ts
+  // reads them as helms (a "Crown of the ..." name would read as
+  // a crown instead). Legendary and Mythical stay hidden until earned.
+  { id: 'epic-helm-mountain-king', name: 'Helm of the Mountain King', tier: 'Mythical', set: 'Epic helmets', how: 'Defeat 6 boss rounds.', effect: 'A crown of stone and gold, worn by the king under the mountain. Six boss rounds bow to it.' },
+  { id: 'epic-helm-horned-north', name: 'Horned Helm of the North', tier: 'Legendary', set: 'Epic helmets', how: 'Finish 20 workouts.', effect: 'Two curved horns, a cold wind at your back. Twenty workouts of northern grit.' },
+  { id: 'epic-helm-dragonlord', name: 'Helm of the Dragonlord', tier: 'Legendary', set: 'Epic helmets', how: 'Reach Level 11.', effect: 'Scales and fire, tempered into steel. Eleven levels of showing up.' },
+  { id: 'epic-helm-winged-swift', name: 'Winged Helm of the Swift', tier: 'Rare', set: 'Epic helmets', how: 'Beat your best balance hold of 60 seconds.', effect: 'Small wings at the temples. Sixty seconds on one leg, steady as a hawk.' },
+  { id: 'epic-helm-first-light', name: 'Helm of the First Light', tier: 'Mythical', set: 'Epic helmets', how: 'Check in 30 days in a row.', effect: 'Dawn on polished steel. Thirty days of showing up, and the light is yours.' },
 ];
 
 // ---------------------------------------------------------------- NUTRITION

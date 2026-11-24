@@ -176,9 +176,16 @@ export default function GuardianAvatar({
   // dots (r2.4->2.7); they already read on every tone.
   const skinIsDark = skinTone === 'Brown' || skinTone === 'Deep';
   const browCore = skinIsDark ? '#120a04' : HAIR_C;
-  const browHalo = skinIsDark ? '#ffe3c2' : null;
+  // BIGGER FIXES (Derek, Nov 23 10:12 PM, diagnosis Nov 23 10:11 PM):
+  // the Ranger brows/eyes were sub-pixel at the 96px live preview
+  // (brow stroke 1.8 units = 0.86px, glint r0.9 = 0.43px radius), so
+  // the light halo now exists on ALL skin tones for Ranger, not
+  // only Brown/Deep — on Light skin the cream rim is what separates
+  // the dark brow from the light skin at 1-2px. Mouth thickened
+  // for Ranger too (see mouthWidth below).
+  const browHalo = skinIsDark || isRanger ? '#ffe3c2' : null;
   const mouthStroke = skinIsDark ? '#ffe3c2' : '#6b4a3a';
-  const mouthWidth = skinIsDark ? 2.8 : 2.0;
+  const mouthWidth = isRanger ? 3.2 : skinIsDark ? 2.8 : 2.0;
   // Beard edge on dark skin: the old dark outline (#2e1a08) vanished
   // into Deep skin (#54371e) next to beard fill #40260f, so the beard
   // edge gets a light-tan rim on dark tones instead.
@@ -210,6 +217,16 @@ export default function GuardianAvatar({
         equippedWeaponKind === 'hammer' ||
         equippedWeaponKind === 'claws'));
   const equippedArmorKind = equippedArmor ? armorKind(equippedArmor) : null;
+  // FULL HELMET (Derek, Nov 23 10:18 PM: a full helmet that covers
+  // the head when equipped, plus famous ones to unlock). The old
+  // helm was only a thin tier-coloured band across the crown. When
+  // a helm is equipped, the hair / hood / wizard hat are NOT drawn
+  // at all (see the head section below): the helmet replaces them,
+  // on all 3 classes — the Ranger hood and the Spellweaver hat are
+  // class headgear, and the helmet takes their place while it is
+  // equipped. The helmet itself is drawn just before {faceArt}, so
+  // brows, eyes and mouth are drawn AFTER it and stay visible.
+  const helmEquipped = equippedArmorKind === 'helm';
   const equipTier = equippedArmor ? tierColor(equippedArmor.tier) : null;
   const weaponTier = equippedWeapon ? tierColor(equippedWeapon.tier) : null;
   const px = SIZES[size];
@@ -240,30 +257,42 @@ export default function GuardianAvatar({
   // prefers-reduced-motion media query sets animation: none on
   // .guardian-glow-pulse (see styles.css). SMIL <animate> is NOT
   // affected by CSS animation: none or that media query, so the pulse
-  // now also lives in SMIL: each circle's r animates 1 -> 1.4, and
-  // the group's opacity 0.5 -> 1.0. In a normal browser CSS wins
+  // now also lives in SMIL: each circle's r animates 1 -> 1.2, and
+  // the group's opacity 0.7 -> 0.95. In a normal browser CSS wins
   // over SMIL on opacity (same property) and SMIL r still runs —
   // CSS never touches r — so nothing compounds. In a reduced-motion
   // browser CSS is dead and SMIL runs both. Either way dim =
-  // opacity 0.5, r x1.0; bright = opacity 1.0, r x1.4. */
+  // opacity 0.7, r x1.0; bright = opacity 0.95, r x1.2.
+  // TONE-DOWN (Derek, Nov 23 10:13 PM: "The aura is a little too
+  // much now"): radii cut ~25-30% from v2 (chest 20->15, orb 22->17,
+  // shield/arrow 18->14, pommel 16->12, equipped 24->18, cast hand
+  // 14->11), solid core 0.5->0.35, white ring 0.35->0.25, SMIL
+  // radius 1.4->1.2 and opacity 0.5->1.0 to 0.7->0.95 (same in
+  // styles.css). Glow still visible at 96px, just subtler — not
+  // removed, no permanent whole-figure halo. */
   const glowDisc = (cx: number, cy: number, r: number, fillUrl: string, light: string) => (
     <g className="guardian-glow-pulse">
-      <animate attributeName="opacity" values="0.5;1;0.5" keyTimes="0;0.5;1" dur="1.8s" repeatCount="indefinite" calcMode="spline" keySplines="0.42 0 0.58 1;0.42 0 0.58 1" />
+      <animate attributeName="opacity" values="0.7;0.95;0.7" keyTimes="0;0.5;1" dur="1.8s" repeatCount="indefinite" calcMode="spline" keySplines="0.42 0 0.58 1;0.42 0 0.58 1" />
       <circle cx={cx} cy={cy} r={r} fill={fillUrl}>
-        <animate attributeName="r" values={`${r};${r * 1.4};${r}`} keyTimes="0;0.5;1" dur="1.8s" repeatCount="indefinite" calcMode="spline" keySplines="0.42 0 0.58 1;0.42 0 0.58 1" />
+        <animate attributeName="r" values={`${r};${r * 1.2};${r}`} keyTimes="0;0.5;1" dur="1.8s" repeatCount="indefinite" calcMode="spline" keySplines="0.42 0 0.58 1;0.42 0 0.58 1" />
       </circle>
-      <circle cx={cx} cy={cy} r={r * 0.62} fill={light} opacity="0.5">
-        <animate attributeName="r" values={`${r * 0.62};${r * 0.62 * 1.4};${r * 0.62}`} keyTimes="0;0.5;1" dur="1.8s" repeatCount="indefinite" calcMode="spline" keySplines="0.42 0 0.58 1;0.42 0 0.58 1" />
+      <circle cx={cx} cy={cy} r={r * 0.62} fill={light} opacity="0.35">
+        <animate attributeName="r" values={`${r * 0.62};${r * 0.62 * 1.2};${r * 0.62}`} keyTimes="0;0.5;1" dur="1.8s" repeatCount="indefinite" calcMode="spline" keySplines="0.42 0 0.58 1;0.42 0 0.58 1" />
       </circle>
-      <circle cx={cx} cy={cy} r={r * 0.42} fill="#ffffff" opacity="0.35">
-        <animate attributeName="r" values={`${r * 0.42};${r * 0.42 * 1.4};${r * 0.42}`} keyTimes="0;0.5;1" dur="1.8s" repeatCount="indefinite" calcMode="spline" keySplines="0.42 0 0.58 1;0.42 0 0.58 1" />
+      <circle cx={cx} cy={cy} r={r * 0.42} fill="#ffffff" opacity="0.25">
+        <animate attributeName="r" values={`${r * 0.42};${r * 0.42 * 1.2};${r * 0.42}`} keyTimes="0;0.5;1" dur="1.8s" repeatCount="indefinite" calcMode="spline" keySplines="0.42 0 0.58 1;0.42 0 0.58 1" />
       </circle>
     </g>
   );
   const scene: GuardianScene = background ?? CLASS_SCENE[g.classId] ?? 'guardian';
   const isFemale = g.look === 'Female';
-  const browCoreWidth = isRanger ? (isFemale ? 1.8 : 2.2) : isFemale ? 2.4 : 3.0;
-  const browHaloWidth = isRanger ? (isFemale ? 3.8 : 4.4) : isFemale ? 4.6 : 5.2;
+  // BIGGER FIXES (Nov 23 10:12 PM): Ranger brows were 1.8/2.2 units
+  // (0.86px at 96px) — invisible. Now ≥4 units (1.9px) with a halo
+  // 2.4 units wider, so the brow reads as a dark bar rimmed in
+  // light on every skin tone. Eyes r3.0 -> 4.5 (4.3px diameter),
+  // glint r0.9 -> 1.6 (was sub-pixel, 0.43px radius).
+  const browCoreWidth = isRanger ? (isFemale ? 4.2 : 4.6) : isFemale ? 2.4 : 3.0;
+  const browHaloWidth = isRanger ? (isFemale ? 6.6 : 7.0) : isFemale ? 4.6 : 5.2;
   const hair = hairForLook(g.look, g.hair);
   const hasBeard = !isFemale && HAIR_WITH_BEARD.includes(hair);
   const bw = buildWidth(g.build);
@@ -322,7 +351,7 @@ export default function GuardianAvatar({
         'thumbs-up': 'M88.5 20.5 L95.5 19 M104.5 19 L111.5 20.5',
       };
   const eyeCy = isRanger ? 29 : 27.5;
-  const eyeR = isRanger ? 3 : 2.7;
+  const eyeR = isRanger ? 4.5 : 2.7;
   const faceArt = (
     <g>
       {browHalo && (
@@ -333,7 +362,7 @@ export default function GuardianAvatar({
         <path d="M90 24.5 L88.5 22.5 M110 24.5 L111.5 22.5" fill="none" stroke={browCore} strokeWidth="1.8" strokeLinecap="round" />
       )}
       {isFemale && faceId === 'determined' && isRanger && (
-        <path d="M90 26 L88.5 24 M110 26 L111.5 24" fill="none" stroke={browCore} strokeWidth="1.6" strokeLinecap="round" />
+        <path d="M90 26 L88.5 24 M110 26 L111.5 24" fill="none" stroke={browCore} strokeWidth="2.4" strokeLinecap="round" />
       )}
       {faceId === 'celebrate' ? (
         <>
@@ -362,8 +391,8 @@ export default function GuardianAvatar({
           <circle cx="107.5" cy={eyeCy} r={eyeR} fill="#1c2b3a" />
           {isRanger && (
             <g fill="#fff" opacity="0.9">
-              <circle cx="91.3" cy={eyeCy - 1} r="0.9" />
-              <circle cx="106.3" cy={eyeCy - 1} r="0.9" />
+              <circle cx="91" cy={eyeCy - 1.5} r="1.6" />
+              <circle cx="106" cy={eyeCy - 1.5} r="1.6" />
             </g>
           )}
           {faceId === 'determined' && (
@@ -466,6 +495,17 @@ export default function GuardianAvatar({
   // on Guardian legs any more (legSpread 1), so boots keep their
   // size and the angle is not distorted. Ranger keeps its 1.12x
   // scale, Spellweaver its robe.
+  // BIGGER FIXES (Derek, Nov 23 10:12 PM, diagnosis Nov 23 10:11 PM):
+  // the 16-unit gap DID read in an exact-size 96px render, but the
+  // live check still read "vertical, boots touching" — the cape,
+  // same Navy as the legs, hangs to y122-130 and fills the inter-leg
+  // gap for the upper two-thirds, so the splay only showed in the
+  // lower ~20 units. Now the ankles splay ANOTHER ~8 units each side
+  // (bottoms x71-81 / x119-129 Female, x69-80 / x120-131 Male),
+  // boots cx76 / cx124 Female (cx74.5 / cx125.5 Male), gap ~26 units
+  // (~12.5px at 96px), AND the cape is shortened to end above the
+  // knees (bottom y108-116, was y122-130), so the inter-leg gap is
+  // open background below the knees and the splay reads unambiguously.
   // Spellweaver casting hand: out to the left, raised to chest
   // height, with a glow (see the hands block). Null for other
   // classes, so their hands are untouched.
@@ -547,7 +587,23 @@ export default function GuardianAvatar({
     // edge ~146.5, ~3 units of sky). Arms stay rounded, warm brown,
     // non-demonic (see rule above). Knob, cup, glow disc, knots,
     // bark and gold rings all move with the new centreline.
-    const ox = handRx + 17;
+    // BIGGER FIXES (Derek, Nov 23 10:12 PM, diagnosis Nov 23
+    // 10:11 PM): the brim is now rx33 (tips x67/133) and the live
+    // check (Nov 23 7:09 PM) found the orb sitting ON the hat's
+    // lower right at brim height. Two causes, both fixed: (1) ox
+    // moves further right, handRx+17 -> handRx+24, so the orb's
+    // left edge is 134.5 Female / 139.5 Male before the pose
+    // rotation; (2) the pose rotation was rotate(-8), which swings
+    // the staff top LEFT by ~9 units at orb height — the old
+    // comment claiming -8 swings the top right was wrong (a point
+    // above the grip rotated -8 deg moves left, not right), and
+    // that leftward pull is what put the orb over the hat. The
+    // Spellweaver staff pose is now rotate(+8), swinging the top
+    // RIGHT, so the orb lands ~10 units clear of the brim tip
+    // (see the pose block below). Equipped staffs are not rotated,
+    // so their orb sits 1.5 units clear of the brim tip — tight,
+    // but the class staff is the live case.
+    const ox = handRx + 24;
     const oy = 28;
     // Centreline: top (knob) -> gentle curve RIGHT-DOWN to the grip
     // -> small bend RIGHT -> straight foot. No leftward excursion
@@ -593,7 +649,7 @@ export default function GuardianAvatar({
             <stop offset="100%" stopColor={glowFill} stopOpacity="0" />
           </radialGradient>
         </defs>
-        {glowDisc(ox, oy, 22, `url(#${id('glowOrb')})`, shade(glowFill, 80))}
+        {glowDisc(ox, oy, 17, `url(#${id('glowOrb')})`, shade(glowFill, 80))}
         {/* Crystal orb, DOWN between the prongs: centre (ox,28),
             r8.5, bottom y36.5 overlaps the cup and the shaft top,
             so it is mounted, not floating. */}
@@ -1223,10 +1279,10 @@ export default function GuardianAvatar({
               of vanishing into it (same colour, no edge). */}
           {g.cape && (
             <g>
-              <path d="M100 48 L124 58 L121 122 Q100 130 79 122 L76 58 Z" fill={capeMain} stroke={capeDark} strokeWidth="2" opacity="0.96" />
-              <path d="M86 64 Q84 96 86 118" fill="none" stroke={capeDark} strokeWidth="2" opacity="0.6" />
-              <path d="M114 64 Q116 96 114 118" fill="none" stroke={capeDark} strokeWidth="2" opacity="0.6" />
-              <path d="M100 58 Q100 96 100 122" fill="none" stroke={capeDark} strokeWidth="1.5" opacity="0.4" />
+              <path d="M100 48 L124 58 L121 108 Q100 116 79 108 L76 58 Z" fill={capeMain} stroke={capeDark} strokeWidth="2" opacity="0.96" />
+              <path d="M86 64 Q84 88 86 106" fill="none" stroke={capeDark} strokeWidth="2" opacity="0.6" />
+              <path d="M114 64 Q116 88 114 106" fill="none" stroke={capeDark} strokeWidth="2" opacity="0.6" />
+              <path d="M100 58 Q100 88 100 110" fill="none" stroke={capeDark} strokeWidth="1.5" opacity="0.4" />
             </g>
           )}
           {/* Wings, Level 8+ : flat white feathers */}
@@ -1295,20 +1351,20 @@ export default function GuardianAvatar({
           <g transform={legSpread !== 1 ? `translate(100 0) scale(${legSpread} 1) translate(-100 0)` : undefined}>
           {g.classId === 'Guardian' ? (
             <>
-              <path d={isFemale ? 'M89 94 L79 142 L89 142 L95 94 Z' : 'M87 94 L77 142 L88 142 L97 94 Z'} fill={legMain} stroke={legDark} strokeWidth="1.5" />
-              <path d={isFemale ? 'M105 94 L111 142 L121 142 L111 94 Z' : 'M103 94 L112 142 L123 142 L113 94 Z'} fill={legMain} stroke={legDark} strokeWidth="1.5" />
-              <path d={isFemale ? 'M92 96 L84 140 L87 140 L95 96 Z' : 'M91 96 L82 140 L85 140 L94 96 Z'} fill="#000" opacity="0.14" />
-              <path d={isFemale ? 'M108 96 L116 140 L113 140 L105 96 Z' : 'M109 96 L117 140 L114 140 L106 96 Z'} fill="#000" opacity="0.14" />
-              <path d={isFemale ? 'M83.5 120 L90 120 M108.5 120 L115 120' : 'M81.5 120 L92 120 M108 120 L118.5 120'} fill="none" stroke={legDark} strokeWidth="2.5" opacity="0.85" strokeLinecap="round" />
-              <ellipse cx={isFemale ? 84 : 82.5} cy="148" rx="10" ry="4.5" fill={BOOT} transform={`rotate(-18 ${isFemale ? 84 : 82.5} 148)`} />
-              <ellipse cx={isFemale ? 116 : 117.5} cy="148" rx="10" ry="4.5" fill={BOOT} transform={`rotate(18 ${isFemale ? 116 : 117.5} 148)`} />
-              <g transform={`rotate(-18 ${isFemale ? 84 : 82.5} 148)`}>
-                <path d={`M${(isFemale ? 84 : 82.5) - 8} 145 L${(isFemale ? 84 : 82.5) + 8} 145`} stroke="#d9a441" strokeWidth="3" opacity="1" />
-                <path d={`M${(isFemale ? 84 : 82.5) - 8} 150 L${(isFemale ? 84 : 82.5) + 8} 150`} stroke="#d9a441" strokeWidth="2.5" opacity="0.9" />
+              <path d={isFemale ? 'M89 94 L71 142 L81 142 L95 94 Z' : 'M87 94 L69 142 L80 142 L97 94 Z'} fill={legMain} stroke={legDark} strokeWidth="1.5" />
+              <path d={isFemale ? 'M105 94 L119 142 L129 142 L111 94 Z' : 'M103 94 L120 142 L131 142 L113 94 Z'} fill={legMain} stroke={legDark} strokeWidth="1.5" />
+              <path d={isFemale ? 'M92 96 L76 140 L79 140 L95 96 Z' : 'M91 96 L74 140 L77 140 L94 96 Z'} fill="#000" opacity="0.14" />
+              <path d={isFemale ? 'M108 96 L124 140 L121 140 L105 96 Z' : 'M109 96 L125 140 L122 140 L106 96 Z'} fill="#000" opacity="0.14" />
+              <path d={isFemale ? 'M79.5 120 L87 120 M113 120 L120.5 120' : 'M77.5 120 L87.5 120 M112.5 120 L122.5 120'} fill="none" stroke={legDark} strokeWidth="2.5" opacity="0.85" strokeLinecap="round" />
+              <ellipse cx={isFemale ? 76 : 74.5} cy="148" rx="10" ry="4.5" fill={BOOT} transform={`rotate(-18 ${isFemale ? 76 : 74.5} 148)`} />
+              <ellipse cx={isFemale ? 124 : 125.5} cy="148" rx="10" ry="4.5" fill={BOOT} transform={`rotate(18 ${isFemale ? 124 : 125.5} 148)`} />
+              <g transform={`rotate(-18 ${isFemale ? 76 : 74.5} 148)`}>
+                <path d={`M${(isFemale ? 76 : 74.5) - 8} 145 L${(isFemale ? 76 : 74.5) + 8} 145`} stroke="#d9a441" strokeWidth="3" opacity="1" />
+                <path d={`M${(isFemale ? 76 : 74.5) - 8} 150 L${(isFemale ? 76 : 74.5) + 8} 150`} stroke="#d9a441" strokeWidth="2.5" opacity="0.9" />
               </g>
-              <g transform={`rotate(18 ${isFemale ? 116 : 117.5} 148)`}>
-                <path d={`M${(isFemale ? 116 : 117.5) - 8} 145 L${(isFemale ? 116 : 117.5) + 8} 145`} stroke="#d9a441" strokeWidth="3" opacity="1" />
-                <path d={`M${(isFemale ? 116 : 117.5) - 8} 150 L${(isFemale ? 116 : 117.5) + 8} 150`} stroke="#d9a441" strokeWidth="2.5" opacity="0.9" />
+              <g transform={`rotate(18 ${isFemale ? 124 : 125.5} 148)`}>
+                <path d={`M${(isFemale ? 124 : 125.5) - 8} 145 L${(isFemale ? 124 : 125.5) + 8} 145`} stroke="#d9a441" strokeWidth="3" opacity="1" />
+                <path d={`M${(isFemale ? 124 : 125.5) - 8} 150 L${(isFemale ? 124 : 125.5) + 8} 150`} stroke="#d9a441" strokeWidth="2.5" opacity="0.9" />
               </g>
             </>
           ) : (
@@ -1331,10 +1387,17 @@ export default function GuardianAvatar({
               the shared ellipses + straps. */}
           {isRanger ? (
             <g>
-              <path d="M84 142 L96 142 Q98 142 98 146 L98 149 Q98 152 94 152 L86 152 Q82 152 82 149 L82 146 Q82 142 84 142 Z" fill={BOOT} stroke={shade(BOOT, -20)} strokeWidth="1.5" />
-              <path d="M102 142 L116 142 Q118 142 118 146 L118 149 Q118 152 114 152 L106 152 Q102 152 102 149 L102 146 Q102 142 104 142 Z" fill={BOOT} stroke={shade(BOOT, -20)} strokeWidth="1.5" />
-              <path d="M82 150 L98 150 M102 150 L118 150" stroke="#1e1206" strokeWidth="1.5" opacity="0.8" />
-              <path d="M85 145 L95 145 M105 145 L115 145" stroke="#d9a441" strokeWidth="2.5" opacity="1" />
+              {/* BIGGER FIXES (Nov 23 10:12 PM): the Ranger boot gap
+                  was 4 units (1.9px at 96px) — one plank live. Now
+                  the boots are 12 units apart (5.8px at 96px, 6.4px
+                  after the 1.12x leg scale): left x78-94, right
+                  x106-122, and the single gold strap (10 wide) is
+                  shorter than the boot (16 wide) so gold never
+                  bridges the gap. */}
+              <path d="M80 142 L92 142 Q94 142 94 146 L94 149 Q94 152 90 152 L82 152 Q78 152 78 149 L78 146 Q78 142 80 142 Z" fill={BOOT} stroke={shade(BOOT, -20)} strokeWidth="1.5" />
+              <path d="M108 142 L120 142 Q122 142 122 146 L122 149 Q122 152 118 152 L110 152 Q106 152 106 149 L106 146 Q106 142 108 142 Z" fill={BOOT} stroke={shade(BOOT, -20)} strokeWidth="1.5" />
+              <path d="M78 150 L94 150 M106 150 L122 150" stroke="#1e1206" strokeWidth="1.5" opacity="0.8" />
+              <path d="M81 145 L91 145 M109 145 L119 145" stroke="#d9a441" strokeWidth="2.5" opacity="1" />
             </g>
           ) : (
             <g>
@@ -1412,7 +1475,9 @@ export default function GuardianAvatar({
               the jaw on its own. */}
           {/* Hair, hood, or wizard hat — all in the same coordinates as
               the head, sitting ON it. */}
-          {g.classId === 'Ranger' ? hoodHair : g.classId === 'Spellweaver' ? spellweaverHair : hairArt}
+          {!helmEquipped && (g.classId === 'Ranger' ? hoodHair : g.classId === 'Spellweaver' ? spellweaverHair : hairArt)}
+          {/* (helm: hair / hood / hat are skipped when a helm is
+              equipped — see the fullHelmet block before {faceArt}.) */}
           {/* Spellweaver hat: a tall pointed wizard hat in a LIGHT fill
               (shade +100), so it reads against the steel-blue night sky.
               Derek, Nov 23 4:27 PM: "The spell weaver hat looks weird".
@@ -1437,17 +1502,30 @@ export default function GuardianAvatar({
               stays y22.5, just above the brows (y22.5-25). Brim
               widened (Derek, Nov 23 6:44 PM: "make the brim bigger"):
               rx20 -> rx26, 52 wide, ends x74/126, extending past the
-              hair on both sides; cone, gold band and gem unchanged. */}
-          {g.classId === 'Spellweaver' && (
+              hair on both sides; cone, gold band and gem unchanged.
+              BIGGER FIXES (Derek, Nov 23 10:12 PM, diagnosis Nov 23
+              10:11 PM): rx26 read as the cone's base live, not a
+              flap - at 96px the visible flaps were only ~3.8px wide
+              each, tapering to ~1.6px, in the SAME light blue as the
+              cone, so there was no edge contrast. Now rx33, ry7,
+              cy15.5 (bottom y22.5, still just above the brows
+              y22.5-25, no face cover): each flap is 15 units wide
+              past the cone base (x67-82 / x118-133, ~7px at 96px)
+              and ~8-10 units tall mid-flap (~4-5px), and the brim
+              is a shade DARKER than the cone (shade +70 vs +100)
+              with a thicker outline (2.5), so it reads as a
+              separate wide brim. The staff now clears it (see
+              wizardStaff: ox handRx+24, pose rotate +8). */}
+          {!helmEquipped && g.classId === 'Spellweaver' && (
             <g>
               <path d="M82 18 C85 9 92 0 101 -4 C110 -1 115 8 118 18 Z" fill={light} stroke={dark} strokeWidth="2" strokeLinejoin="round" />
               <path d="M88 13 Q94 6 99 1" fill="none" stroke="#fff" strokeWidth="2" opacity="0.55" strokeLinecap="round" />
-              <ellipse cx="100" cy="18" rx="26" ry="4.5" fill={light} stroke={dark} strokeWidth="2" />
+              <ellipse cx="100" cy="15.5" rx="33" ry="7" fill={shade(main, 70)} stroke={dark} strokeWidth="2.5" />
               <path d="M85 13.5 Q100 11 115 13.5 L115 18 L85 18 Z" fill={GOLD} stroke={GOLD_DARK} strokeWidth="1" />
               <circle cx="100" cy="15.5" r="2.8" fill={gem} stroke="#fff" strokeWidth="1" />
             </g>
           )}
-        {g.classId === 'Spellweaver' && (hair === 'Bun' || hair === 'Topknot' || hair === 'ManBun') && knotOnHat}
+        {!helmEquipped && g.classId === 'Spellweaver' && (hair === 'Bun' || hair === 'Topknot' || hair === 'ManBun') && knotOnHat}
           {/* Beard: only when the picked hair style has one (Male Short +
               beard, Bald, or Long). A SHORT NEAT CHIN BEARD that
               follows the jawline — Derek, Nov 22 7:54 PM: "the facial
@@ -1494,7 +1572,17 @@ export default function GuardianAvatar({
                   clear, two short texture lines only. */}
               {isRanger ? (
                 <>
-                  <path d="M93 37.5 Q92 42 100 43.5 Q108 42 107 37.5 Q104 39.5 100 39.5 Q96 39.5 93 37.5 Z" stroke={beardStroke} strokeWidth="1" />
+                  {/* BIGGER FIXES (Nov 23 10:12 PM): the Ranger beard
+                      was 14 wide with a 1-unit outline, in #40260f
+                      against #5b3a1e locks — at 96px beard + locks +
+                      jaw merged into one brown lower-face band. Now
+                      the outline is 2.2 units of dark #2e1a08 (light
+                      tan rim on dark skin, via beardStroke) and the
+                      beard is narrowed to 12 wide (x94-106), leaving
+                      a 4-unit skin gap to the locks' inner edge
+                      (x90/110), so the beard reads as a separate
+                      chin crescent, not part of the hair. */}
+                  <path d="M94 37.5 Q93 42 100 43.5 Q107 42 106 37.5 Q104 39.5 100 39.5 Q96 39.5 94 37.5 Z" stroke={beardStroke} strokeWidth="2.2" />
                   <path d="M97 40.5 L97 42.5 M103 40.5 L103 42.5" fill="none" stroke={HAIR_L} strokeWidth="1.6" opacity="0.9" strokeLinecap="round" />
                 </>
               ) : (
@@ -1513,6 +1601,39 @@ export default function GuardianAvatar({
               <circle cx="100" cy="18" r="2.4" fill={gem} stroke="#fff" strokeWidth="1.5" />
               <circle cx="91" cy="18" r="1.8" fill={gem} stroke="#fff" strokeWidth="1" />
               <circle cx="109" cy="18" r="1.8" fill={gem} stroke="#fff" strokeWidth="1" />
+            </g>
+          )}
+          {/* FULL HELMET (Derek, Nov 23 10:18 PM): when a helm is
+              equipped, a real helmet covers the crown and hair —
+              not the old thin band. Drawn AFTER the head, hair
+              (suppressed), hood/hat (suppressed) and beard, and
+              BEFORE {faceArt}, so brows, eyes and mouth are drawn
+              on top and stay visible. Geometry, head centre
+              (100,29) r13, brows y22.5-25, eyes cy27.5/29: the dome
+              top is y3, its bottom edge arches UP to y20.5 at the
+              centre (above the brows) and down to y28 at the
+              temples (x84/116, covering the hairline and side
+              hair). A tier-coloured brow band sits at y17-22,
+              above the brows; a steel nose guard runs down the
+              centre (x98.5-101.5, y20-33) between the eyes,
+              stopping above the mouth (y34.5); a tier gem sits on
+              the dome at (100,11). Cheek guards run down the face
+              sides (x83-88 / 112-117, y26-32), outside the face
+              edge (x87/113). Beard (chin y37-44.5) is below the
+              helmet and stays visible. The Level 10+ crown, drawn
+              just above, is covered by the dome when a helm is
+              equipped. All 3 classes get the same helmet — the
+              hood and hat are replaced by it, not worn under it. */}
+          {helmEquipped && equipTier && (
+            <g>
+              <path d="M84 28 Q83 4 100 3 Q117 4 116 28 Q108 20.5 100 20.5 Q92 20.5 84 28 Z" fill={STEEL} stroke={dark} strokeWidth="2" />
+              <path d="M100 5 L100 19" fill="none" stroke={STEEL_DARK} strokeWidth="2.5" strokeLinecap="round" />
+              <path d="M90 10 Q94 6 98 5" fill="none" stroke="#fff" strokeWidth="2" opacity="0.5" strokeLinecap="round" />
+              <path d="M87 22 Q100 17 113 22 L113 19 Q100 14 87 19 Z" fill={equipTier} stroke="#fff" strokeWidth="1" />
+              <path d="M84 26 L88 26 L88 32 Q84 32 84 26 Z" fill={STEEL} stroke={dark} strokeWidth="1.5" />
+              <path d="M116 26 L112 26 L112 32 Q116 32 116 26 Z" fill={STEEL} stroke={dark} strokeWidth="1.5" />
+              <rect x="98.5" y="20" width="3" height="13" rx="1.5" fill={STEEL} stroke={dark} strokeWidth="1" />
+              <circle cx="100" cy="11" r="2.6" fill={gem} stroke="#fff" strokeWidth="1" />
             </g>
           )}
           {faceArt}
@@ -1619,7 +1740,7 @@ export default function GuardianAvatar({
                   the plate edges onto the torso/background. It
                   pulses (.guardian-glow-pulse); the gem itself is
                   static. The old plate gem had no glow disc at all. */}
-              {glowDisc(100, 70, 20, `url(#${id('glowGem')})`, gemLight)}
+              {glowDisc(100, 70, 15, `url(#${id('glowGem')})`, gemLight)}
               <circle cx="100" cy="70" r="4" fill={gem} stroke="#fff" strokeWidth="1.5" />
             </g>
           )}
@@ -1630,7 +1751,7 @@ export default function GuardianAvatar({
               does not get a second gem here. */}
           {g.classId !== 'Guardian' && (
             <g>
-              {glowDisc(100, 71, 20, `url(#${id('glowGem')})`, gemLight)}
+              {glowDisc(100, 71, 15, `url(#${id('glowGem')})`, gemLight)}
               <polygon points="100,62 109,71 100,80 91,71" fill={gem} stroke="#fff" strokeWidth="2" />
               <polygon points="100,66 104,71 100,76 96,71" fill="#fff" opacity="0.55" />
             </g>
@@ -1638,7 +1759,7 @@ export default function GuardianAvatar({
           {/* Hanging hair in front of the armour (Guardian only — the
               Ranger hood and Spellweaver hat have no pauldrons to
               swallow them, so their hair stays in the early block). */}
-          {g.classId === 'Guardian' && hangingHair}
+          {g.classId === 'Guardian' && !helmEquipped && hangingHair}
           {/* Ranger quiver strap, diagonal across the chest */}
           {g.classId === 'Ranger' && (
             <path d="M84 58 L116 88" fill="none" stroke={WOOD_DARK} strokeWidth="4" opacity="0.7" strokeLinecap="round" />
@@ -1654,11 +1775,12 @@ export default function GuardianAvatar({
               <path d="M88 58 L112 58 L112 64 L88 64 Z" fill={equipTier} stroke="#fff" strokeWidth="1" opacity="0.95" />
               <circle cx="100" cy="61" r="3" fill="#fff" stroke={equipTier} strokeWidth="1.5" />
               {(equippedArmor.tier === 'Legendary' || equippedArmor.tier === 'Mythical') && (
-                glowDisc(100, 70, 24, `url(#${id('glowTier')})`, shade(weaponTier ?? gemLight, 80))
+                glowDisc(100, 70, 18, `url(#${id('glowTier')})`, shade(weaponTier ?? gemLight, 80))
               )}
-              {equippedArmorKind === 'helm' && (
-                <path d="M88 20 Q100 10 112 20 L112 15 Q100 7 88 15 Z" fill={equipTier} stroke="#fff" strokeWidth="1.5" />
-              )}
+              {/* Helm: the old thin band across the crown is gone —
+                  a full helmet is drawn just before {faceArt} now
+                  (see fullHelmet above), so this block draws
+                  nothing extra for helms. */}
               {equippedArmorKind === 'crown' && (
                 <g fill={equipTier} stroke="#fff" strokeWidth="1">
                   <polygon points="88,16 92,6 96,16" />
@@ -1694,7 +1816,7 @@ export default function GuardianAvatar({
           {equippedWeapon && equippedWeaponKind && (
             <g>
               {(equippedWeapon.tier === 'Legendary' || equippedWeapon.tier === 'Mythical') && (
-                glowDisc(equippedWeaponKind === 'bow' || equippedWeaponKind === 'staff' || equippedWeaponKind === 'shield' || equippedWeaponKind === 'lasso' ? handRx + 12 : handLx, 70, 24, `url(#${id('glowTier')})`, shade(weaponTier ?? gemLight, 80))
+                glowDisc(equippedWeaponKind === 'bow' || equippedWeaponKind === 'staff' || equippedWeaponKind === 'shield' || equippedWeaponKind === 'lasso' ? handRx + 12 : handLx, 70, 18, `url(#${id('glowTier')})`, shade(weaponTier ?? gemLight, 80))
               )}
               {equippedWeaponKind === 'sword' && (
                 <g transform={`rotate(-12 ${handLx} 68)`}>
@@ -1702,8 +1824,18 @@ export default function GuardianAvatar({
                   <rect x={handLx - 1} y="42" width="1.8" height="38" fill="#fff" opacity="0.7" />
                   <rect x={handLx - 10} y="82" width="20" height="6" rx="3" fill={weaponTier ?? GOLD} stroke={GOLD_DARK} strokeWidth="1.5" />
                   <rect x={handLx - 4.5} y="88" width="9" height="13" rx="3" fill={WOOD} />
-                  {glowDisc(handLx, 101, 16, `url(#${id('glowTier')})`, shade(weaponTier ?? gemLight, 80))}
-                  <circle cx={handLx} cy="101" r="3.5" fill={weaponTier ?? gem} stroke="#fff" strokeWidth="1.5" />
+                  {/* CROTCH GLOW FIX (Derek, Nov 23 10:18 PM: "make it
+                      so it doesn't look like the avatars crotch is
+                      glowing"): the pommel gem used to sit at
+                      (handLx,101) with a r12 glow disc. After the
+                      -12° rotation about (handLx,68) that renders at
+                      ~(handLx+7,100) — just below the belt, over the
+                      left leg top, and the glow disc spanned the gap
+                      between the legs. The gem now sits on the LEFT
+                      TIP of the crossguard (handLx-9,85), clearly on
+                      the sword and clear of the body, and the glow
+                      disc is GONE — a sword pommel does not glow. */}
+                  <circle cx={handLx - 9} cy="85" r="3.5" fill={weaponTier ?? gem} stroke="#fff" strokeWidth="1.5" />
                 </g>
               )}
               {equippedWeaponKind === 'dagger' && (
@@ -1734,7 +1866,7 @@ export default function GuardianAvatar({
                   <line x1={handRx} y1="66" x2={handRx} y2="126" stroke={weaponTier ?? '#e8e2d4'} strokeWidth="2" />
                   <line x1={handRx} y1="90" x2={handRx + 24} y2="90" stroke={weaponTier ?? gem} strokeWidth="3.5" strokeLinecap="round" />
                   <polygon points={`${handRx + 24},90 ${handRx + 17},87 ${handRx + 17},93`} fill={STEEL_DARK} />
-                  {glowDisc(handRx + 24, 90, 18, `url(#${id('glowTier')})`, shade(weaponTier ?? gemLight, 80))}
+                  {glowDisc(handRx + 24, 90, 14, `url(#${id('glowTier')})`, shade(weaponTier ?? gemLight, 80))}
                   <polygon points={`${handRx + 2},90 ${handRx - 13},84 ${handRx - 13},96`} fill="#fff" opacity="0.9" />
                 </g>
               )}
@@ -1743,7 +1875,7 @@ export default function GuardianAvatar({
                 <g>
                   <path d={`M${handRx - 2} 66 L${handRx + 28} 66 L${handRx + 28} 86 Q${handRx + 13} 102 ${handRx - 2} 86 Z`} fill={STEEL} stroke={weaponTier ?? GOLD} strokeWidth="3" />
                   <path d={`M${handRx + 3} 71 L${handRx + 23} 71 L${handRx + 23} 85 Q${handRx + 13} 96 ${handRx + 3} 85 Z`} fill={main} opacity="0.9" />
-                  {glowDisc(handRx + 13, 81, 18, `url(#${id('glowTier')})`, shade(weaponTier ?? gemLight, 80))}
+                  {glowDisc(handRx + 13, 81, 14, `url(#${id('glowTier')})`, shade(weaponTier ?? gemLight, 80))}
                   <circle cx={handRx + 13} cy="81" r="5.5" fill={weaponTier ?? gem} stroke="#fff" strokeWidth="1.5" />
                 </g>
               )}
@@ -1774,7 +1906,7 @@ export default function GuardianAvatar({
                   same colour as the gem, no gradient — a flat slightly
                   larger blue disc. Now a r14 radialGradient glow,
                   light centre fading out, pulsing. */}
-              {glowDisc(handRx + 19, 85, 18, `url(#${id('glowGem')})`, gemLight)}
+              {glowDisc(handRx + 19, 85, 14, `url(#${id('glowGem')})`, gemLight)}
               <circle cx={handRx + 19} cy="85" r="5.5" fill={gem} stroke="#fff" strokeWidth="1.5" />
               {/* POSE (Guardian): sword RAISED — blade up-left at -48
                   about the grip point (handLx, 90), so the hand stays
@@ -1791,11 +1923,18 @@ export default function GuardianAvatar({
                     at preview size live (grip read as solid brown). */}
                 <rect x={handLx - 4.5} y="88" width="9" height="13" rx="3" fill={WOOD} />
                 <path d={`M${handLx - 4.5} 90 L${handLx + 4.5} 92 M${handLx - 4.5} 94 L${handLx + 4.5} 96 M${handLx - 4.5} 98 L${handLx + 4.5} 100`} stroke={WOOD_DARK} strokeWidth="2.5" />
-                {/* Sword pommel gem GLOW (GLOW FIX): old r6 disc was
-                    the same colour as the gem, no gradient. Now a
-                    r12 radialGradient glow, pulsing, gem static. */}
-                {glowDisc(handLx, 101, 16, `url(#${id('glowGem')})`, gemLight)}
-                <circle cx={handLx} cy="101" r="3.5" fill={gem} stroke="#fff" strokeWidth="1.5" />
+                {/* Sword pommel gem — CROTCH GLOW FIX (Derek, Nov 23
+                    10:18 PM): the gem used to sit at (handLx,101)
+                    with a r12 glow disc. After the -48° pose rotation
+                    about (handLx,90) that renders at ~(handLx+8,97)
+                    — just below the belt, over the left leg top — and
+                    the glow disc (r12, pulsing to r14.4) spanned
+                    x75-104, y83-112, covering the gap between the
+                    legs: a glowing crotch. The gem now sits on the
+                    LEFT TIP of the crossguard (handLx-9,85), clearly
+                    on the sword and clear of the body, and the glow
+                    disc is GONE — a sword pommel does not glow. */}
+                <circle cx={handLx - 9} cy="85" r="3.5" fill={gem} stroke="#fff" strokeWidth="1.5" />
               </g>
               )}
             </g>
@@ -1824,7 +1963,7 @@ export default function GuardianAvatar({
               {/* Arrow tip GLOW (GLOW FIX): the old r6 disc was a
                   ~3px pale-blue dot at 100px, not a glow. Now a r12
                   radialGradient glow, pulsing, around the arrowhead. */}
-              {glowDisc(handRx + 30, bowY, 18, `url(#${id('glowGem')})`, gemLight)}
+              {glowDisc(handRx + 30, bowY, 14, `url(#${id('glowGem')})`, gemLight)}
               {/* Fletching, BIG — the old small white triangle was
                   invisible at preview size live. A large white feather
                   at the arrow tail, with a second smaller one. */}
@@ -1832,15 +1971,20 @@ export default function GuardianAvatar({
               <polygon points={`${handLx + 6},${bowY} ${handLx - 5},${bowY + 2} ${handLx - 5},${bowY + 8}`} fill="#dfe8f0" opacity="0.9" />
             </g>
           )}
-          {/* POSE (Spellweaver): staff RAISED — tilted -8° about the
-              grip point (handRx-2, 90), so the top swings up/right
-              and the foot stays planted on the ground. -8°, not
-              -14°: at -14° the orb's left edge would sit ~1.5 units
-              from the face; at -8° it stays ~8 units clear. The
-              grip, the fist, and the face-clearance fix are
-              untouched. */}
+          {/* POSE (Spellweaver): staff RAISED — tilted +8° about the
+              grip point (handRx-2, 90), so the top swings up/RIGHT
+              and the foot stays planted on the ground. It WAS -8°,
+              but -8° swings a point above the grip LEFT (measured
+              Nov 23 10:11 PM diagnosis: the old comment claiming
+              -8° swings the top right was backwards), which pulled
+              the orb ~9 units left onto the hat brim — the live
+              Nov 23 7:09 PM check found the orb sitting on the
+              hat's lower right at brim height. +8° with ox =
+              handRx+24 lands the orb ~10 units clear of the brim
+              tip (brim rx33, tips x67/133). The grip, the fist,
+              and the face-clearance fix are untouched. */}
           {!equippedWeapon && g.classId === 'Spellweaver' && (
-            <g transform={`rotate(-8 ${handRx - 2} 90)`}>{wizardStaff(gem, gem)}</g>
+            <g transform={`rotate(8 ${handRx - 2} 90)`}>{wizardStaff(gem, gem)}</g>
           )}
           {/* Hands, drawn LAST over the weapon grips, so every weapon
               reads as held. Skin circles with a dark outline.
@@ -1898,7 +2042,7 @@ export default function GuardianAvatar({
                   arm, with a small glow in the palm. The bottom
                   half-arc outline stays, so it reads as a palm, not
                   a closed coin. */}
-              {castHand && glowDisc(castHand.x, castHand.y, 14, `url(#${id('glowGem')})`, gemLight)}
+              {castHand && glowDisc(castHand.x, castHand.y, 11, `url(#${id('glowGem')})`, gemLight)}
               <circle cx={castHand ? castHand.x : handLx} cy={castHand ? castHand.y : 87} r={handR + 0.5} fill={SKIN} />
               <path d={`M${(castHand ? castHand.x : handLx) - handR - 0.5} ${castHand ? castHand.y : 87} A${handR + 0.5} ${handR + 0.5} 0 0 0 ${(castHand ? castHand.x : handLx) + handR + 0.5} ${castHand ? castHand.y : 87}`} fill="none" stroke={dark} strokeWidth="1" strokeLinecap="round" />
               {/* Palm column (left / body side), joins the fingers. */}
@@ -1916,7 +2060,7 @@ export default function GuardianAvatar({
                   hand as the staff branch. With an equipped weapon
                   the left hand stays on its weapon, so the casting
                   hand only applies when no weapon is equipped. */}
-              {castHand && !equippedWeapon && glowDisc(castHand.x, castHand.y, 14, `url(#${id('glowGem')})`, gemLight)}
+              {castHand && !equippedWeapon && glowDisc(castHand.x, castHand.y, 11, `url(#${id('glowGem')})`, gemLight)}
               {/* Ranger raised bow: the left (draw) hand sits at the
                   string V (handLx+4, 60) and the right hand grips
                   the bow at (handRx, 60) — both on the raised sleeves
