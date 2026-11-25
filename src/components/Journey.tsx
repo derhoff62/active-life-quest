@@ -85,13 +85,7 @@ export default function Journey({ ctx }: { ctx: Ctx }) {
       <div className="card gold-frame">
         <h2>Your journey</h2>
         <p><strong>Next: {nextRetestLabel(journeyNextRetest)} {nextBossLabel(journeyNextBoss)}</strong></p>
-        <p className="small">Follow the gold path from the top, step by step. Step 1: Weeks 1 to 3, train in Sapphire Forest. Step 2: Week 4 boss round, then the Week 4 retest. Step 3: Weeks 5 to 8, Crystal Shores. Step 4: Week 8 boss round, then the retest. Step 5: Weeks 9 to 12, Navy Peaks. Step 6: Week 12 boss round, then the retest and a lighter week.</p>
         <JourneyMap currentWeek={currentWeekForDoc(doc)} met={met} bossHp={doc.bossHp || {}} />
-        <div className="map">
-          <p><span className="land">Land 1: Sapphire Forest, Forest Castle, Weeks 1 to 4.</span> {phase >= 1 ? 'You are here, or past here.' : ''}</p>
-          <p className={phase < 2 ? 'locked' : ''}><span className="land">Land 2: Crystal Shores, Lake Castle, Weeks 5 to 8.</span> {phase < 2 ? 'Locked until your Week 4 retest.' : 'Open.'}</p>
-          <p className={phase < 3 ? 'locked' : ''}><span className="land">Land 3: Navy Peaks, Navy Castle, Weeks 9 to 12.</span> {phase < 3 ? 'Locked until your Week 8 retest.' : 'Open.'}</p>
-        </div>
         <p className="small muted">Boss rounds at Weeks 4, 8, and 12 of every cycle, plus a review round at the end of the road. Win the round with your class moves and mana, then do the retest to open the next land. The map above shows the first stretch, Weeks 1 to 12. The road continues below.</p>
       </div>
 

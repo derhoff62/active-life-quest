@@ -3,7 +3,7 @@ import type { Ctx } from '../App';
 import { WORKOUTS, CORE_BALANCE_WORKOUT, REFERENCE_TRACKS, PHASES, PHASE_WEEKLY_SETS, PHASE_VOLUME_RANGE, VOLUME_MUSCLES, weeklyVolumeForSplit, filterGroupForExercise, exerciseNeeds, daysForTime, splitForDays, TRAINING_STYLES, CES_TEMPLATES, EQUIPMENT_NOTES, effectiveEquipment, resolveExercise, findExerciseByName, CLASS_WORKOUT_FOCUS, applyClassFocus, GOAL_FINISHERS } from '../lib/data';
 import type { TrainingStyle, FilterGroup } from '../lib/data';
 import type { ExerciseFeedback } from '../lib/store';
-import { phaseForDoc, hasFullAccess, metCompanionIds, lastTimeFor, awardBadges, daysInMonthSet, currentWeekForDoc, hasApprovedRetest, hasCleanApprovedRetest, assessmentApproved, assessmentPending } from '../lib/store';
+import { phaseForDoc, hasFullAccess, metCompanionIds, lastTimeFor, awardBadges, daysInMonthSet, currentWeekForDoc, hasApprovedRetest, hasCleanApprovedRetest, assessmentApproved, assessmentPending, volumeTierForDoc, volumeSetsFor } from '../lib/store';
 import { cardioThisWeek } from '../lib/badges';
 import BackToTop from './BackToTop';
 import { cycleForWeek, nextRetestWeek, nextRetestLabel, isDeloadWeek } from '../lib/yearPlan';
@@ -47,6 +47,11 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
   const timerRef = useRef<number | null>(null);
 
   const phase = phaseForDoc(doc);
+  // Check-in adaptive volume: today's workout follows the last
+  // check-in (today, or yesterday). Good trains as planned, ok is
+  // shortened, bad is the short session or Zone 2, pain blocks the
+  // workout. See volumeTierForDoc in store.ts.
+  const vol = volumeTierForDoc(doc);
   // Class workout focus: Guardian, Ranger, and Spellweaver change volume,
   // not just spells and looks. The focus line is shown in Best for you
   // today, in the workout list, and in the player. Focus never overrides
@@ -144,12 +149,18 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
     w.exercises.every((e) => !resolveExercise(e, doc.equipment).unavailable);
   const best: Workout | null = useMemo(() => {
     if (!assessmentApproved(doc) || isRestDay) return null;
+    // Pain in the last check-in: no workout is prescribed.
+    if (vol.tier === 'pain') return null;
     const candidates = WORKOUTS.filter(unlocked);
     if (!candidates.length) return null;
     if (doc.workouts.length === 0) {
       return candidates.find((w) => w.id === 'day1-first') || candidates[0];
     }
-    if (timeMin === 15) {
+    // Adaptive volume caps the session length: ok caps at 30 minutes
+    // (fewer accessories, same main lifts), bad is the short session
+    // only. The player then also drops sets (see volumeSetsFor).
+    const cap = vol.tier === 'bad' ? 15 : vol.tier === 'ok' ? Math.min(timeMin, 30) : timeMin;
+    if (cap === 15) {
       return candidates.find((w) => w.id === 'track-block-1') || [...candidates].sort((a, b) => a.minutes - b.minutes)[0];
     }
     // At 4 to 6 days the best workout is the next day in the client's
@@ -158,13 +169,13 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
     if (daysPerWeek >= 4) {
       const plannedW = WORKOUTS.find((w) => w.id === planned.workoutId)
         || (planned.workoutId === 'core-balance-mobility' ? CORE_BALANCE_WORKOUT : undefined);
-      if (plannedW && unlocked(plannedW)) return plannedW;
+      if (plannedW && unlocked(plannedW) && plannedW.minutes <= cap) return plannedW;
     }
-    const fits = candidates.filter((w) => w.minutes <= timeMin);
+    const fits = candidates.filter((w) => w.minutes <= cap);
     const pool = fits.length ? fits : candidates;
     return [...pool].sort((a, b) => (b.phase - a.phase) || (b.minutes - a.minutes))[0];
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [doc.assessmentDone, doc.assessmentStatus, isRestDay, timeMin, phase, full, doc.workouts.length, doc.equipment, daysPerWeek, planned]);
+  }, [doc.assessmentDone, doc.assessmentStatus, isRestDay, timeMin, phase, full, doc.workouts.length, doc.equipment, daysPerWeek, planned, vol.tier]);
   const myTemplates = CES_TEMPLATES.filter((t) => doc.assessment?.findings.includes(t.id));
   const startedAt = useRef(Date.now());
 
@@ -197,6 +208,10 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
     }
     if (!assessmentApproved(doc)) {
       setNotice('Assessment waiting for Derek to review. Your workouts unlock once he approves it.');
+      return;
+    }
+    if (volumeTierForDoc(doc).tier === 'pain') {
+      setNotice('You noted sharp, new, or worsening pain. See a doctor or physical therapist. No workout today.');
       return;
     }
     if (w.phase === 4 && !hasApprovedRetest(doc, 12)) {
@@ -306,7 +321,10 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
     const rawEx = regressionName ? (findExerciseByName(regressionName) || rawEx0) : rawEx0;
     const resolved = resolveForDoc(rawEx, doc);
     const focused = applyClassFocus(resolved.exercise, classId, active.phase);
-    const ex = focused.exercise;
+    // Adaptive volume: the check-in drops sets on each move (ok: 1
+    // fewer, bad: 2 fewer, never below 1). The reason is shown above
+    // the move so the client knows why it is shorter today.
+    const ex = { ...focused.exercise, sets: volumeSetsFor(focused.exercise.sets, vol.tier) };
     const last = lastTimeFor(doc, ex.id);
     const isLast = step >= active.exercises.length - 1;
     return (
@@ -318,6 +336,11 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
           </p>
           {classFocus && (
             <p className="small"><strong>{classFocus.line}</strong></p>
+          )}
+          {(vol.tier === 'ok' || vol.tier === 'bad') && (
+            <p className="notice" style={{ marginTop: 10 }}>
+              Shortened because recovery is low today: {vol.setsDrop} fewer {vol.setsDrop === 1 ? 'set' : 'sets'} on each move. {vol.line}
+            </p>
           )}
           {regressionName && (
             <p className="notice" style={{ marginTop: 10 }}>
@@ -599,6 +622,8 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
         </details>
         {!doc.assessmentDone && <p>Do the assessment first. It sets your starting phase, and then your best workout shows here.</p>}
         {assessmentPending(doc) && <p>Assessment waiting for Derek to review. Your workouts unlock once he approves it.</p>}
+        {doc.assessmentDone && vol.tier !== 'none' && <p className="small"><strong>{vol.line}</strong></p>}
+        {doc.assessmentDone && vol.tier === 'bad' && <p className="small">Or take it easy today: a Zone 2 walk instead of strength. Log it on the Cardio tab.</p>}
         {doc.assessmentDone && isRestDay && (
           <div>
             <p><strong>Today is an active rest day.</strong> {style === 'ppl' || style === 'upper-lower' ? 'You trained those same muscles yesterday, so they rest today. A different muscle group is next.' : 'You trained yesterday. Take 1 to 2 rest days between strength days.'}</p>
@@ -626,7 +651,10 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
             <button className="primary" onClick={() => startWorkout(best)}>Start this workout</button>
           </div>
         )}
-        {doc.assessmentDone && !isRestDay && !best && (
+        {doc.assessmentDone && !isRestDay && !best && vol.tier === 'pain' && (
+          <p><strong>{vol.line}</strong></p>
+        )}
+        {doc.assessmentDone && !isRestDay && !best && vol.tier !== 'pain' && (
           <p>No workout fits right now. Pick one from the list below.</p>
         )}
       </div>

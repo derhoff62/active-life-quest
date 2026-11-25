@@ -68,15 +68,24 @@ export default function Cardio({ ctx }: { ctx: Ctx }) {
           <summary>Zone 2: steady, easy effort</summary>
           <p>Zone 2 is steady cardio at an easy effort. You can talk in full sentences the whole time, and breathing through your nose still works. Brisk walking, easy cycling, and easy swimming all count.</p>
           <p>How to find it: use the talk test first. If you can talk in full sentences, you are in Zone 2. If you can only get out a few words, you are going too hard for Zone 2, slow down.</p>
-          <p>Effort is about 4 or 5 out of 10. Heart rate is only a rough guide: 180 minus your age is a rough starting point for the top of Zone 2, not a rule. The talk test matters more than the number.</p>
+          <p>Effort is about 4 or 5 out of 10. Heart rate is only a rough guide, see the heart rate section below for the numbers. The talk test matters more than the number.</p>
+          <p>Heart rate: about 60 to 70 percent of your max heart rate (220 minus your age). Example, age 40: about 108 to 126 beats per minute.</p>
           <p>Target: 150 to 300 minutes a week in total. Short walks add up, ten minutes here and there still counts.</p>
         </details>
         <details>
           <summary>HIIT: short hard efforts, with rest between</summary>
           <p>HIIT is short hard efforts with easy rest between them. For example, 30 seconds hard, 90 seconds easy, repeat 4 to 6 times. During the hard part you should only manage a few words. During the easy part you should be able to talk in full sentences.</p>
+          <p>Heart rate: hard efforts about 80 to 90 percent or more of your max heart rate (220 minus your age), easy recovery back down toward Zone 2. Example, age 40: hard about 144 to 162 or more, easy back to about 108 to 126.</p>
           <p>When to use it: only on non-strength days, or after a strength workout, 1 to 2 times a week at most, never every day. Always warm up for 5 minutes and cool down for 5 minutes.</p>
           <p>One HIIT minute counts double toward your weekly cardio total, so 10 hard minutes count as 20. Log your actual minutes and pick HIIT, the app does the doubling.</p>
           <p>Stop if you feel sharp, new, or worsening pain, chest pain, or dizziness. See a doctor or physical therapist about it. If a move hurts your joints, swap to a joint-friendly option or back to Zone 2 cardio.</p>
+        </details>
+        <details>
+          <summary>Find your zones with heart rate</summary>
+          <p>First, estimate your max heart rate: 220 minus your age. It is a rough estimate, not exact. It is different for everyone, and a watch or monitor reading can be off.</p>
+          <p>Zone 2 is roughly 60 to 70 percent of your max heart rate. Example, age 40: max is about 180, so Zone 2 is about 108 to 126 beats per minute.</p>
+          <p>HIIT hard efforts are roughly 80 to 90 percent or more of your max heart rate, then easy recovery back down toward Zone 2. Example, age 40: hard is about 144 to 162 or more, then easy back to about 108 to 126.</p>
+          <p>These numbers are rough guides only. If the number and the talk test disagree, trust the talk test. Zone 2 means you can talk in full sentences. A HIIT hard effort means you can only get out a few words. If you do not have a watch, use the talk test instead.</p>
         </details>
       </div>
 

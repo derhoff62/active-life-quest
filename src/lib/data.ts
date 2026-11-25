@@ -113,7 +113,8 @@ export function daysForTime(timeMin: 15 | 30 | 45 | 60, phase: number): number {
 const YMOVE = 'Exercise video by Your Move';
 
 // Playable video clips, served from public/videos/. The six Your Move clips
-// are the exact matches on file; the single-leg RDL clip is Derek's own.
+// are the exact matches on file; the single-leg RDL and step-up clips are
+// Derek's own (step-up added Nov 25, 2026, clipped and muted from his take).
 const EXERCISE_VIDEOS: Record<string, string> = {
   'Dumbbell Goblet Squat': '/videos/dumbbell-goblet-squat.mp4',
   'Seated Cable Row': '/videos/seated-cable-row.mp4',
@@ -122,6 +123,7 @@ const EXERCISE_VIDEOS: Record<string, string> = {
   'Barbell Back Squat': '/videos/barbell-back-squat.mp4',
   'Barbell Deadlift': '/videos/barbell-deadlift.mp4',
   'Single-Leg Romanian Deadlift': '/videos/single-leg-rdl-derek.mp4',
+  'Step-Up': '/videos/step-up.mp4',
 };
 
 // Demo videos for moves with no Derek clip yet. Curated form demos (slow lowering,
@@ -132,7 +134,6 @@ const EXERCISE_DEMO_LINKS: Record<string, string> = {
   'Romanian Deadlift': 'https://www.youtube.com/watch?v=JCPd_L-xI5k',
   'Push-Up': 'https://www.youtube.com/watch?v=8V-ZUMvQKr0',
   'Glute Bridge': 'https://www.youtube.com/watch?v=B_MWNJOwUcM',
-  'Step-Up': 'https://www.youtube.com/watch?v=9day6RhW8XA',
   'Split Squat': 'https://www.youtube.com/watch?v=NIDiXDxzvYs',
   'Pallof Press': 'https://www.youtube.com/watch?v=axgv7H_VQOo',
   'Dumbbell Overhead Press': 'https://www.youtube.com/watch?v=9jzSIztp6EQ',

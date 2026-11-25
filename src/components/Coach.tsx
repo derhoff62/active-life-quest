@@ -4,9 +4,11 @@ import * as api from '../lib/api';
 import { CES_TEMPLATES } from '../lib/data';
 import Metrics, { latestMetric, TrendChart, metricSeries } from './Metrics';
 import type { ProfileDoc } from '../lib/store';
-import { checkinPreferenceText, checkinFrequenciesForMode, normalizeCheckinFrequency, normalizeProfile, phaseForDoc, recoveryScoreForDoc, cardioCreditedSum, pendingRetests, applyRetestReview, hasCleanApprovedRetest, retestNextPhase, applyAssessmentReview, assessmentPending, assessmentStatus } from '../lib/store';
+import { checkinPreferenceText, checkinFrequenciesForMode, normalizeCheckinFrequency, normalizeProfile, phaseForDoc, recoveryScoreForDoc, cardioCreditedSum, pendingRetests, applyRetestReview, hasCleanApprovedRetest, retestNextPhase, applyAssessmentReview, assessmentPending, assessmentStatus, volumeTierForDoc } from '../lib/store';
 import { weekLabel } from '../lib/yearPlan';
 import { coachReminders, retestWeeksDue } from '../lib/coachReminders';
+import { checkinHistory, coachCheckinSummary, recoveryTrend, volumeAdjustments, volumeByWeek, shortDate, windowStats } from '../lib/coachStats';
+import { VOLUME_MUSCLES } from '../lib/data';
 import GuardianEmote from './GuardianEmote';
 
 interface ClientRow {
@@ -335,6 +337,14 @@ export default function Coach({ ctx }: { ctx: Ctx }) {
               return (
                 <div>
                   <p className="small">Check-ins this week: {ciWeek} of 7 · Recovery score: {rec !== null ? `${rec}/100` : 'no check-in yet'} · Retests due: {(() => { const due = retestWeeksDue(selected.data); return due.length ? due.map((w) => (w === 52 ? 'review' : `Week ${w}`)).join(', ') : 'none'; })()}</p>
+                  {(() => {
+                    const vol = volumeTierForDoc(selected.data);
+                    const lastCi = (selected.data.checkins || [])[(selected.data.checkins || []).length - 1] as { date?: string; energy?: number; sleepHours?: number; soreness?: number; note?: string } | undefined;
+                    if (!lastCi) return <p className="small">Last check-in: none yet. Volume: as planned.</p>;
+                    return (
+                      <p className="small">Last check-in: {new Date(String(lastCi.date)).toLocaleDateString()} · Energy {lastCi.energy ?? '?'} of 10 · Sleep {lastCi.sleepHours ?? '?'} hours · Soreness {lastCi.soreness ?? '?'} of 10{lastCi.note ? ` · Note: ${lastCi.note}` : ''}. Volume today: {vol.tier === 'none' ? 'as planned' : vol.line}</p>
+                    );
+                  })()}
                   <h5 style={{ margin: '10px 0 2px' }}>Workouts, last 4 weeks</h5>
                   {bar(weekCounts, maxW)}
                   <h5 style={{ margin: '10px 0 2px' }}>Cardio minutes, last 4 weeks (gold line: 150 target)</h5>
@@ -352,6 +362,85 @@ export default function Coach({ ctx }: { ctx: Ctx }) {
                         <TrendChart points={strPoints} unit="lb" />
                       </div>
                     </>
+                  )}
+                </div>
+              );
+            })()}
+          </div>
+
+          {/* Check-ins and volume, read-only: the numbers Derek goes
+              over with a client on a call. Check-in history, recovery
+              trend, sets per muscle vs the phase target, and every
+              workout shortened for low recovery, with the date and the
+              reason. Worked out from the check-ins and workouts already
+              on the profile, see coachStats.ts. */}
+          <div className="card">
+            <h4 style={{ margin: '0 0 4px' }}>Check-ins and volume</h4>
+            <p className="small muted">Read this with the client on a call. Recovery is worked out from sleep, soreness, and energy. Sets are counted from the workouts they finished, after any recovery shortening that day. A workout with no check-in near it counts as planned, not shortened.</p>
+            {(() => {
+              const phase = phaseForDoc(selected.data);
+              const summary = coachCheckinSummary(selected.data, phase);
+              const history = checkinHistory(selected.data, 30);
+              const trend = recoveryTrend(selected.data);
+              const weeks = volumeByWeek(selected.data, phase);
+              const adjustments = volumeAdjustments(selected.data, 30);
+              const last30 = windowStats(history, Date.now() - 30 * 24 * 60 * 60 * 1000, Date.now());
+              const last7rows = history.slice(0, 7);
+              return (
+                <div>
+                  {summary ? (
+                    <p><strong>{summary}</strong></p>
+                  ) : (
+                    <p className="small"><strong>No check-ins yet.</strong></p>
+                  )}
+                  {trend && (
+                    <p className="small">Recovery trend: {trend.direction === 'up' ? `up, ${trend.prevAvg} to ${trend.thisAvg} this week` : trend.direction === 'down' ? `down, ${trend.prevAvg} to ${trend.thisAvg} this week` : `about the same, ${trend.thisAvg} this week vs ${trend.prevAvg} last week`}.</p>
+                  )}
+                  {history.length === 0 ? (
+                    <p className="small muted">No check-ins logged yet. Check-ins show here once the client logs one.</p>
+                  ) : (
+                    <>
+                      <p className="small">Last 30 days: checked in {last30.daysDone} of 30 days{last30.avgRecovery !== null ? `, recovery averaged ${last30.avgRecovery}` : ''}{last30.avgSleep !== null ? `, sleep averaged ${last30.avgSleep} hours` : ''}.</p>
+                      <h5 style={{ margin: '10px 0 2px' }}>Check-ins, newest first</h5>
+                      <table style={{ width: '100%', fontSize: 13 }}>
+                        <thead>
+                          <tr><th style={{ textAlign: 'left' }}>Date</th><th style={{ textAlign: 'left' }}>Recovery</th><th style={{ textAlign: 'left' }}>Sleep</th><th style={{ textAlign: 'left' }}>Energy</th><th style={{ textAlign: 'left' }}>Soreness</th></tr>
+                        </thead>
+                        <tbody>
+                          {last7rows.map((r) => (
+                            <tr key={r.date}>
+                              <td>{shortDate(r.date)}</td>
+                              <td>{r.recovery !== null ? `${r.recovery}/100` : 'not set'}</td>
+                              <td>{r.sleepHours !== null ? `${r.sleepHours} h` : 'not set'}</td>
+                              <td>{r.energy !== null ? `${r.energy}/10` : 'not set'}</td>
+                              <td>{r.soreness !== null ? `${r.soreness}/10` : 'not set'}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                      {history.length > 7 && <p className="small muted">Showing the last 7 check-ins. {history.length} in the last 30 days.</p>}
+                    </>
+                  )}
+                  <h5 style={{ margin: '10px 0 2px' }}>Volume, last 4 weeks</h5>
+                  {weeks.every((w) => w.workouts === 0) ? (
+                    <p className="small muted">No workouts logged yet.</p>
+                  ) : (
+                    weeks.map((w) => (
+                      <p key={w.label} className="small" style={{ margin: '4px 0' }}>
+                        {w.label}: {w.workouts} workout{w.workouts === 1 ? '' : 's'}, {w.totalSets} sets. {VOLUME_MUSCLES.map((m) => `${m.label} ${w.setsPerMuscle[m.id]} of ${w.target[0]} to ${w.target[1]}`).join(', ')}.
+                      </p>
+                    ))
+                  )}
+                  <p className="small muted">Phase {phase} target is {weeks[0]?.target[0] ?? 6} to {weeks[0]?.target[1] ?? 10} sets per muscle a week. Legs often run high, squats and hinges all count toward legs.</p>
+                  <h5 style={{ margin: '10px 0 2px' }}>Workouts shortened for low recovery</h5>
+                  {adjustments.length === 0 ? (
+                    <p className="small muted">No workouts shortened in the last 30 days, and no check-in flagged pain.</p>
+                  ) : (
+                    adjustments.map((a) => (
+                      <p key={`${a.date}-${a.title}`} className="small" style={{ margin: '4px 0' }}>
+                        {shortDate(a.date)}, {a.title}: {a.line}
+                      </p>
+                    ))
                   )}
                 </div>
               );

@@ -3,7 +3,7 @@ import type { Ctx } from '../App';
 import * as api from '../lib/api';
 import { PHASES, WORKOUTS, CORE_BALANCE_WORKOUT, WEEK13, CLASS_GOOD_FOR, GOAL_TYPES, splitForDays, foodQuestForDate } from '../lib/data';
 import type { TrainingStyle } from '../lib/data';
-import { phaseForDoc, recoveryScore, levelForXp, titleForLevel, metCompanionIds, currentWeekForDoc, checkinPreferenceText, checkinFrequenciesForMode, normalizeCheckinFrequency, loggedToday, streakDaysForDoc, lastLoggedLabel, cardioCreditedSum, hasApprovedRetest, pendingRetests, assessmentApproved, assessmentPending } from '../lib/store';
+import { phaseForDoc, recoveryScore, levelForXp, titleForLevel, metCompanionIds, currentWeekForDoc, checkinPreferenceText, checkinFrequenciesForMode, normalizeCheckinFrequency, loggedToday, streakDaysForDoc, lastLoggedLabel, cardioCreditedSum, hasApprovedRetest, pendingRetests, assessmentApproved, assessmentPending, volumeTierForDoc } from '../lib/store';
 import { cycleForWeek, nextRetestWeek, nextBossWeek, nextRetestLabel, nextBossLabel, isDeloadWeek, challengeForWeek } from '../lib/yearPlan';
 import type { AssessmentVideo } from '../lib/store';
 import GuardianAvatar from './GuardianAvatar';
@@ -98,6 +98,9 @@ export default function Today({ ctx }: { ctx: Ctx }) {
   // from the slider positions. Until the first check-in, it uses last
   // night's sleep and a neutral middle for energy and soreness.
   const lastCheckin = doc.checkins[doc.checkins.length - 1] as { energy?: number; sleepHours?: number; soreness?: number } | undefined;
+  // Check-in adaptive volume: today's workout follows the last
+  // check-in (today, or yesterday). See volumeTierForDoc in store.ts.
+  const vol = volumeTierForDoc(doc);
   const rec = recoveryScore(
     lastCheckin?.sleepHours ?? lastSleep?.hours ?? 7,
     lastCheckin?.soreness ?? 3,
@@ -243,6 +246,7 @@ export default function Today({ ctx }: { ctx: Ctx }) {
             {assessmentPending(doc) && <p className="notice">Assessment waiting for Derek to review. Your plan starts once he approves it.</p>}
             {assessmentApproved(doc) && !doc.workouts.length && <p>Your next step: do Day 1. It takes about 10 to 15 minutes.</p>}
             {assessmentApproved(doc) && doc.workouts.length > 0 && <p>Your next step: your Phase {phase} workout. {phaseInfo?.name}. Take 1 to 2 rest days between strength days.</p>}
+            {assessmentApproved(doc) && vol.tier !== 'none' && <p className="small"><strong>{vol.line}</strong></p>}
             <div className="row">
               {!doc.assessmentDone && <button className="primary" onClick={() => go('assessment')}>Start the assessment</button>}
               {assessmentPending(doc) && <button className="primary" onClick={() => go('assessment')}>See my assessment</button>}
@@ -347,6 +351,7 @@ export default function Today({ ctx }: { ctx: Ctx }) {
         <p className="muted small">
           Recovery score from your last check-in: {lastCheckin ? `${rec}/100` : 'not set yet, log your first check-in below'}. Sleep 40, aches 25, energy 25, rest rhythm 10.
         </p>
+        {lastCheckin && <p className="small"><strong>{vol.line}</strong></p>}
         <p className="small">Your daily check-in is in the app. Complete your tasks for the day, then log how it went here.</p>
         {lastLoggedLabel(doc.checkins) && <p className="small muted">{lastLoggedLabel(doc.checkins)}.</p>}
         <p className="small"><strong>{checkinPreferenceText(doc)}</strong></p>
@@ -385,6 +390,7 @@ export default function Today({ ctx }: { ctx: Ctx }) {
             <input type="range" min={1} max={10} value={soreness} onChange={(e) => setSoreness(Number(e.target.value))} />
             <label htmlFor="ci-note">Anything to tell Derek?</label>
             <input id="ci-note" value={checkinNote} onChange={(e) => setCheckinNote(e.target.value)} placeholder="Optional" />
+            <p className="small muted">If you have sharp, new, or worsening pain, write it in the note and see a doctor or physical therapist.</p>
             <button
               className="primary"
               style={{ marginTop: 10 }}

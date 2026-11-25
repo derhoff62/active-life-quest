@@ -643,6 +643,64 @@ export function recoveryScoreForDoc(doc: ProfileDoc): number | null {
   return recoveryScore(last.sleepHours ?? lastSleep?.hours ?? 7, last.soreness ?? 3, last.energy ?? 7, true);
 }
 
+/** Check-in adaptive volume (Derek, Nov 25, 2026): how hard today
+ * should be follows the client's last check-in, not just their phase.
+ * Tiers use the recovery score from the last check-in: 70 and up is
+ * good, 50 to 69 is ok, below 50 is bad. Only a check-in from today
+ * or yesterday counts; an older one is stale, so the client trains
+ * as planned. A note that mentions sharp, new, or worsening pain,
+ * chest pain, or dizziness is a pain flag, not a volume tier: the
+ * client is told to see a doctor or physical therapist, and no
+ * workout is prescribed around pain. */
+export type VolumeTier = 'good' | 'ok' | 'bad' | 'none' | 'pain';
+export interface VolumeAdjustment {
+  tier: VolumeTier;
+  /** Sets to drop from each move in the workout player. */
+  setsDrop: number;
+  /** True when the best-workout picker should drop accessories by
+   * picking a shorter session. */
+  dropAccessories: boolean;
+  /** True when the picker should offer the short session / Zone 2. */
+  shortOnly: boolean;
+  /** Plain line shown to the client on Today and in Workouts. */
+  line: string;
+}
+const PAIN_NOTE = /\b(sharp|stabbing|chest pain|dizzy|dizziness|worsening|getting worse|new pain)\b/i;
+export function volumeTierForDoc(doc: ProfileDoc): VolumeAdjustment {
+  const checkins = doc.checkins || [];
+  const planned: VolumeAdjustment = { tier: 'none', setsDrop: 0, dropAccessories: false, shortOnly: false, line: 'No check-in yet. Train as planned.' };
+  if (checkins.length === 0) return planned;
+  const last = checkins[checkins.length - 1] as { date?: string; note?: string } | undefined;
+  if (!last) return planned;
+  const lastDate = String(last.date || '').slice(0, 10);
+  const today = new Date().toISOString().slice(0, 10);
+  const yesterdayDate = new Date();
+  yesterdayDate.setDate(yesterdayDate.getDate() - 1);
+  const yesterday = yesterdayDate.toISOString().slice(0, 10);
+  if (lastDate !== today && lastDate !== yesterday) {
+    return { ...planned, line: 'No check-in in the last day. Train as planned.' };
+  }
+  if (PAIN_NOTE.test(String(last.note || ''))) {
+    return { tier: 'pain', setsDrop: 0, dropAccessories: false, shortOnly: false, line: 'You noted sharp, new, or worsening pain. See a doctor or physical therapist. No workout today.' };
+  }
+  const rec = recoveryScoreForDoc(doc);
+  if (rec === null) return planned;
+  if (rec >= 70) {
+    return { tier: 'good', setsDrop: 0, dropAccessories: false, shortOnly: false, line: 'Recovery looks good, train as planned.' };
+  }
+  if (rec >= 50) {
+    return { tier: 'ok', setsDrop: 1, dropAccessories: true, shortOnly: false, line: 'Recovery is a bit low today, so today is shortened by 1 set on the main lifts, with a shorter session.' };
+  }
+  return { tier: 'bad', setsDrop: 2, dropAccessories: true, shortOnly: true, line: 'Recovery is low today, so today is shortened a lot. Do the short session, or a Zone 2 walk instead. No PR attempt today.' };
+}
+/** Sets to do for one move after the volume tier: ok drops 1 set,
+ * bad drops 2, never below 1 set. Good, none, and pain change nothing
+ * here (pain blocks the workout before it starts). */
+export function volumeSetsFor(sets: number, tier: VolumeTier): number {
+  const drop = tier === 'ok' ? 1 : tier === 'bad' ? 2 : 0;
+  return Math.max(1, sets - drop);
+}
+
 /** Best balance hold so far, in seconds, from the baseline and tests. */
 export function bestBalanceSec(doc: ProfileDoc): number {
   const base = Math.max(doc.balanceBaseline?.left || 0, doc.balanceBaseline?.right || 0);

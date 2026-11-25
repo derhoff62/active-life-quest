@@ -185,7 +185,7 @@ export default function GuardianAvatar({
   // for Ranger too (see mouthWidth below).
   const browHalo = skinIsDark || isRanger ? '#ffe3c2' : null;
   const mouthStroke = skinIsDark ? '#ffe3c2' : '#6b4a3a';
-  const mouthWidth = isRanger ? 3.2 : skinIsDark ? 2.8 : 2.0;
+  const mouthWidth = isRanger ? 2.4 : skinIsDark ? 2.8 : 2.0;
   // Beard edge on dark skin: the old dark outline (#2e1a08) vanished
   // into Deep skin (#54371e) next to beard fill #40260f, so the beard
   // edge gets a light-tan rim on dark tones instead.
@@ -286,13 +286,15 @@ export default function GuardianAvatar({
   );
   const scene: GuardianScene = background ?? CLASS_SCENE[g.classId] ?? 'guardian';
   const isFemale = g.look === 'Female';
-  // BIGGER FIXES (Nov 23 10:12 PM): Ranger brows were 1.8/2.2 units
-  // (0.86px at 96px) — invisible. Now ≥4 units (1.9px) with a halo
-  // 2.4 units wider, so the brow reads as a dark bar rimmed in
-  // light on every skin tone. Eyes r3.0 -> 4.5 (4.3px diameter),
-  // glint r0.9 -> 1.6 (was sub-pixel, 0.43px radius).
-  const browCoreWidth = isRanger ? (isFemale ? 4.2 : 4.6) : isFemale ? 2.4 : 3.0;
-  const browHaloWidth = isRanger ? (isFemale ? 6.6 : 7.0) : isFemale ? 4.6 : 5.2;
+  // RANGER FACE FIX, ROUND 2: r3.2 eyes + glint still dominated the
+  // face at 180px (shiny eyeballs under thick brow bars). The
+  // Ranger-only enlargement was the overshoot — Guardian eyes r2.7
+  // read fine. Ranger now uses the SAME eye/brow sizes as Guardian
+  // (r2.7, glint r0.9, brow core 2.4/3.0, halo 4.6/5.2); only the
+  // Ranger brow SHAPE (raised, shorter) and eye height (cy29) stay
+  // distinct, so the face keeps its own look without the bug eyes.
+  const browCoreWidth = isRanger ? (isFemale ? 2.4 : 3.0) : isFemale ? 2.4 : 3.0;
+  const browHaloWidth = isRanger ? (isFemale ? 4.6 : 5.2) : isFemale ? 4.6 : 5.2;
   const hair = hairForLook(g.look, g.hair);
   const hasBeard = !isFemale && HAIR_WITH_BEARD.includes(hair);
   const bw = buildWidth(g.build);
@@ -351,7 +353,7 @@ export default function GuardianAvatar({
         'thumbs-up': 'M88.5 20.5 L95.5 19 M104.5 19 L111.5 20.5',
       };
   const eyeCy = isRanger ? 29 : 27.5;
-  const eyeR = isRanger ? 4.5 : 2.7;
+  const eyeR = 2.7;
   const faceArt = (
     <g>
       {browHalo && (
@@ -391,8 +393,8 @@ export default function GuardianAvatar({
           <circle cx="107.5" cy={eyeCy} r={eyeR} fill="#1c2b3a" />
           {isRanger && (
             <g fill="#fff" opacity="0.9">
-              <circle cx="91" cy={eyeCy - 1.5} r="1.6" />
-              <circle cx="106" cy={eyeCy - 1.5} r="1.6" />
+              <circle cx="91" cy={eyeCy - 1} r="0.9" />
+              <circle cx="106" cy={eyeCy - 1} r="0.9" />
             </g>
           )}
           {faceId === 'determined' && (
@@ -490,22 +492,22 @@ export default function GuardianAvatar({
   // rectangles — hips stay under the belt (tops x89-95 / x105-111
   // Female), ankles splay out ~12 units each side (bottoms x79-89 /
   // x111-121 Female), ~15 degrees, boots centred on the ankles
-  // (cx84 / cx116 Female) rotated 18 degrees toes-out, with a clear
-  // 16-unit gap between the boots (~8px at 100px). No scale transform
-  // on Guardian legs any more (legSpread 1), so boots keep their
-  // size and the angle is not distorted. Ranger keeps its 1.12x
-  // scale, Spellweaver its robe.
-  // BIGGER FIXES (Derek, Nov 23 10:12 PM, diagnosis Nov 23 10:11 PM):
-  // the 16-unit gap DID read in an exact-size 96px render, but the
-  // live check still read "vertical, boots touching" — the cape,
-  // same Navy as the legs, hangs to y122-130 and fills the inter-leg
-  // gap for the upper two-thirds, so the splay only showed in the
-  // lower ~20 units. Now the ankles splay ANOTHER ~8 units each side
-  // (bottoms x71-81 / x119-129 Female, x69-80 / x120-131 Male),
-  // boots cx76 / cx124 Female (cx74.5 / cx125.5 Male), gap ~26 units
-  // (~12.5px at 96px), AND the cape is shortened to end above the
-  // knees (bottom y108-116, was y122-130), so the inter-leg gap is
-  // open background below the knees and the splay reads unambiguously.
+  // (cx84 / cx116 Female) rotated 10 degrees toes-out (was 18,
+  // narrowed Nov 25, see below), with a clear 12-unit gap between
+  // the boots (~5.8px at 96px). No scale transform on Guardian legs
+  // any more (legSpread 1), so boots keep their size and the angle
+  // is not distorted. Ranger keeps its 1.12x scale, Spellweaver
+  // its robe.
+  // GUARDIAN STANCE NARROWED (Derek, Nov 25 12:59 PM: "the
+  // guardians legs seem too far apart"). The Nov 23 fix overshot:
+  // ankles splayed to bottoms x71-81 / x119-129, boots cx76 / cx124
+  // (Male 74.5 / 125.5), ~48 units ankle-to-ankle, boots spanning
+  // x66-134 — two-thirds of the figure width, a split, not a
+  // stance. Now ankles come in ~8 units each side: bottoms x79-89 /
+  // x111-121 Female (x77-88 / x112-123 Male), boots cx84 / cx116
+  // (Male 82.5 / 117.5), ~12-unit gap between the boots (~5.8px at
+  // 96px), toes-out 18° -> 10°. Still a planted stance, hips still
+  // under the belt, splay ~10°, not feet together.
   // Spellweaver casting hand: out to the left, raised to chest
   // height, with a glow (see the hands block). Null for other
   // classes, so their hands are untouched.
@@ -1351,20 +1353,20 @@ export default function GuardianAvatar({
           <g transform={legSpread !== 1 ? `translate(100 0) scale(${legSpread} 1) translate(-100 0)` : undefined}>
           {g.classId === 'Guardian' ? (
             <>
-              <path d={isFemale ? 'M89 94 L71 142 L81 142 L95 94 Z' : 'M87 94 L69 142 L80 142 L97 94 Z'} fill={legMain} stroke={legDark} strokeWidth="1.5" />
-              <path d={isFemale ? 'M105 94 L119 142 L129 142 L111 94 Z' : 'M103 94 L120 142 L131 142 L113 94 Z'} fill={legMain} stroke={legDark} strokeWidth="1.5" />
-              <path d={isFemale ? 'M92 96 L76 140 L79 140 L95 96 Z' : 'M91 96 L74 140 L77 140 L94 96 Z'} fill="#000" opacity="0.14" />
-              <path d={isFemale ? 'M108 96 L124 140 L121 140 L105 96 Z' : 'M109 96 L125 140 L122 140 L106 96 Z'} fill="#000" opacity="0.14" />
-              <path d={isFemale ? 'M79.5 120 L87 120 M113 120 L120.5 120' : 'M77.5 120 L87.5 120 M112.5 120 L122.5 120'} fill="none" stroke={legDark} strokeWidth="2.5" opacity="0.85" strokeLinecap="round" />
-              <ellipse cx={isFemale ? 76 : 74.5} cy="148" rx="10" ry="4.5" fill={BOOT} transform={`rotate(-18 ${isFemale ? 76 : 74.5} 148)`} />
-              <ellipse cx={isFemale ? 124 : 125.5} cy="148" rx="10" ry="4.5" fill={BOOT} transform={`rotate(18 ${isFemale ? 124 : 125.5} 148)`} />
-              <g transform={`rotate(-18 ${isFemale ? 76 : 74.5} 148)`}>
-                <path d={`M${(isFemale ? 76 : 74.5) - 8} 145 L${(isFemale ? 76 : 74.5) + 8} 145`} stroke="#d9a441" strokeWidth="3" opacity="1" />
-                <path d={`M${(isFemale ? 76 : 74.5) - 8} 150 L${(isFemale ? 76 : 74.5) + 8} 150`} stroke="#d9a441" strokeWidth="2.5" opacity="0.9" />
+              <path d={isFemale ? 'M89 94 L79 142 L89 142 L95 94 Z' : 'M87 94 L77 142 L88 142 L97 94 Z'} fill={legMain} stroke={legDark} strokeWidth="1.5" />
+              <path d={isFemale ? 'M105 94 L111 142 L121 142 L111 94 Z' : 'M103 94 L112 142 L123 142 L113 94 Z'} fill={legMain} stroke={legDark} strokeWidth="1.5" />
+              <path d={isFemale ? 'M92 96 L84 140 L87 140 L95 96 Z' : 'M91 96 L82 140 L85 140 L94 96 Z'} fill="#000" opacity="0.14" />
+              <path d={isFemale ? 'M108 96 L116 140 L113 140 L105 96 Z' : 'M109 96 L117 140 L114 140 L106 96 Z'} fill="#000" opacity="0.14" />
+              <path d={isFemale ? 'M84 120 L91 120 M109 120 L116 120' : 'M82 120 L92 120 M108 120 L118 120'} fill="none" stroke={legDark} strokeWidth="2.5" opacity="0.85" strokeLinecap="round" />
+              <ellipse cx={isFemale ? 84 : 82.5} cy="148" rx="10" ry="4.5" fill={BOOT} transform={`rotate(-10 ${isFemale ? 84 : 82.5} 148)`} />
+              <ellipse cx={isFemale ? 116 : 117.5} cy="148" rx="10" ry="4.5" fill={BOOT} transform={`rotate(10 ${isFemale ? 116 : 117.5} 148)`} />
+              <g transform={`rotate(-10 ${isFemale ? 84 : 82.5} 148)`}>
+                <path d={`M${(isFemale ? 84 : 82.5) - 8} 145 L${(isFemale ? 84 : 82.5) + 8} 145`} stroke="#d9a441" strokeWidth="3" opacity="1" />
+                <path d={`M${(isFemale ? 84 : 82.5) - 8} 150 L${(isFemale ? 84 : 82.5) + 8} 150`} stroke="#d9a441" strokeWidth="2.5" opacity="0.9" />
               </g>
-              <g transform={`rotate(18 ${isFemale ? 124 : 125.5} 148)`}>
-                <path d={`M${(isFemale ? 124 : 125.5) - 8} 145 L${(isFemale ? 124 : 125.5) + 8} 145`} stroke="#d9a441" strokeWidth="3" opacity="1" />
-                <path d={`M${(isFemale ? 124 : 125.5) - 8} 150 L${(isFemale ? 124 : 125.5) + 8} 150`} stroke="#d9a441" strokeWidth="2.5" opacity="0.9" />
+              <g transform={`rotate(10 ${isFemale ? 116 : 117.5} 148)`}>
+                <path d={`M${(isFemale ? 116 : 117.5) - 8} 145 L${(isFemale ? 116 : 117.5) + 8} 145`} stroke="#d9a441" strokeWidth="3" opacity="1" />
+                <path d={`M${(isFemale ? 116 : 117.5) - 8} 150 L${(isFemale ? 116 : 117.5) + 8} 150`} stroke="#d9a441" strokeWidth="2.5" opacity="0.9" />
               </g>
             </>
           ) : (
@@ -1907,12 +1909,17 @@ export default function GuardianAvatar({
                   light centre fading out, pulsing. */}
               {glowDisc(handRx + 19, 85, 14, `url(#${id('glowGem')})`, gemLight)}
               <circle cx={handRx + 19} cy="85" r="5.5" fill={gem} stroke="#fff" strokeWidth="1.5" />
-              {/* POSE (Guardian): sword RAISED — blade up-left at -48
+              {/* POSE (Guardian): sword RAISED — blade up-left at -38
                   about the grip point (handLx, 90), so the hand stays
                   on the grip and the blade points up, ready, instead
-                  of hanging down at -12. */}
+                  of hanging down at -12. SWORD HIGHER (Derek, Nov 25
+                  12:59 PM: "a good guardian action stance would just
+                  be holding the sword a bit higher"): -48 -> -38, so
+                  the blade is ~8° more upright and the tip sits ~5
+                  units higher, without swinging onto the face. The
+                  pommel gem stays IN the gold cap at (handLx,97.8). */}
               {!equippedWeapon && (
-              <g transform={`rotate(-48 ${handLx} 90)`}>
+              <g transform={`rotate(-38 ${handLx} 90)`}>
               {/* Sword, image-left: blade with fuller line, gold
                   crossguard, wrapped grip, gem in the pommel */}
                 <rect x={handLx - 3} y="40" width="6" height="44" rx="3" fill={STEEL} stroke={STEEL_DARK} strokeWidth="1.5" />
@@ -1935,10 +1942,11 @@ export default function GuardianAvatar({
                     belt. The gem belongs on the POMMEL, on the sword
                     axis just below the fist: grip shortened to end at
                     y96, gold pommel cap at y95-100.5, gem set in the
-                    cap at (handLx,97.8), rendering at ~(handLx+6,95)
-                    — on the grip axis, attached via cap and grip to
-                    the hand. NO glow disc: a pommel gem is solid, and
-                    the old r12 disc is what glowed in the crotch. */}
+                    cap at (handLx,97.8), rendering at ~(handLx+5,96)
+                    at the -38° raise — on the grip axis, attached via
+                    cap and grip to the hand. NO glow disc: a pommel
+                    gem is solid, and the old r12 disc is what glowed
+                    in the crotch. */}
                 <rect x={handLx - 5.5} y="95" width="11" height="5.5" rx="2.5" fill={GOLD} stroke={GOLD_DARK} strokeWidth="1.5" />
                 <circle cx={handLx} cy="97.8" r="3" fill={gem} stroke="#fff" strokeWidth="1.5" />
               </g>
