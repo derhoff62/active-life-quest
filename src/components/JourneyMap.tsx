@@ -106,70 +106,111 @@ function LandBadge({ land }: { land: string }) {
   );
 }
 
-// Illustrated scene strip for one step: the land's terrain, a dirt
-// trail snaking across it, and the castle at the end of the land on
-// boss steps. The winding lives HERE, inside one step's strip, so it
-// can never make the step order ambiguous. Flat style, land colours,
-// no new images.
+// Illustrated scene strip for one step, round 4 (Derek, Nov 25, 2026):
+// "It's the map strips" – the old ~72px strips were sparse and
+// unreadable on his phone: tiny flag tick, one thin arc for a trail,
+// empty Step 4 sky, clipped sun. This version is TALLER (120px) and
+// much simpler: FEWER, BIGGER shapes, one land per strip, instantly
+// recognisable. Forest = big pines + green ground. Shores = blue
+// water waves + sand. Peaks = big snow-capped mountains + stars.
+// Castle = BIG gold castle with a large waving red flag, boss steps
+// only. Signpost = BIG brown signpost with an arrow board, walk
+// steps only. Never both. The dirt trail is a WIDE tan path with a
+// dashed centre line, snaking across the strip. The big red arrow
+// is GONE from inside the strip (it duplicated the gutter arrows
+// and confused the picture). The sun sits fully inside the strip,
+// never clipped. Every strip also gets a plain-words label directly
+// under it, so nobody has to guess what the picture is. Flat style,
+// land colours, no new images.
+const STRIP_LABEL: Record<number, string> = {
+  1: 'Sapphire Forest, start here',
+  2: 'Forest Castle, Week 4 boss waits here',
+  3: 'Crystal Shores',
+  4: 'Lake Castle, Week 8 boss waits here',
+  5: 'Navy Peaks',
+  6: 'Navy Castle, Week 12 boss waits here',
+};
+
 function TrailScene({ land, bossStep }: { land: string; bossStep: boolean }) {
   const theme = LAND_THEME[land];
   return (
-    <svg width="100%" height="72" viewBox="0 0 360 72" preserveAspectRatio="xMidYMid slice" role="img" aria-label={`${land} trail scene`} style={{ display: 'block', borderRadius: 12, border: `2px solid ${theme.border}` }}>
-      <rect width="360" height="72" fill={theme.tint} />
-      {/* Sun. */}
-      <circle cx="322" cy="12" r="8" fill="#f2d878" stroke="#c9a227" strokeWidth="1" />
-      {/* Terrain per land. */}
+    <svg width="100%" height="120" viewBox="0 0 360 120" preserveAspectRatio="xMidYMid slice" role="img" aria-label={`${land} trail scene`} style={{ display: 'block', borderRadius: 12, border: `2px solid ${theme.border}` }}>
+      <rect width="360" height="120" fill={theme.tint} />
+      {/* Ground band at the bottom, in the land colour. */}
+      {land === 'Sapphire Forest' && <rect x="0" y="82" width="360" height="38" fill="#4c8a4f" />}
+      {land === 'Crystal Shores' && <rect x="0" y="82" width="360" height="38" fill="#e8d9a8" />}
+      {land === 'Navy Peaks' && <rect x="0" y="82" width="360" height="38" fill="#7d8ea3" />}
+      {/* Sun, fully inside the strip (top edge at y=6, never clipped).
+          Kept clear of the boss portrait, which sits at the right end. */}
+      <circle cx="258" cy="20" r="12" fill="#f2d878" stroke="#c9a227" strokeWidth="1.5" />
+      {/* Terrain per land: three or four BIG shapes only. */}
       {land === 'Sapphire Forest' && (
-        <g fill={theme.deep}>
-          <path d="M18 52 L28 26 L38 52 Z" />
-          <path d="M44 52 L54 30 L64 52 Z" />
-          <path d="M300 52 L310 30 L320 52 Z" />
-          <ellipse className="map-mist" cx="180" cy="56" rx="60" ry="4" fill="#fff" opacity="0.55" />
+        <g>
+          <g fill={theme.deep}>
+            <path d="M150 84 L172 30 L194 84 Z" />
+            <path d="M200 84 L222 22 L244 84 Z" />
+            <path d="M250 84 L272 34 L294 84 Z" />
+          </g>
+          <g fill="#5b3a1e">
+            <rect x="168" y="82" width="7" height="10" />
+            <rect x="218" y="82" width="7" height="10" />
+            <rect x="268" y="82" width="7" height="10" />
+          </g>
         </g>
       )}
       {land === 'Crystal Shores' && (
-        <g fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round">
-          <path className="map-wave" d="M10 58 Q25 52 40 58 Q55 64 70 58" />
-          <path className="map-wave" d="M150 60 Q165 54 180 60 Q195 66 210 60" />
-          <path className="map-wave" d="M280 58 Q295 52 310 58 Q325 64 340 58" />
+        <g>
+          <rect x="0" y="52" width="360" height="32" fill="#4a90d9" />
+          <g fill="none" stroke="#fff" strokeWidth="4" strokeLinecap="round">
+            <path className="map-wave" d="M140 62 Q160 54 180 62 Q200 70 220 62" />
+            <path className="map-wave" d="M230 72 Q250 64 270 72 Q290 80 310 72" />
+            <path className="map-wave" d="M150 76 Q170 68 190 76 Q210 84 230 76" />
+          </g>
         </g>
       )}
       {land === 'Navy Peaks' && (
         <g>
-          <g fill="#fff" stroke={theme.deep} strokeWidth="1">
-            <path d="M20 54 L48 18 L76 54 Z" />
-            <path d="M290 54 L318 20 L346 54 Z" />
+          <g fill="#eef3f8" stroke={theme.deep} strokeWidth="1.5">
+            <path d="M140 84 L190 16 L240 84 Z" />
+            <path d="M225 84 L275 28 L325 84 Z" />
+          </g>
+          <g fill="#fff">
+            <path d="M190 16 L206 38 L190 32 L176 40 Z" />
+            <path d="M275 28 L288 46 L274 41 L262 47 Z" />
           </g>
           <g fill="#f2d878">
-            <circle className="map-twinkle" cx="120" cy="10" r="1.6" />
-            <circle className="map-twinkle" cx="180" cy="7" r="1.3" />
-            <circle className="map-twinkle" cx="240" cy="11" r="1.6" />
+            <circle className="map-twinkle" cx="120" cy="14" r="2.2" />
+            <circle className="map-twinkle" cx="330" cy="12" r="2.2" />
+            <circle className="map-twinkle" cx="300" cy="34" r="1.8" />
           </g>
         </g>
       )}
-      {/* Dirt trail snaking across the strip, with an arrow pointing up
-          the way to go. The trail is the same dirt gold on every land. */}
-      <path d="M-10 66 C 60 46, 110 66, 180 52 S 300 44, 370 60 L 370 72 L -10 72 Z" fill="#e8d9a8" stroke="#c9a227" strokeWidth="1.5" />
-      <path d="M176 44 L186 34 L196 44 L190 44 L190 52 L182 52 L182 44 Z" fill="#a83232" />
-      {/* Castle at the end of the land, on boss steps only. On other
-          steps a wooden signpost marks the trail instead. */}
+      {/* Dirt trail: a WIDE tan path snaking left to right across the
+          strip, with a dashed centre line. Same dirt on every land. */}
+      <path d="M-10 108 C 70 78, 140 112, 210 88 S 320 82, 370 100" fill="none" stroke="#d9b96a" strokeWidth="24" strokeLinecap="round" />
+      <path d="M-10 108 C 70 78, 140 112, 210 88 S 320 82, 370 100" fill="none" stroke="#8a6d00" strokeWidth="2.5" strokeDasharray="10 8" strokeLinecap="round" />
+      {/* Castle at the end of the land, on boss steps only: BIG gold
+          castle with crenellations, a door, and a LARGE waving red
+          flag on a tall pole. On walk steps a BIG wooden signpost
+          with an arrow board marks the trail instead. */}
       {bossStep ? (
         <g>
-          <g fill="#f2d878" stroke="#8a6d00" strokeWidth="1.2">
-            <rect x="14" y="28" width="34" height="26" />
-            <rect x="10" y="22" width="7" height="8" />
-            <rect x="24" y="22" width="7" height="8" />
-            <rect x="38" y="22" width="7" height="8" />
-            <rect x="28" y="40" width="6" height="14" fill="#8a6d00" stroke="none" />
+          <g fill="#f2d878" stroke="#8a6d00" strokeWidth="1.5">
+            <rect x="12" y="46" width="66" height="46" />
+            <rect x="6" y="36" width="10" height="12" />
+            <rect x="28" y="36" width="10" height="12" />
+            <rect x="50" y="36" width="10" height="12" />
+            <rect x="68" y="36" width="10" height="12" />
+            <rect x="38" y="70" width="14" height="22" fill="#8a6d00" stroke="none" />
           </g>
-          <rect x="30" y="10" width="2" height="14" fill="#124571" />
-          <path d="M32 10 L48 14 L32 19 Z" fill="#c9a227" stroke="#8a6d00" strokeWidth="0.8" />
+          <rect x="43" y="12" width="3" height="26" fill="#124571" />
+          <path d="M46 12 L78 19 L46 27 Z" fill="#a83232" stroke="#7d2424" strokeWidth="1" />
         </g>
       ) : (
         <g>
-          <rect x="20" y="30" width="4" height="24" fill="#5b3a1e" />
-          <rect x="10" y="24" width="24" height="10" rx="2" fill="#8a6238" stroke="#5b3a1e" strokeWidth="1" />
-          <path d="M28 26 L36 29 L28 32 Z" fill="#fff" />
+          <rect x="30" y="52" width="7" height="44" fill="#5b3a1e" />
+          <path d="M34 44 L96 44 L108 53 L96 62 L34 62 Z" fill="#8a6238" stroke="#5b3a1e" strokeWidth="1.5" />
+          <path d="M88 50 L100 53 L88 56 Z" fill="#fff" />
         </g>
       )}
     </svg>
@@ -369,14 +410,17 @@ export default function JourneyMap({
                 {/* Illustrated trail scene for this step. The monster
                     stands ON the trail here, at the right end of the
                     scene, on boss steps. */}
-                <div style={{ position: 'relative', marginBottom: 8 }}>
+                <div style={{ position: 'relative', marginBottom: 4 }}>
                   <TrailScene land={LAND_FOR_STEP[s.n]} bossStep={isBossStep} />
                   {boss && (
-                    <div style={{ position: 'absolute', right: 8, top: 8, width: 56, height: 56, borderRadius: '50%', boxShadow: '0 0 0 2px rgba(168,50,50,0.75), 0 0 12px rgba(168,50,50,0.45)' }}>
+                    <div style={{ position: 'absolute', right: 8, top: 8, width: 56, height: 56, borderRadius: '50%', background: '#fff3c4', boxShadow: '0 0 0 2px rgba(168,50,50,0.75), 0 0 12px rgba(168,50,50,0.45)' }}>
                       <BossAvatar id={BOSS_AVATAR[boss.id] || 'the-slump'} />
                     </div>
                   )}
                 </div>
+                {/* Plain-words label for the strip, directly under it,
+                    so nobody has to guess what the picture is. */}
+                <p style={{ margin: '0 0 8px', fontWeight: 700, color: '#124571' }}>{STRIP_LABEL[s.n]}</p>
                 <p style={{ margin: '0 0 4px' }}>
                   <strong>Step {s.n}: {s.title}</strong>{' '}
                   <span
