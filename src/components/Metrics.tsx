@@ -154,6 +154,10 @@ export default function Metrics({ doc, update, toast }: MetricsProps) {
   const [weighMsg, setWeighMsg] = useState('');
   const [measureMsg, setMeasureMsg] = useState('');
   const [measureBusy, setMeasureBusy] = useState(false);
+  // History (Derek, Nov 25, 2026): latest 5 entries stay visible, the
+  // older entries hide behind Show all history at the bottom of the
+  // card, after the log forms, so expanding never buries the log form.
+  const [showHistory, setShowHistory] = useState(false);
 
   const exercises = [...new Set((doc.prs || []).map((p) => p.exercise))].sort();
   const pickedExercise = exercise || exercises[0] || '';
@@ -335,6 +339,15 @@ export default function Metrics({ doc, update, toast }: MetricsProps) {
       )}
       {!readOnly && metric === 'cardio' && (
         <p className="small muted" style={{ marginTop: 12 }}>Log cardio in the Cardio tab. It shows up here.</p>
+      )}
+
+      {points.length > 5 && (
+        <div style={{ marginTop: 12 }}>
+          <button onClick={() => setShowHistory((v) => !v)}>{showHistory ? 'Hide history' : 'Show all history'}</button>
+          {showHistory && points.slice(0, points.length - 5).reverse().map((p, i) => (
+            <p key={i} className="small" style={{ margin: '2px 0' }}>{fmtDate(p.date)}: {p.label}</p>
+          ))}
+        </div>
       )}
     </div>
   );

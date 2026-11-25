@@ -26,11 +26,22 @@ const BOSS_AVATAR: Record<string, string> = {
 // Land picture: a small flat badge with the land's castle and its motif.
 // No land image files exist, so the badge is drawn here, reusing the same
 // flat style as the companion portraits. No new image files, no base64.
+// Each land has its own terrain feel, and a little calm motion from the
+// map classes in styles.css (glow, mist, waves, twinkles). Motion is
+// gentle and stops under prefers-reduced-motion.
+const LAND_THEME: Record<string, { tint: string; border: string; deep: string }> = {
+  'Sapphire Forest': { tint: '#e9f4ec', border: '#1e7a46', deep: '#0f4d28' },
+  'Crystal Shores': { tint: '#e7f1fd', border: '#2f6fd0', deep: '#1d4fa1' },
+  'Navy Peaks': { tint: '#e6edf6', border: '#124571', deep: '#0b2f4d' },
+};
+
 function LandBadge({ land }: { land: string }) {
   const bg = land === 'Crystal Shores' ? '#2f6fd0' : land === 'Navy Peaks' ? '#124571' : '#1e7a46';
   return (
-    <svg width="56" height="56" viewBox="0 0 56 56" role="img" aria-label={land} style={{ display: 'block', borderRadius: 12, flexShrink: 0 }}>
+    <svg width="56" height="56" viewBox="0 0 56 56" role="img" aria-label={land} style={{ display: 'block', borderRadius: 12, flexShrink: 0, boxShadow: '0 2px 8px rgba(18,69,113,0.35)', border: '2px solid #f2d878' }}>
       <rect width="56" height="56" rx="12" fill={bg} />
+      {/* Soft gold glow behind the castle, gently pulsing. */}
+      <ellipse className="map-land-glow" cx="28" cy="30" rx="20" ry="16" fill="#f2d878" opacity="0.35" />
       {/* Castle: gold tower with battlements, same in every land. */}
       <g fill="#f2d878" stroke="#8a6d00" strokeWidth="1">
         <rect x="20" y="22" width="16" height="22" />
@@ -40,21 +51,33 @@ function LandBadge({ land }: { land: string }) {
         <rect x="26" y="32" width="4" height="12" fill="#8a6d00" stroke="none" />
       </g>
       {land === 'Sapphire Forest' && (
-        <g fill="#0f4d28">
-          <path d="M8 44 L13 30 L18 44 Z" />
-          <path d="M38 44 L43 30 L48 44 Z" />
+        <g>
+          <g fill="#0f4d28">
+            <path d="M8 44 L13 30 L18 44 Z" />
+            <path d="M38 44 L43 30 L48 44 Z" />
+          </g>
+          {/* Drifting mist between the pines. */}
+          <ellipse className="map-mist" cx="28" cy="46" rx="18" ry="3" fill="#fff" opacity="0.5" />
         </g>
       )}
       {land === 'Crystal Shores' && (
         <g fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round">
-          <path d="M6 48 Q12 44 18 48 Q24 52 30 48" />
-          <path d="M26 48 Q32 44 38 48 Q44 52 50 48" />
+          <path className="map-wave" d="M6 48 Q12 44 18 48 Q24 52 30 48" />
+          <path className="map-wave" d="M26 48 Q32 44 38 48 Q44 52 50 48" />
         </g>
       )}
       {land === 'Navy Peaks' && (
-        <g fill="#fff">
-          <path d="M6 46 L16 28 L26 46 Z" />
-          <path d="M30 46 L40 24 L50 46 Z" />
+        <g>
+          <g fill="#fff">
+            <path d="M6 46 L16 28 L26 46 Z" />
+            <path d="M30 46 L40 24 L50 46 Z" />
+          </g>
+          {/* Twinkling stars over the peaks. */}
+          <g fill="#f2d878">
+            <circle className="map-twinkle" cx="12" cy="10" r="1.6" />
+            <circle className="map-twinkle" cx="28" cy="7" r="1.3" />
+            <circle className="map-twinkle" cx="45" cy="12" r="1.6" />
+          </g>
         </g>
       )}
     </svg>
@@ -132,6 +155,7 @@ export default function JourneyMap({
           background: '#ffffff',
           color: '#124571',
           border: '2px solid #124571',
+          boxShadow: '0 2px 10px rgba(18,69,113,0.25)',
         }}
       >
         You are here: {hereLand} · {weekLabel(week)}
@@ -156,6 +180,8 @@ export default function JourneyMap({
           const companions = CREATURES.filter((c) => c.meetWeek >= s.from && c.meetWeek <= s.to);
           const isCurrent = status === 'current';
           const isDone = status === 'done';
+          const theme = LAND_THEME[LAND_FOR_STEP[s.n]];
+          const isBossStep = !!boss;
           return (
             <div
               key={s.n}
@@ -163,49 +189,73 @@ export default function JourneyMap({
                 position: 'relative',
                 marginBottom: 12,
                 padding: 12,
-                background: isCurrent ? '#fffdf4' : '#fff',
-                border: isCurrent ? '3px solid #c9a227' : '1px solid #d7e3ee',
-                borderRadius: 14,
+                paddingTop: 18,
+                overflow: 'hidden',
+                // Each land has its own terrain tint; boss steps get a
+                // red-tinted wash over it so they read as boss steps.
+                background: isCurrent
+                  ? '#fffdf4'
+                  : isBossStep
+                    ? `linear-gradient(180deg, ${theme.tint}, #fbe9e7)`
+                    : theme.tint,
+                border: isCurrent
+                  ? '3px solid #c9a227'
+                  : isBossStep
+                    ? '2px solid #a83232'
+                    : `2px solid ${theme.border}`,
+                borderRadius: 16,
                 opacity: status === 'locked' ? 0.55 : 1,
+                boxShadow: isCurrent
+                  ? '0 4px 18px rgba(201,162,39,0.45)'
+                  : isBossStep
+                    ? '0 2px 10px rgba(168,50,50,0.25)'
+                    : '0 1px 4px rgba(18,69,113,0.12)',
               }}
             >
+              {/* Terrain band across the top of the card, in the land colour. */}
+              <div aria-hidden style={{ position: 'absolute', left: 0, right: 0, top: 0, height: 7, background: theme.border }} />
               {/* This row's piece of the trail, behind the step number.
                   Done rows are red all the way through. The current row is
-                  grey above its number circle and red below it, so the red
-                  stops exactly where you are. Future rows are grey. */}
+                  grey above its number pin and red below it, so the red
+                  stops exactly where you are. Future rows are grey. The
+                  trail is 6px wide with a soft red glow, centred on the
+                  step pin (left -31, pin centre -28). */}
               {status === 'done' && (
-                <div aria-hidden style={{ position: 'absolute', left: -37, top: idx === 0 ? 20 : 0, bottom: idx === shown.length - 1 ? 20 : -12, width: 4, background: '#a83232', borderRadius: 2 }} />
+                <div aria-hidden style={{ position: 'absolute', left: -31, top: idx === 0 ? 20 : 0, bottom: idx === shown.length - 1 ? 20 : -12, width: 6, background: '#a83232', borderRadius: 3, boxShadow: '0 0 6px rgba(168,50,50,0.55)' }} />
               )}
               {status === 'current' && (
                 <>
-                  <div aria-hidden style={{ position: 'absolute', left: -37, top: idx === 0 ? 20 : 0, height: 28 - (idx === 0 ? 20 : 0), width: 4, background: '#d7e3ee', borderRadius: 2 }} />
-                  <div aria-hidden style={{ position: 'absolute', left: -37, top: 28, bottom: idx === shown.length - 1 ? 20 : -12, width: 4, background: '#a83232', borderRadius: 2 }} />
+                  <div aria-hidden style={{ position: 'absolute', left: -31, top: idx === 0 ? 20 : 0, height: 28 - (idx === 0 ? 20 : 0), width: 6, background: '#d7e3ee', borderRadius: 3 }} />
+                  <div aria-hidden style={{ position: 'absolute', left: -31, top: 28, bottom: idx === shown.length - 1 ? 20 : -12, width: 6, background: '#a83232', borderRadius: 3, boxShadow: '0 0 6px rgba(168,50,50,0.55)' }} />
                 </>
               )}
               {(status === 'next' || status === 'locked') && (
-                <div aria-hidden style={{ position: 'absolute', left: -37, top: idx === 0 ? 20 : 0, bottom: idx === shown.length - 1 ? 20 : -12, width: 4, background: '#d7e3ee', borderRadius: 2 }} />
+                <div aria-hidden style={{ position: 'absolute', left: -31, top: idx === 0 ? 20 : 0, bottom: idx === shown.length - 1 ? 20 : -12, width: 6, background: '#d7e3ee', borderRadius: 3 }} />
               )}
-              {/* Step number on the trail. */}
+              {/* Step number as a map pin on the trail: a teardrop pin,
+                  gold and pulsing on the step you are on. */}
               <div
                 aria-hidden
                 style={{
                   position: 'absolute',
-                  left: -44,
-                  top: 12,
-                  width: 32,
-                  height: 32,
-                  borderRadius: '50%',
-                  background: isDone ? '#1e7a46' : '#124571',
-                  color: '#fff',
+                  left: -45,
+                  top: 10,
+                  width: 34,
+                  height: 34,
+                  borderRadius: '50% 50% 50% 0',
+                  transform: 'rotate(-45deg)',
+                  background: isDone ? '#1e7a46' : isCurrent ? '#c9a227' : status === 'locked' ? '#8a9aa8' : '#124571',
+                  color: isCurrent ? '#124571' : '#fff',
                   border: '2px solid #fff',
+                  boxShadow: isCurrent ? '0 0 12px rgba(201,162,39,0.7)' : '0 2px 6px rgba(18,69,113,0.35)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  fontWeight: 700,
-                  fontSize: '1rem',
                 }}
               >
-                {isDone ? '✓' : s.n}
+                {/* inline-block: transforms do nothing on an inline span,
+                    so without this the digit would stay rotated -45deg. */}
+                <span style={{ display: 'inline-block', transform: 'rotate(45deg)', fontWeight: 700, fontSize: '1rem', lineHeight: 1 }}>{isDone ? '✓' : s.n}</span>
               </div>
               <p style={{ margin: '0 0 4px' }}>
                 <strong>Step {s.n}: {s.title}</strong>{' '}
@@ -215,6 +265,12 @@ export default function JourneyMap({
                 >
                   {statusText[status]}
                 </span>
+                {isCurrent && (
+                  <svg className="map-flag" aria-hidden width="20" height="20" viewBox="0 0 20 20" style={{ verticalAlign: '-4px', marginLeft: 4 }}>
+                    <rect x="4" y="2" width="2" height="16" fill="#124571" />
+                    <path d="M6 3 L17 6 L6 10 Z" fill="#c9a227" stroke="#8a6d00" strokeWidth="0.8" />
+                  </svg>
+                )}
               </p>
               <p className="small" style={{ margin: '0 0 8px' }}>{s.doLine}</p>
               {/* Pictures for this step: land badge, companion portraits,
@@ -236,7 +292,9 @@ export default function JourneyMap({
                 })}
                 {boss && (
                   <div style={{ textAlign: 'center', width: 56 }}>
-                    <BossAvatar id={BOSS_AVATAR[boss.id] || 'the-slump'} />
+                    <div style={{ borderRadius: '50%', boxShadow: '0 0 0 2px rgba(168,50,50,0.75), 0 0 12px rgba(168,50,50,0.45)', width: 56, height: 56 }}>
+                      <BossAvatar id={BOSS_AVATAR[boss.id] || 'the-slump'} />
+                    </div>
                     <div className="progress-bar boss-bar" style={{ width: 56, margin: '6px auto 0' }} role="img" aria-label={`${bossHpLeft} of ${boss.maxHp} HP`}>
                       <div style={{ width: `${(bossHpLeft / boss.maxHp) * 100}%` }} />
                     </div>

@@ -8,8 +8,8 @@ import JourneyMap from './JourneyMap';
 import CompanionAvatar, { BossAvatar } from './CompanionAvatar';
 import BackToTop from './BackToTop';
 
-// New boss rounds reuse the five boss drawings with new names and higher
-// HP. Bosses are challenges you beat, never friends.
+// Every boss round has its own picture (Derek Nov 25, 2026). No round
+// reuses another round's portrait.
 const BOSS_AVATAR: Record<string, string> = {
   'boss-week-4': 'the-slump',
   // Week 8 is the Mirror of Doubt round: the generated Mirror portrait is
@@ -18,22 +18,30 @@ const BOSS_AVATAR: Record<string, string> = {
   // Knees Troll stays its own monster in the monster list.
   'boss-week-8': 'mirror-of-doubt',
   'boss-week-12': 'wobbly-balance-sprite',
-  'boss-week-16': 'stiff-hips-goblin',
-  'boss-week-20': 'tired-back-beast',
-  'boss-week-24': 'achy-knees-troll',
-  'boss-week-28': 'the-slump',
-  'boss-week-32': 'wobbly-balance-sprite',
-  'boss-week-36': 'stiff-hips-goblin',
-  'boss-week-40': 'tired-back-beast',
-  'boss-week-44': 'achy-knees-troll',
-  'boss-week-48': 'wobbly-balance-sprite',
-  'boss-week-52': 'the-slump',
+  'boss-week-16': 'heavy-fog',
+  'boss-week-20': 'rust-giant',
+  'boss-week-24': 'ember-drake',
+  'boss-week-28': 'gale-howler',
+  'boss-week-32': 'tide-troll',
+  'boss-week-36': 'storm-serpent',
+  'boss-week-40': 'gold-golem',
+  'boss-week-44': 'summit-wraith',
+  'boss-week-48': 'peak-keeper',
+  'boss-week-52': 'summit-review',
 };
 
 export default function Journey({ ctx }: { ctx: Ctx }) {
   const { doc, update, toast } = ctx;
   const [showStory, setShowStory] = useState(false);
   const [bossHit, setBossHit] = useState('');
+  // Show more collapsing (Derek, Nov 25, 2026): long reference lists
+  // start short, one tap expands them, one tap hides them again. The
+  // current cycle, the selected boss, and the companions you have met
+  // plus the next two to meet always stay visible.
+  const [showAllBosses, setShowAllBosses] = useState(false);
+  const [showMoreCycles, setShowMoreCycles] = useState(false);
+  const [showAllCompanions, setShowAllCompanions] = useState(false);
+  const [showAllMonsters, setShowAllMonsters] = useState(false);
   // Same as Armor: the "new companion" badge and the top notice stay
   // while you are on this tab, and clear when you leave it. The
   // boss-ready part of the badge does not clear on a visit at all: it
@@ -80,6 +88,95 @@ export default function Journey({ ctx }: { ctx: Ctx }) {
   const bossBeaten = bossHp <= 0;
   const bossUnlocked = phase >= boss.unlockPhase;
 
+  // One boss row, used for the selected boss (always visible) and for
+  // the rest of the rounds behind Show all boss rounds.
+  const bossRow = (r: (typeof BOSS_ROUNDS)[number]) => {
+    const hp = hpOf(r);
+    const locked = phase < r.unlockPhase;
+    return (
+      <div className="creature" key={r.id} style={{ margin: '12px 0' }}>
+        <div className="avatar" aria-hidden><BossAvatar id={BOSS_AVATAR[r.id]} /></div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <button
+            onClick={() => setSelectedBoss(r.id)}
+            disabled={locked}
+            style={selectedBoss === r.id ? { background: '#124571', color: '#fff' } : {}}
+          >
+            {r.name} · {r.land}
+          </button>
+          <div className="progress-bar boss-bar" style={{ marginTop: 8 }}>
+            <div style={{ width: `${(hp / r.maxHp) * 100}%` }} />
+          </div>
+          <p className="small" style={{ margin: '4px 0 0' }}>
+            {locked
+              ? `${r.maxHp} HP · Locked until your Week ${r.week - 4} retest.`
+              : hp <= 0
+                ? 'Beaten. You move on to the next land.'
+                : `${hp} of ${r.maxHp} HP`}
+          </p>
+        </div>
+      </div>
+    );
+  };
+  const otherBosses = BOSS_ROUNDS.filter((r) => r.id !== boss.id);
+
+  // Your road ahead: the cycle you are in now, the rest behind Show more.
+  const currentCycle = YEAR_CYCLES.find((c) => journeyWeek >= c.weeks[0] && journeyWeek <= c.weeks[1])
+    || (journeyWeek > YEAR_CYCLES[YEAR_CYCLES.length - 1].weeks[1] ? YEAR_CYCLES[YEAR_CYCLES.length - 1] : YEAR_CYCLES[0]);
+  const otherCycles = YEAR_CYCLES.filter((c) => c.cycle !== currentCycle.cycle);
+  const cycleBlock = (c: (typeof YEAR_CYCLES)[number]) => {
+    const week = currentWeekForDoc(doc);
+    const state = week > c.weeks[1] ? 'Done' : week >= c.weeks[0] ? 'You are here' : 'Coming up';
+    const shownBossWeeks = c.bossWeeks.filter((w) => w !== 52);
+    const beaten = shownBossWeeks.filter((w) => ((doc.bossHp || {})[`boss-week-${w}`] ?? 999) <= 0).length;
+    return (
+      <div key={c.cycle} style={{ marginBottom: 12 }}>
+        <p><strong>{c.name} (Weeks {c.weeks[0]} to {c.weeks[1]}) · {state}</strong></p>
+        <p className="small">Goal: {c.goal} · {c.phases} · {c.lands}</p>
+        <p className="small">{c.story}</p>
+        <p className="small muted">Boss rounds: Weeks {shownBossWeeks.join(', ')}{beaten > 0 ? ` · ${beaten} beaten` : ''} · {c.track}</p>
+      </div>
+    );
+  };
+
+  // Companions in full: met companions plus the next two to meet stay
+  // visible, the rest hide behind Show all companions.
+  const unmetCompanions = CREATURES.filter((c) => !met.has(c.id)).sort((a, b) => a.meetWeek - b.meetWeek);
+  const visibleCompanions = [
+    ...CREATURES.filter((c) => met.has(c.id)),
+    ...unmetCompanions.slice(0, 2),
+  ];
+  const hiddenCompanions = CREATURES.filter((c) => !visibleCompanions.includes(c));
+  const creatureRow = (c: (typeof CREATURES)[number]) => {
+    const isMet = met.has(c.id);
+    if (!isMet) {
+      return (
+        <div className="creature" key={c.id} style={{ margin: '10px 0', opacity: 0.7 }}>
+          <div className="avatar" aria-hidden><CompanionAvatar id="unknown" /></div>
+          <p><strong>???</strong> <span className="small muted">Someone you have not met yet. You meet them around Week {c.meetWeek}.</span></p>
+        </div>
+      );
+    }
+    return (
+      <div className="creature" key={c.id} style={{ margin: '10px 0' }}>
+        <div className="avatar" aria-hidden><CompanionAvatar id={c.id} /></div>
+        <div>
+          <p><strong>{c.name}</strong> ({c.kind}, {c.place}): {c.line}</p>
+          <p className="small" style={{ margin: 0 }}><strong>Helps you:</strong> {c.effect}</p>
+        </div>
+      </div>
+    );
+  };
+  const monsterRow = (m: (typeof MONSTERS)[number]) => (
+    <div className="creature" key={m.id} style={{ margin: '10px 0' }}>
+      <div className="avatar" aria-hidden><BossAvatar id={m.id} /></div>
+      <div>
+        <p><strong>{m.name}</strong>: guards the {m.castle} in {m.land}, {m.weeks}. Boss round: {m.bossRound}.</p>
+        <p className="small muted">{m.blurb}</p>
+      </div>
+    </div>
+  );
+
   return (
     <div>
       <div className="card gold-frame">
@@ -93,59 +190,18 @@ export default function Journey({ ctx }: { ctx: Ctx }) {
       <div className="card">
         <h2>Your road ahead</h2>
         <p className="small muted">Each stretch is different: a new goal, a new land, new boss rounds, and new companions. A stretch only opens after the last stretch's retest, the same gate as Week 13.</p>
-        {YEAR_CYCLES.map((c) => {
-          const week = currentWeekForDoc(doc);
-          const state = week > c.weeks[1] ? 'Done' : week >= c.weeks[0] ? 'You are here' : 'Coming up';
-          // Boss weeks are shown without the review round week, and the
-          // beaten count never shows a total: the length of the road
-          // stays hidden.
-          const shownBossWeeks = c.bossWeeks.filter((w) => w !== 52);
-          const beaten = shownBossWeeks.filter((w) => ((doc.bossHp || {})[`boss-week-${w}`] ?? 999) <= 0).length;
-          return (
-            <div key={c.cycle} style={{ marginBottom: 12 }}>
-              <p><strong>{c.name} (Weeks {c.weeks[0]} to {c.weeks[1]}) · {state}</strong></p>
-              <p className="small">Goal: {c.goal} · {c.phases} · {c.lands}</p>
-              <p className="small">{c.story}</p>
-              <p className="small muted">Boss rounds: Weeks {shownBossWeeks.join(', ')}{beaten > 0 ? ` · ${beaten} beaten` : ''} · {c.track}</p>
-            </div>
-          );
-        })}
+        {cycleBlock(currentCycle)}
         <p><strong>Keep going.</strong> After the Golden Summit, test your best in a review retest, pick your next goal, and the road keeps going. There is no finish line here.</p>
         <p className="small">This month's challenge: <strong>{challengeForWeek(currentWeekForDoc(doc)).title}</strong> · {challengeForWeek(currentWeekForDoc(doc)).detail}</p>
+        <button onClick={() => setShowMoreCycles((v) => !v)}>{showMoreCycles ? 'Hide other cycles' : 'Show all cycles'}</button>
+        {showMoreCycles && otherCycles.map((c) => cycleBlock(c))}
       </div>
 
       <div className="card gold-frame" id="combat">
         <h2>Combat</h2>
         <p>A boss round is a practice fight at the end of a land, at Weeks 4, 8, and 12 of every cycle, plus a review round when you get there. You attack with your class spells, and each spell costs mana. Win the round, do the retest, and the next land opens. Bosses are challenges you beat, not friends.</p>
         <p className="small muted">Mana: {doc.mana}/10. Mana refills daily, and good sleep and check-ins add more. Spells never block a workout, quest, check-in, or retest. Pick a boss, then use a spell. The bar drops with every hit.</p>
-        {BOSS_ROUNDS.map((r) => {
-          const hp = hpOf(r);
-          const locked = phase < r.unlockPhase;
-          return (
-            <div className="creature" key={r.id} style={{ margin: '12px 0' }}>
-              <div className="avatar" aria-hidden><BossAvatar id={BOSS_AVATAR[r.id]} /></div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <button
-                  onClick={() => setSelectedBoss(r.id)}
-                  disabled={locked}
-                  style={selectedBoss === r.id ? { background: '#124571', color: '#fff' } : {}}
-                >
-                  {r.name} · {r.land}
-                </button>
-                <div className="progress-bar boss-bar" style={{ marginTop: 8 }}>
-                  <div style={{ width: `${(hp / r.maxHp) * 100}%` }} />
-                </div>
-                <p className="small" style={{ margin: '4px 0 0' }}>
-                  {locked
-                    ? `${r.maxHp} HP · Locked until your Week ${r.week - 4} retest.`
-                    : hp <= 0
-                      ? 'Beaten. You move on to the next land.'
-                      : `${hp} of ${r.maxHp} HP`}
-                </p>
-              </div>
-            </div>
-          );
-        })}
+        {bossRow(boss)}
         <p className="small"><strong>Attacking:</strong> {boss.name}. {bossBeaten ? 'Already beaten.' : bossUnlocked ? `${bossHp} of ${boss.maxHp} HP left.` : `${boss.maxHp} HP · Locked until your Week ${boss.week - 4} retest.`}</p>
         <div className="row">
           {mySpells.map((s) => (
@@ -176,6 +232,8 @@ export default function Journey({ ctx }: { ctx: Ctx }) {
         </div>
         {bossHit && <p className="ok">{bossHit}</p>}
         <p className="small muted">Your class: {doc.guardian?.classId || 'not picked yet'}. {CLASSES.find((c) => c.id === doc.guardian?.classId)?.description || ''}</p>
+        <button onClick={() => setShowAllBosses((v) => !v)}>{showAllBosses ? 'Hide boss rounds' : 'Show all boss rounds'}</button>
+        {showAllBosses && otherBosses.map((r) => bossRow(r))}
       </div>
 
 
@@ -215,40 +273,19 @@ export default function Journey({ ctx }: { ctx: Ctx }) {
       <div className="card" id="companions">
         <h3>Your companions, in full</h3>
         <p className="small muted">People and animals you befriend along the road, one at a time as you get further. Bosses are not companions. They are challenges you beat. The short list is at the top of this tab, above the map.</p>
-        {CREATURES.map((c) => {
-          const isMet = met.has(c.id);
-          if (!isMet) {
-            return (
-              <div className="creature" key={c.id} style={{ margin: '10px 0', opacity: 0.7 }}>
-                <div className="avatar" aria-hidden><CompanionAvatar id="unknown" /></div>
-                <p><strong>???</strong> <span className="small muted">Someone you have not met yet. You meet them around Week {c.meetWeek}.</span></p>
-              </div>
-            );
-          }
-          return (
-            <div className="creature" key={c.id} style={{ margin: '10px 0' }}>
-              <div className="avatar" aria-hidden><CompanionAvatar id={c.id} /></div>
-              <div>
-                <p><strong>{c.name}</strong> ({c.kind}, {c.place}): {c.line}</p>
-                <p className="small" style={{ margin: 0 }}><strong>Helps you:</strong> {c.effect}</p>
-              </div>
-            </div>
-          );
-        })}
+        {visibleCompanions.map((c) => creatureRow(c))}
+        {showAllCompanions && hiddenCompanions.map((c) => creatureRow(c))}
+        {hiddenCompanions.length > 0 && (
+          <button onClick={() => setShowAllCompanions((v) => !v)}>{showAllCompanions ? 'Hide companions' : 'Show all companions'}</button>
+        )}
       </div>
 
       <div className="card">
         <h3>Monsters and bosses</h3>
         <p className="small muted">Defeat a monster in a boss round and it is beaten. You move on to the next land. Consistency powers your attacks. Sleep and recovery raise your defense.</p>
-        {MONSTERS.map((m) => (
-          <div className="creature" key={m.id} style={{ margin: '10px 0' }}>
-            <div className="avatar" aria-hidden><BossAvatar id={m.id} /></div>
-            <div>
-              <p><strong>{m.name}</strong>: guards the {m.castle} in {m.land}, {m.weeks}. Boss round: {m.bossRound}.</p>
-              <p className="small muted">{m.blurb}</p>
-            </div>
-          </div>
-        ))}
+        {MONSTERS.slice(0, 2).map((m) => monsterRow(m))}
+        {showAllMonsters && MONSTERS.slice(2).map((m) => monsterRow(m))}
+        <button onClick={() => setShowAllMonsters((v) => !v)}>{showAllMonsters ? 'Hide monsters' : 'Show all monsters'}</button>
       </div>
 
       <div className="card">

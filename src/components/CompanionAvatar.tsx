@@ -85,6 +85,17 @@ const BOSS_PALS: Record<string, Pal> = {
   'achy-knees-troll': { glow: '#8a9aa8', glowLight: '#c8d2da', cloth: '#5b6b7a', clothDark: '#3a4a5a', skin: '#8a9aa8', hair: '#c8ccd0', accent: '#fff' },
   'tired-back-beast': { glow: '#8a6238', glowLight: '#c8a06a', cloth: '#5b3a1e', clothDark: '#3a2410', skin: '#8a6238', hair: '#5b3a1e', accent: '#e8e2d4' },
   'wobbly-balance-sprite': { glow: '#7b2fbe', glowLight: '#c9a7e8', cloth: '#7b2fbe', clothDark: '#4d1a78', skin: '#c9b8f2', hair: '#7b2fbe', accent: '#f2d878' },
+  'mirror-of-doubt': { glow: '#6a7a8a', glowLight: '#b8c8d4', cloth: '#5b6b7a', clothDark: '#3a4a5a', skin: '#9ab0c0', hair: '#6a7a8a', accent: '#d8e8f2' },
+  'heavy-fog': { glow: '#9aa8b0', glowLight: '#d0d8dc', cloth: '#6a7a82', clothDark: '#424a50', skin: '#b8c2c8', hair: '#9aa8b0', accent: '#e8eef0' },
+  'rust-giant': { glow: '#b06a2e', glowLight: '#d8a06a', cloth: '#5b3a1e', clothDark: '#3a2410', skin: '#b06a2e', hair: '#7a4a1e', accent: '#f2d878' },
+  'ember-drake': { glow: '#c23a1e', glowLight: '#e88a6a', cloth: '#7a2a1a', clothDark: '#4d1a10', skin: '#c23a1e', hair: '#8a2a1a', accent: '#f2a878' },
+  'gale-howler': { glow: '#7fb3d5', glowLight: '#c2dcec', cloth: '#4a7a9a', clothDark: '#2e4d62', skin: '#a8c8dc', hair: '#7fb3d5', accent: '#fff' },
+  'tide-troll': { glow: '#2e7d6b', glowLight: '#7ab8a8', cloth: '#1e4a3a', clothDark: '#12302a', skin: '#2e7d6b', hair: '#1e5a4a', accent: '#d8f2e8' },
+  'storm-serpent': { glow: '#3a5a8c', glowLight: '#8aa8c8', cloth: '#2e3a5a', clothDark: '#1c2438', skin: '#3a5a8c', hair: '#2e4a6a', accent: '#f2d878' },
+  'gold-golem': { glow: '#c9a227', glowLight: '#e8d078', cloth: '#8a6a1a', clothDark: '#5a4410', skin: '#c9a227', hair: '#8a6a1a', accent: '#fff2b8' },
+  'summit-wraith': { glow: '#a8c8d8', glowLight: '#d8e8f2', cloth: '#5a7a8a', clothDark: '#384a55', skin: '#c8d8e2', hair: '#a8c8d8', accent: '#e8f2f8' },
+  'peak-keeper': { glow: '#6b7a6b', glowLight: '#b0b8a8', cloth: '#4a5a4a', clothDark: '#2e382e', skin: '#9a8a7a', hair: '#c8c8c8', accent: '#f2d878' },
+  'summit-review': { glow: '#4a6a9a', glowLight: '#9ab8d8', cloth: '#2e4a6a', clothDark: '#1c2e44', skin: '#d8c8b8', hair: '#c8c8c8', accent: '#f2d878' },
 };
 
 function Portrait({

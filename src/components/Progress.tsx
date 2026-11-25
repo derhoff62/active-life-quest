@@ -35,6 +35,10 @@ export default function Progress({ ctx }: { ctx: Ctx }) {
   const [photoMsg, setPhotoMsg] = useState('');
   const [photoError, setPhotoError] = useState('');
   const [showGoals, setShowGoals] = useState(true);
+  // History (Derek, Nov 25, 2026): latest PR and latest photo stay
+  // visible, the full history hides behind Show more.
+  const [showAllPrs, setShowAllPrs] = useState(false);
+  const [showAllPhotos, setShowAllPhotos] = useState(false);
 
   const level = levelForXp(doc.xp);
   // Streak is worked out from the dates of workouts and check-ins, so it
@@ -300,9 +304,13 @@ export default function Progress({ ctx }: { ctx: Ctx }) {
         {photoError && <p className="error">{photoError}</p>}
         {progressPhotos.length > 0 && (
           <div style={{ marginTop: 10 }}>
-            {progressPhotos.map((ph) => (
+            <p className="small">{new Date(progressPhotos[0].date).toLocaleDateString()}{progressPhotos[0].note ? ` · ${progressPhotos[0].note}` : ''} · {(progressPhotos[0].sizeBytes / 1024 / 1024).toFixed(1)} MB</p>
+            {showAllPhotos && progressPhotos.slice(1).map((ph) => (
               <p key={ph.id} className="small">{new Date(ph.date).toLocaleDateString()}{ph.note ? ` · ${ph.note}` : ''} · {(ph.sizeBytes / 1024 / 1024).toFixed(1)} MB</p>
             ))}
+            {progressPhotos.length > 1 && (
+              <button onClick={() => setShowAllPhotos((v) => !v)}>{showAllPhotos ? 'Hide photos' : 'Show all photos'}</button>
+            )}
           </div>
         )}
       </div>
@@ -319,9 +327,15 @@ export default function Progress({ ctx }: { ctx: Ctx }) {
       <div className="card">
         <h3>Personal records</h3>
         {prs.length === 0 && <p className="muted">No PRs yet. Log a heavier weight or more reps than last time and it counts here.</p>}
-        {prs.map((p, i) => (
+        {prs.length > 0 && (
+          <p>{prs[prs.length - 1].exercise}: {prs[prs.length - 1].weight} lb x {prs[prs.length - 1].reps} on {new Date(prs[prs.length - 1].date).toLocaleDateString()}</p>
+        )}
+        {showAllPrs && prs.slice(0, -1).reverse().map((p, i) => (
           <p key={i}>{p.exercise}: {p.weight} lb x {p.reps} on {new Date(p.date).toLocaleDateString()}</p>
         ))}
+        {prs.length > 1 && (
+          <button onClick={() => setShowAllPrs((v) => !v)}>{showAllPrs ? 'Hide personal records' : 'Show all personal records'}</button>
+        )}
       </div>
       <BackToTop />
     </div>
