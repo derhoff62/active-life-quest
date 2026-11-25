@@ -23,7 +23,13 @@ export const EMOTES: EmoteDef[] = [
   { id: 'tired', label: 'Tired', text: 'Tired — I need a rest day.' },
   { id: 'strong', label: 'Strong', text: 'Strong — feeling powerful today.' },
   { id: 'struggling', label: 'Struggling', text: 'Struggling — today is hard.' },
-  { id: 'thumbs-up', label: 'Good job', text: 'Good job — that went well.' },
+  // "Good job" did not make sense (Derek, Nov 25): the client sends
+  // these emotes TO Derek, so praising him is backwards, and the old
+  // face was the angry Determined brows with a thumb blob on the
+  // cheek. "Proud" keeps the thumbs-up praise, pointed at the
+  // client's own work. The id stays 'thumbs-up' so stored profiles
+  // and Coach messages keep working.
+  { id: 'thumbs-up', label: 'Proud', text: 'Proud — I am proud of how that went.' },
 ];
 
 export function emoteById(id: string | undefined): EmoteDef | undefined {
@@ -127,15 +133,26 @@ export default function GuardianEmote({ emote, guardian, size = 44 }: { emote: E
       )}
       {emote === 'thumbs-up' && (
         <g>
-          {/* Smile, raised brows, and a thumbs-up hand beside the face. */}
-          <path d="M12.5 20 L19 22.5 M29 22.5 L35.5 20" fill="none" stroke={browStroke} strokeWidth={browW} strokeLinecap="round" />
+          {/* Proud: happy brows raised (not the angry down-angle the old
+              version copied from Determined), big open smile, and a
+              clear thumbs-up hand: a fist with the thumb up on top,
+              bottom right, outlined dark so it reads against the face
+              instead of blending into the cheek like the old blob. */}
+          <path d="M12.5 18 L19 16.5 M29 16.5 L35.5 18" fill="none" stroke={browStroke} strokeWidth={browW} strokeLinecap="round" />
           <circle cx="16" cy="25.5" r="2.2" fill={DARK} />
           <circle cx="32" cy="25.5" r="2.2" fill={DARK} />
-          <path d="M18 30 Q24 35.5 30 30" fill="none" stroke={mouthStroke} strokeWidth="1.4" strokeLinecap="round" />
-          <g transform="translate(36 30)">
-            <circle cx="4" cy="6" r="5" fill={skin} stroke={faceStroke} strokeWidth="1" />
-            <path d="M4 6 L4 -3 Q4 -6 6.5 -6 Q8 -6 8 -3 L8 2" fill={skin} stroke={faceStroke} strokeWidth="1" strokeLinecap="round" />
-          </g>
+          <path d="M17 30 Q24 38 31 30 Q24 33.5 17 30 Z" fill={mouthStroke} />
+          {/* One silhouette: the thumb grows out of the top of the fist,
+              no dividing line between them, so it cannot read as a
+              handle on a bag (the v1/v2 two-shape versions did). */}
+          <path
+            d="M32 45 L32 40 Q32 37 35 37 L35 33 Q35 30.5 38.5 30.5 Q42 30.5 42 33 L42 37 L43 37 Q46 37 46 40 L46 45 Z"
+            fill={skin}
+            stroke={DARK}
+            strokeWidth="1.1"
+            strokeLinejoin="round"
+          />
+          <path d="M35 41.5 L43 41.5" fill="none" stroke={faceStroke} strokeWidth="0.8" strokeLinecap="round" />
         </g>
       )}
       {female && emote !== 'celebrate' && (

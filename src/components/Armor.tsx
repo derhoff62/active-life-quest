@@ -3,7 +3,7 @@ import type { Ctx } from '../App';
 import { ARMOR, CLASSES, CLASS_GOOD_FOR, CLASS_WORKOUT_FOCUS, SPELLS } from '../lib/data';
 import type { ArmorPiece } from '../lib/types';
 import { earnedArmorIds, levelForXp } from '../lib/store';
-import { equipSlot, equippedArmorName, equippedWeaponName } from '../lib/equip';
+import { armorKind, equipSlot, equippedArmorName, equippedWeaponName, weaponKind } from '../lib/equip';
 import { showToast } from '../lib/toast';
 import type { GuardianState } from '../lib/store';
 import type { ClassId } from '../lib/types';
@@ -93,9 +93,19 @@ function GearIcon({ piece }: { piece: ArmorPiece }) {
   );
 }
 
-function GearCard({ piece, earned, equipped, onToggleEquip }: { piece: ArmorPiece; earned: boolean; equipped?: boolean; onToggleEquip?: () => void }) {
-  // Legendary and Mythical stay hidden until earned: only the tier and the
-  // way to unlock show. No name, no effect, no emblem detail.
+// One gear row. Compact by default: name, tier, Earned / Equipped pills,
+// and the Equip button. How to earn it and what it does only show when
+// the client taps Details, so the vault no longer reads as a wall of
+// stats. Hidden Legendary / Mythical pieces keep their old shape: name
+// stays "???", only the tier and the way to unlock show.
+function GearCard({ piece, earned, equipped, expanded, onToggleEquip, onToggleDetails }: {
+  piece: ArmorPiece;
+  earned: boolean;
+  equipped?: boolean;
+  expanded?: boolean;
+  onToggleEquip?: () => void;
+  onToggleDetails?: () => void;
+}) {
   if (!earned && (piece.tier === 'Legendary' || piece.tier === 'Mythical')) {
     return (
       <div className={`gear-item rarity-${piece.tier.toLowerCase()} gear-hidden`}>
@@ -129,17 +139,43 @@ function GearCard({ piece, earned, equipped, onToggleEquip }: { piece: ArmorPiec
           {earned && <span className="tier-pill tier-earned">Earned</span>}
           {equipped && <span className="tier-pill">Equipped</span>}
         </div>
-        <p className="small" style={{ margin: '2px 0' }}>{piece.how}</p>
-        <p className="small muted" style={{ margin: 0 }}>Effect: {piece.effect}</p>
-        {earned && onToggleEquip && (
-          <button type="button" onClick={onToggleEquip} style={{ marginTop: 6 }}>
-            {equipped ? 'Unequip' : `Equip ${equipSlot(piece) === 'weapon' ? 'weapon' : 'armor'}`}
-          </button>
+        {expanded && (
+          <>
+            <p className="small" style={{ margin: '2px 0' }}>{piece.how}</p>
+            <p className="small muted" style={{ margin: 0 }}>Effect: {piece.effect}</p>
+          </>
         )}
+        <div className="row" style={{ gap: 6, marginTop: 6 }}>
+          {onToggleDetails && (
+            <button type="button" onClick={onToggleDetails} aria-expanded={!!expanded}>
+              {expanded ? 'Hide details' : 'Details'}
+            </button>
+          )}
+          {earned && onToggleEquip && (
+            <button type="button" onClick={onToggleEquip}>
+              {equipped ? 'Unequip' : `Equip ${equipSlot(piece) === 'weapon' ? 'weapon' : 'armor'}`}
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );
 }
+
+// Gear groups for the full list, by what the piece is, not by tier or
+// set. A piece lands in the first group whose test matches, so every
+// piece shows exactly once. Weapons first, then head, chest, legs,
+// hands, cloaks, belts and shoulders, then anything left over.
+const GEAR_GROUPS: { id: string; label: string; test: (a: ArmorPiece) => boolean }[] = [
+  { id: 'weapons', label: 'Weapons', test: (a) => !!weaponKind(a) },
+  { id: 'helmets', label: 'Helmets', test: (a) => armorKind(a) === 'helm' || armorKind(a) === 'crown' },
+  { id: 'chest', label: 'Chest', test: (a) => armorKind(a) === 'chest' },
+  { id: 'boots', label: 'Boots and legs', test: (a) => armorKind(a) === 'boots' },
+  { id: 'hands', label: 'Hands', test: (a) => armorKind(a) === 'hands' },
+  { id: 'cloaks', label: 'Cloaks', test: (a) => armorKind(a) === 'cloak' },
+  { id: 'belt', label: 'Belts and shoulders', test: (a) => armorKind(a) === 'belt' || armorKind(a) === 'pauldrons' },
+  { id: 'other', label: 'Other gear', test: () => true },
+];
 
 export default function Armor({ ctx }: { ctx: Ctx }) {
   const { doc, update } = ctx;
@@ -168,6 +204,29 @@ export default function Armor({ ctx }: { ctx: Ctx }) {
   const earnedCount = ARMOR.filter((a) => earned.has(a.id) || rarityEarned.has(a.id)).length;
   const next = ARMOR.find((a) => !earned.has(a.id) && !rarityEarned.has(a.id));
   const nextHidden = next && (next.tier === 'Legendary' || next.tier === 'Mythical');
+  // Gear view state: the full list stays hidden behind "Show all gear",
+  // and one piece at a time shows its details. Nothing is removed.
+  const [showAllGear, setShowAllGear] = useState(false);
+  const [expandedGearId, setExpandedGearId] = useState<string | null>(null);
+  const isEarned = (a: ArmorPiece) => earned.has(a.id) || rarityEarned.has(a.id);
+  const gearCardProps = (a: ArmorPiece) => ({
+    earned: isEarned(a),
+    equipped: doc.guardian?.equippedWeaponId === a.id || doc.guardian?.equippedArmorId === a.id,
+    expanded: expandedGearId === a.id,
+    onToggleEquip: () => toggleEquip(a),
+    onToggleDetails: () => setExpandedGearId((cur) => (cur === a.id ? null : a.id)),
+  });
+  // Wearing now: the two equipped pieces, weapon and armor. Up next: the
+  // next two unearned pieces in vault order, so there is always something
+  // close to aim at. Full list: grouped by type, earned first in each
+  // group, then still to earn.
+  const equippedWeapon = ARMOR.find((a) => a.id === doc.guardian?.equippedWeaponId);
+  const equippedArmor = ARMOR.find((a) => a.id === doc.guardian?.equippedArmorId);
+  const nextPieces = ARMOR.filter((a) => !isEarned(a)).slice(0, 2);
+  const gearGroups = GEAR_GROUPS.map((g) => {
+    const pieces = ARMOR.filter((a) => g.test(a)).sort((x, y) => Number(isEarned(y)) - Number(isEarned(x)));
+    return { ...g, pieces, earnedCount: pieces.filter(isEarned).length };
+  }).filter((g) => g.pieces.length > 0);
   const [showCustomize, setShowCustomize] = useState(false);
   const [draft, setDraft] = useState<GuardianState>(DEFAULT_DRAFT);
   const [customizeMsg, setCustomizeMsg] = useState('');
@@ -197,9 +256,6 @@ export default function Armor({ ctx }: { ctx: Ctx }) {
     setCustomizeMsg('');
     setShowCustomize(true);
   };
-
-  const byTier = (tier: string) => ARMOR.filter((a) => a.tier === tier && !a.set);
-  const bySet = (set: string) => ARMOR.filter((a) => a.set === set);
 
   // Equip (Derek, Nov 22 8:53 PM): one weapon slot + one armor slot.
   // Only earned pieces get a button (GearCard hides it otherwise), so
@@ -449,51 +505,41 @@ export default function Armor({ ctx }: { ctx: Ctx }) {
         <p className="small muted">Second Wind unlocks at Level 9 for every class.</p>
       </div>
 
-      {(['Common', 'Rare', 'Legendary', 'Mythical'] as const).map((tier) => (
-        <div className="card" key={tier} id={tier === 'Common' ? 'gear-list' : undefined}>
-          <h3>{tier}</h3>
-          <p className="small muted">
-            {tier === 'Common' && 'Easiest to earn.'}
-            {tier === 'Rare' && 'Challenging, but easier than Legendary and Mythical.'}
-            {tier === 'Legendary' && 'Challenging, but achievable.'}
-            {tier === 'Mythical' && 'Very challenging to get.'}
-          </p>
-          {byTier(tier).map((a) => (
-            <GearCard key={a.id} piece={a} earned={earned.has(a.id) || rarityEarned.has(a.id)} equipped={doc.guardian?.equippedWeaponId === a.id || doc.guardian?.equippedArmorId === a.id} onToggleEquip={() => toggleEquip(a)} />
-          ))}
-        </div>
-      ))}
+      <div className="card">
+        <h3>Wearing now</h3>
+        <p className="small muted">What your guardian has on. Tap Details on a piece to see how you earned it and what it does.</p>
+        {equippedWeapon && <GearCard key={equippedWeapon.id} piece={equippedWeapon} {...gearCardProps(equippedWeapon)} />}
+        {equippedArmor && <GearCard key={equippedArmor.id} piece={equippedArmor} {...gearCardProps(equippedArmor)} />}
+        {!equippedWeapon && !equippedArmor && (
+          <p className="small">Nothing equipped yet. Equip earned gear below and your guardian changes.</p>
+        )}
+      </div>
 
       <div className="card">
-        <h3>Peakforged set (Phase 4)</h3>
-        {bySet('Peakforged').map((a) => (
-          <GearCard key={a.id} piece={a} earned={earned.has(a.id) || rarityEarned.has(a.id)} equipped={doc.guardian?.equippedWeaponId === a.id || doc.guardian?.equippedArmorId === a.id} onToggleEquip={() => toggleEquip(a)} />
+        <h3>Up next</h3>
+        <p className="small muted">The next pieces to aim at, in vault order.</p>
+        {nextPieces.map((a) => (
+          <GearCard key={a.id} piece={a} {...gearCardProps(a)} />
         ))}
+        {nextPieces.length === 0 && <p className="small">Every piece earned. Nothing left to aim at.</p>}
       </div>
-      <div className="card">
-        <h3>Stormforged set (Phase 5)</h3>
-        {bySet('Stormforged').map((a) => (
-          <GearCard key={a.id} piece={a} earned={earned.has(a.id) || rarityEarned.has(a.id)} equipped={doc.guardian?.equippedWeaponId === a.id || doc.guardian?.equippedArmorId === a.id} onToggleEquip={() => toggleEquip(a)} />
-        ))}
-      </div>
-      <div className="card">
-        <h3>Class weapons</h3>
-        {bySet('Class weapon').map((a) => (
-          <GearCard key={a.id} piece={a} earned={earned.has(a.id) || rarityEarned.has(a.id)} equipped={doc.guardian?.equippedWeaponId === a.id || doc.guardian?.equippedArmorId === a.id} onToggleEquip={() => toggleEquip(a)} />
-        ))}
-      </div>
-      <div className="card">
-        <h3>Epic weapons</h3>
-        <p className="small muted">Famous weapons, retold. Earned from real milestones, never bought. Legendary and Mythical pieces stay hidden until earned.</p>
-        {bySet('Epic weapons').map((a) => (
-          <GearCard key={a.id} piece={a} earned={earned.has(a.id) || rarityEarned.has(a.id)} equipped={doc.guardian?.equippedWeaponId === a.id || doc.guardian?.equippedArmorId === a.id} onToggleEquip={() => toggleEquip(a)} />
-        ))}
-      </div>
-      <div className="card">
-        <h3>Epic helmets</h3>
-        <p className="small muted">Famous helmets, retold. Earned from real milestones, never bought. Equipping one puts a full helmet on your guardian. Legendary and Mythical pieces stay hidden until earned.</p>
-        {bySet('Epic helmets').map((a) => (
-          <GearCard key={a.id} piece={a} earned={earned.has(a.id) || rarityEarned.has(a.id)} equipped={doc.guardian?.equippedWeaponId === a.id || doc.guardian?.equippedArmorId === a.id} onToggleEquip={() => toggleEquip(a)} />
+
+      <div className="card" id="gear-list">
+        <h3>All gear</h3>
+        <p className="small muted">
+          {earnedCount} of {ARMOR.length} pieces earned. Grouped by type, earned pieces first in each group.
+          Legendary and Mythical pieces stay hidden as ??? until earned. Equipping a full helmet puts it on your guardian.
+        </p>
+        <button type="button" onClick={() => setShowAllGear((v) => !v)} aria-expanded={showAllGear}>
+          {showAllGear ? 'Hide all gear' : 'Show all gear'}
+        </button>
+        {showAllGear && gearGroups.map((g) => (
+          <div key={g.id}>
+            <h4 style={{ margin: '14px 0 4px' }}>{g.label} ({g.earnedCount} of {g.pieces.length} earned)</h4>
+            {g.pieces.map((a) => (
+              <GearCard key={a.id} piece={a} {...gearCardProps(a)} />
+            ))}
+          </div>
         ))}
       </div>
     </div>

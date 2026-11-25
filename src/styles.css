@@ -93,10 +93,11 @@ input, select, textarea {
   min-height: 48px;
 }
 label { display: block; font-weight: 600; margin: 12px 0 4px; }
-/* Bottom padding must clear the fixed nav: 11 tabs in a 6-column wrap
-   (2 rows of 52px buttons) plus the safe area. */
-.app { max-width: 720px; margin: 0 auto; padding: 0 12px calc(150px + env(safe-area-inset-bottom)); }
-html { scroll-padding-bottom: calc(150px + env(safe-area-inset-bottom)); }
+/* Bottom padding must clear the fixed nav: 6 tabs in one row of 52px
+   buttons (Nov 25, 2026: 12 tabs in two rows was too much to scan) plus
+   the safe area. */
+.app { max-width: 720px; margin: 0 auto; padding: 0 12px calc(92px + env(safe-area-inset-bottom)); }
+html { scroll-padding-bottom: calc(92px + env(safe-area-inset-bottom)); }
 @media (min-width: 900px) { .app { max-width: 860px; } }
 .banner {
   background: linear-gradient(135deg, var(--navy), var(--blue));
@@ -118,24 +119,26 @@ html { scroll-padding-bottom: calc(150px + env(safe-area-inset-bottom)); }
   border: 1px solid var(--gold); border-radius: 999px; padding: 2px 10px;
   font-size: 0.85rem; font-weight: 600;
 }
-/* Bottom nav: original size, 6-column wrap, 52px buttons. The size was
-   fine; the problem was the tabs were easy to ignore. They are obvious
-   now: dark navy bold text on solid white cards with a visible border,
-   never muted grey. Active tab is solid navy with white text, a gold
-   border, and a gold dot. Thick navy top border and a strong shadow, so
-   the bar stands out from page content.
+/* Bottom nav: original size, 6-column grid, one row, 52px buttons. The
+   size was fine; the problem was the tabs were easy to ignore. They are
+   obvious now: dark navy bold text on solid white cards with a visible
+   border, never muted grey. Active tab is solid navy with white text, a
+   gold border, and a gold dot. Thick navy top border and a strong shadow,
+   so the bar stands out from page content.
    Grid, not flex-wrap: flex items refuse to shrink below their label
    width, so only 5 fit per row and the second row grows wide and tall.
-   Six equal grid columns give 6 tabs on row 1 and 5 on row 2, every
-   button the same width and 52px tall. The gold dot is absolutely
-   positioned on the top edge, so it never adds height to the row.
+   Six equal grid columns give 6 tabs in one row (Nov 25, 2026: 12 tabs
+   in two rows was cut to 6), every button the same width and 52px tall.
+   The gold dot is absolutely positioned on the top edge, so it never
+   adds height to the row.
    Labels never wrap mid-word (Nov 22 fix): the old `overflow-wrap:
    anywhere` split "Assessment" into "Assessm/ent" and "Workouts" into
-   "Workout/s" on Derek's phone. Labels are `nowrap` now, the two longest
-   words are shortened in App.tsx ("Assess", "Workout"), and the gap and
-   padding were tightened so the longest label ("Nutrition", ~48px at this
-   size in the app's own Quest Sans Bold, with -0.2px letter-spacing) fits
-   its ~52px tab even on a 360px phone. The ellipsis is only a backstop. */
+   "Workout/s" on Derek's phone. Labels are `nowrap` now, and the gap and
+   padding were tightened so the longest label ("Progress", at 0.68rem in
+   the app's own Quest Sans Bold, with -0.2px letter-spacing) fits its
+   ~52px tab even on a 360px phone. The ellipsis is only a backstop. Do
+   not add a 7th tab: 7 tabs would wrap to a second row and break this
+   layout. */
 .nav {
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 20;
   background: #fff; border-top: 3px solid var(--navy);
@@ -145,7 +148,7 @@ html { scroll-padding-bottom: calc(150px + env(safe-area-inset-bottom)); }
 }
 .nav button {
   position: relative; border: 1.5px solid #b9cfe2; background: #fff; min-height: 52px; min-width: 0;
-  padding: 5px 0; font-size: 0.68rem; color: var(--navy);
+  padding: 5px 0; font-size: 0.65rem; color: var(--navy);
   font-weight: 700; border-radius: 10px;
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;
 }

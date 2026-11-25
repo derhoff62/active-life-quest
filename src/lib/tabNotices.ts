@@ -20,6 +20,8 @@ export interface NoticeAction {
   label: string;
   /** Open another tab. */
   go?: Tab;
+  /** Pick a section inside the Health tab (Cardio, Sleep, or Food). */
+  section?: string;
   /** Scroll to this element id on the current tab. */
   anchor?: string;
 }
@@ -46,7 +48,7 @@ export function tabNotice(doc: ProfileDoc, tab: Tab): TabNotice | null {
       }
       if (workoutDueToday(doc)) {
         items.push("today's workout not done yet");
-        actions.push({ label: "Start today's workout", go: 'workouts' });
+        actions.push({ label: "Start today's workout", go: 'train' });
       }
       const unread = unreadCount(doc);
       if (unread > 0) {
@@ -60,7 +62,7 @@ export function tabNotice(doc: ProfileDoc, tab: Tab): TabNotice | null {
         actions,
       };
     }
-    case 'assessment': {
+    case 'train': {
       if (!doc.assessmentDone) {
         return {
           text: 'Finish your assessment to set your starting phase.',
@@ -83,29 +85,26 @@ export function tabNotice(doc: ProfileDoc, tab: Tab): TabNotice | null {
           actions: [{ label: 'Pick my next stretch', anchor: 'week13-plan' }],
         };
       }
-      return null;
-    }
-    case 'workouts': {
       if (!workoutDueToday(doc)) return null;
       return {
         text: "Today's workout is waiting.",
         actions: [{ label: "Start today's workout", anchor: 'best-workout' }],
       };
     }
-    case 'cardio': {
+    case 'health': {
+      const parts: string[] = [];
+      const actions: NoticeAction[] = [];
       const n = cardioThisWeek(doc);
-      if (!doc.assessmentDone || n >= 150) return null;
-      return {
-        text: `Cardio this week: ${n} of 150 minutes. ${150 - n} minutes to go to hit 150.`,
-        actions: [{ label: 'Log cardio', anchor: 'log-cardio' }],
-      };
-    }
-    case 'sleep': {
-      if (!doc.assessmentDone || loggedToday(doc.sleep)) return null;
-      return {
-        text: 'Sleep not logged yet today.',
-        actions: [{ label: 'Log sleep', anchor: 'log-sleep' }],
-      };
+      if (doc.assessmentDone && n < 150) {
+        parts.push(`Cardio this week: ${n} of 150 minutes. ${150 - n} minutes to go to hit 150.`);
+        actions.push({ label: 'Log cardio', go: 'health', section: 'cardio', anchor: 'log-cardio' });
+      }
+      if (doc.assessmentDone && !loggedToday(doc.sleep)) {
+        parts.push('Sleep not logged yet today.');
+        actions.push({ label: 'Log sleep', go: 'health', section: 'sleep', anchor: 'log-sleep' });
+      }
+      if (parts.length === 0) return null;
+      return { text: parts.join(' '), actions };
     }
     case 'journey': {
       const parts: string[] = [];
@@ -131,7 +130,7 @@ export function tabNotice(doc: ProfileDoc, tab: Tab): TabNotice | null {
         actions: [{ label: 'Log a weigh-in', anchor: 'weigh-in' }],
       };
     }
-    case 'armor': {
+    case 'gear': {
       const names = newGearNames(doc);
       if (names.length === 0) return null;
       return {

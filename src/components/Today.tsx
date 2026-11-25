@@ -8,6 +8,7 @@ import { cycleForWeek, nextRetestWeek, nextBossWeek, nextRetestLabel, nextBossLa
 import type { AssessmentVideo } from '../lib/store';
 import GuardianAvatar from './GuardianAvatar';
 import GuardianEmote, { EMOTES } from './GuardianEmote';
+import Faq from './Faq';
 import { autoMood } from '../lib/mood';
 
 export default function Today({ ctx }: { ctx: Ctx }) {
@@ -248,9 +249,9 @@ export default function Today({ ctx }: { ctx: Ctx }) {
             {assessmentApproved(doc) && doc.workouts.length > 0 && <p>Your next step: your Phase {phase} workout. {phaseInfo?.name}. Take 1 to 2 rest days between strength days.</p>}
             {assessmentApproved(doc) && vol.tier !== 'none' && <p className="small"><strong>{vol.line}</strong></p>}
             <div className="row">
-              {!doc.assessmentDone && <button className="primary" onClick={() => go('assessment')}>Start the assessment</button>}
-              {assessmentPending(doc) && <button className="primary" onClick={() => go('assessment')}>See my assessment</button>}
-              {assessmentApproved(doc) && <button className="primary" onClick={() => go('workouts')}>Start my workout</button>}
+              {!doc.assessmentDone && <button className="primary" onClick={() => go('train')}>Start the assessment</button>}
+              {assessmentPending(doc) && <button className="primary" onClick={() => go('train')}>See my assessment</button>}
+              {assessmentApproved(doc) && <button className="primary" onClick={() => go('train')}>Start my workout</button>}
               <button onClick={() => go('journey')}>See my journey</button>
             </div>
           </div>
@@ -280,7 +281,7 @@ export default function Today({ ctx }: { ctx: Ctx }) {
             })()}
           </p>
           <div className="row">
-            <button className="primary" onClick={() => go('workouts')}>Resume workout</button>
+            <button className="primary" onClick={() => go('train')}>Resume workout</button>
             {!confirmDiscard ? (
               <button onClick={() => setConfirmDiscard(true)}>Discard it</button>
             ) : (
@@ -529,7 +530,7 @@ export default function Today({ ctx }: { ctx: Ctx }) {
       <div className="card">
         <h3>Sleep and recovery</h3>
         <p className="muted small">Last night: {lastSleep?.hours ?? 'not logged yet'} hours. Recovery score: {lastCheckin ? `${rec}/100` : 'not set yet, log your first check-in above'}.</p>
-        <button className="primary" onClick={() => go('sleep')}>Log sleep in the Sleep tab</button>
+        <button className="primary" onClick={() => go('health', 'sleep')}>Log sleep in Health</button>
       </div>
 
       <div className="card" id="today-messages">
@@ -680,6 +681,15 @@ export default function Today({ ctx }: { ctx: Ctx }) {
         </button>
         {goalMsg && <p className="ok">{goalMsg}</p>}
       </div>
+
+      {/* Questions and settings used to be their own tab. They live here
+          now, at the bottom of Today, closed behind one tap. */}
+      <details className="card">
+        <summary>
+          <strong>Questions and settings</strong>
+        </summary>
+        <Faq ctx={ctx} />
+      </details>
     </div>
   );
 }

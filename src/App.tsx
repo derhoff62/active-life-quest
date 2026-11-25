@@ -6,22 +6,32 @@ import { tabNotice, type NoticeAction } from './lib/tabNotices';
 import * as api from './lib/api';
 import Auth from './components/Auth';
 import Onboarding from './components/Onboarding';
-import Assessment from './components/Assessment';
 import Today from './components/Today';
-import Workouts from './components/Workouts';
-import Cardio from './components/Cardio';
-import Sleep from './components/Sleep';
+import Train from './components/Train';
+import Health, { type HealthSection } from './components/Health';
 import Journey from './components/Journey';
-import Nutrition from './components/Nutrition';
+import Gear from './components/Gear';
 import Progress from './components/Progress';
-import Armor from './components/Armor';
-import Faq from './components/Faq';
 import ToastHost from './components/Toast';
 import TabNoticeCard from './components/TabNotice';
 import { showToast } from './lib/toast';
 import Coach from './components/Coach';
 
-export type Tab = 'today' | 'assessment' | 'workouts' | 'cardio' | 'sleep' | 'journey' | 'nutrition' | 'progress' | 'armor' | 'faq' | 'coach';
+/* Six tabs, one row (Nov 25, 2026): 12 tabs in two rows was too much to
+   scan, and clients could not find companions or badges. What was
+   folded in, nothing deleted:
+   - Train = Workouts + Assessment and retests (below the workouts,
+     open when something is due).
+   - Health = Cardio + Sleep + Food (Nutrition), one section at a time.
+   - Journey = the map, companions, and Combat, as before.
+   - Gear = Armor + Badges (badges below the gear, full list behind
+     Show all badges).
+   - Today also holds Questions and settings (the old FAQ tab) at the
+     bottom, behind one tap.
+   - Coach is not a bottom tab any more: it is Derek-only and PIN-gated,
+     so it lives on a Coach sign-in button in the footer, on every tab.
+   'coach' stays in the Tab type as a hidden tab so that button works. */
+export type Tab = 'today' | 'train' | 'health' | 'journey' | 'gear' | 'progress' | 'coach';
 
 /** If one tab throws while rendering, show a small card for that tab
  * instead of blanking the whole app. The header and nav stay up, so the
@@ -49,30 +59,28 @@ class TabErrorBoundary extends Component<{ tab: Tab; children: ReactNode }, { fa
 /* Short display labels for the nav: the full words do not fit on one line
    in a 6-column grid on a phone, and the old `overflow-wrap: anywhere`
    split them mid-word ("Assessm/ent", "Workout/s" on Derek's phone, Nov 22).
-   So "Assessment" shows as "Assess" and "Workouts" as "Workout" here; the
-   full word is still the page heading inside the tab, and the aria-label
-   below uses it too. `white-space: nowrap` means a label can never split
-   mid-word again — the ellipsis is only a backstop if a phone ever renders
-   a label wider than its tab. */
+   The six tab labels are all short words now (Today, Train, Health,
+   Journey, Gear, Progress); the full name is still the page heading
+   inside the tab, and the aria-label below uses it too.
+   `white-space: nowrap` means a label can never split mid-word again —
+   the ellipsis is only a backstop if a phone ever renders a label wider
+   than its tab.
+   a label wider than its tab. "Companions" (Nov 25, 2026) is the longest
+   label now, so the nav font is 0.65rem to fit it on a 360px phone. */
 const TABS: { id: Tab; label: string; full: string; icon: string }[] = [
   { id: 'today', label: 'Today', full: 'Today', icon: '☀' },
-  { id: 'assessment', label: 'Assess', full: 'Assessment', icon: '✓' },
-  { id: 'workouts', label: 'Workout', full: 'Workouts', icon: '◆' },
-  { id: 'cardio', label: 'Cardio', full: 'Cardio', icon: '♥' },
-  { id: 'sleep', label: 'Sleep', full: 'Sleep', icon: '☾' },
+  { id: 'train', label: 'Train', full: 'Train', icon: '◆' },
+  { id: 'health', label: 'Health', full: 'Health', icon: '♥' },
   { id: 'journey', label: 'Journey', full: 'Journey', icon: '✦' },
-  { id: 'nutrition', label: 'Nutrition', full: 'Nutrition', icon: '●' },
+  { id: 'gear', label: 'Gear', full: 'Gear', icon: '⬢' },
   { id: 'progress', label: 'Progress', full: 'Progress', icon: '▲' },
-  { id: 'armor', label: 'Armor', full: 'Armor', icon: '⬢' },
-  { id: 'faq', label: 'FAQ', full: 'FAQ', icon: '?' },
-  { id: 'coach', label: 'Coach', full: 'Coach', icon: '★' },
 ];
 
 export interface Ctx {
   doc: ProfileDoc;
   save: (next: ProfileDoc) => void;
   update: (fn: (d: ProfileDoc) => void) => void;
-  go: (t: Tab) => void;
+  go: (t: Tab, section?: string) => void;
   auth: { email: string; displayName: string } | null;
   serverMode: boolean;
   /** Show a short toast at the top of the screen ("Saved", "+10 XP"). */
@@ -212,7 +220,12 @@ export default function App() {
     save(next);
   };
 
-  const go = (t: Tab) => {
+  // Which Health section is showing (Cardio, Sleep, or Food). go() can
+  // pick it: go('health', 'sleep') opens Health on Sleep.
+  const [healthSection, setHealthSection] = useState<HealthSection>('cardio');
+
+  const go = (t: Tab, section?: string) => {
+    if (t === 'health' && section) setHealthSection(section as HealthSection);
     setTab(t);
     window.scrollTo({ top: 0 });
   };
@@ -224,7 +237,7 @@ export default function App() {
   // tab, and the tab itself marks them seen when you leave it.
   const handleNoticeAction = (a: NoticeAction) => {
     if (a.go) {
-      go(a.go);
+      go(a.go, a.section);
       if (a.anchor) {
         const anchor = a.anchor;
         window.setTimeout(() => {
@@ -323,7 +336,7 @@ export default function App() {
           </p>
         </div>
 
-        {!doc.guardianPicked && tab !== 'assessment' && (
+        {!doc.guardianPicked && tab !== 'train' && (
           <Onboarding ctx={ctx} />
         )}
         {(() => {
@@ -332,15 +345,11 @@ export default function App() {
         })()}
         <TabErrorBoundary tab={tab}>
           {doc.guardianPicked && tab === 'today' && <Today ctx={ctx} />}
-          {tab === 'assessment' && <Assessment ctx={ctx} />}
-          {tab === 'workouts' && <Workouts ctx={ctx} />}
-          {tab === 'cardio' && <Cardio ctx={ctx} />}
-          {tab === 'sleep' && <Sleep ctx={ctx} />}
+          {tab === 'train' && <Train ctx={ctx} />}
+          {tab === 'health' && <Health ctx={ctx} section={healthSection} onSection={setHealthSection} />}
           {tab === 'journey' && <Journey ctx={ctx} />}
-          {tab === 'nutrition' && <Nutrition ctx={ctx} />}
+          {tab === 'gear' && <Gear ctx={ctx} />}
           {tab === 'progress' && <Progress ctx={ctx} />}
-          {tab === 'armor' && <Armor ctx={ctx} />}
-          {tab === 'faq' && <Faq ctx={ctx} />}
           {tab === 'coach' && <Coach ctx={ctx} />}
         </TabErrorBoundary>
 
@@ -421,6 +430,14 @@ export default function App() {
             }}
           >
             Need help? Message Derek
+          </button>{' '}
+          {/* Coach used to be a bottom tab. It is Derek-only and PIN-gated,
+              so it lives here in the footer instead, on every tab, with
+              the unread count when Derek has messages to review. */}
+          <button
+            onClick={() => go('coach')}
+          >
+            Coach sign-in{badges.coach?.count ? ` (${badges.coach.count})` : ''}
           </button>{' '}
           {!confirmSignOut ? (
             <button onClick={() => setConfirmSignOut(true)}>Sign out</button>

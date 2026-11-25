@@ -13,7 +13,7 @@
 // here, unlike the guardian). Where GENERATED_COMPANIONS has an image for
 // an id, that image is shown in the same 56x56 slot over the same coloured
 // disc, with the same red ring for bosses; everything else stays SVG.
-import { useId } from 'react';
+import { useId, useState } from 'react';
 import type { ReactNode } from 'react';
 import { GENERATED_COMPANIONS } from '../lib/generatedCompanions';
 
@@ -21,7 +21,7 @@ import { GENERATED_COMPANIONS } from '../lib/generatedCompanions';
 // the character's coloured disc behind it, the image on top (head-and-
 // shoulders cutout, transparent except the Mirror of Doubt, whose
 // grey-blue mirror glass is its background), and the red ring for bosses.
-function GeneratedPortrait({ src, pal, enemy }: { src: string; pal: Pal; enemy?: boolean }) {
+function GeneratedPortrait({ src, pal, enemy, onError }: { src: string; pal: Pal; enemy?: boolean; onError?: () => void }) {
   return (
     <div
       style={{
@@ -35,7 +35,7 @@ function GeneratedPortrait({ src, pal, enemy }: { src: string; pal: Pal; enemy?:
         flexShrink: 0,
       }}
     >
-      <img src={src} alt="" width={56} height={56} style={{ display: 'block', objectFit: 'contain', borderRadius: '50%' }} />
+      <img src={src} alt="" width={56} height={56} onError={onError} style={{ display: 'block', objectFit: 'contain', borderRadius: '50%' }} />
     </div>
   );
 }
@@ -479,10 +479,22 @@ export default function CompanionAvatar({ id }: { id: string }) {
 
 // Boss monsters: enemies, not friends. Same epic portrait style, but with
 // a red ring, sterner faces, and no friendly smile.
+//
+// Boss portraits generated Nov 25, 2026 (v2 style, same as the trial batch
+// in generatedCompanions.ts): the four monster bosses that had no generated
+// image. They are embedded base64 in generatedCompanions.ts (Derek's pick
+// Nov 25, 2026, so they push through the text-only push-files route), not
+// loaded from /bosses/*.webp. If a generated image fails to load, the
+// component falls through to the SVG portrait below for that boss. The
+// later boss rounds reuse these five drawings with new names and higher HP
+// (Journey.tsx), so these four cover every round.
 export function BossAvatar({ id }: { id: string }) {
   const pal = BOSS_PALS[id] ?? BOSS_PALS['the-slump'];
+  const [imgFailed, setImgFailed] = useState(false);
   const generated = GENERATED_COMPANIONS[id];
-  if (generated) return <GeneratedPortrait src={generated} pal={pal} enemy />;
+  if (generated && !imgFailed) {
+    return <GeneratedPortrait src={generated} pal={pal} enemy onError={() => setImgFailed(true)} />;
+  }
 
   // Cycle 2 to 4 companions: befriendable people and animals only.
   if (id === 'wren') {

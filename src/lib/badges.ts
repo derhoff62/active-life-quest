@@ -5,28 +5,32 @@
 // Rules (all from data already on the profile doc):
 // - Today: a NUMBER = check-in not logged today (1) + workout due today
 //   (1) + unread messages/nudges from Derek. Clears as each is done.
-// - Assessment: a dot when the assessment itself is not done yet, when a
-//   retest is due (Week 4/8/12 of any cycle, plus the Week 52 review), or
-//   when Week 13 is available (Week 12 retest saved, no Week 13 goal yet).
-// - Workouts: a dot when today's workout is not done yet. Rest is per
-//   muscle group, not per day: after a full-body day yesterday, today is
-//   a rest day and there is no badge; after a Push/Pull/Legs or short
+// - Train: a dot when the assessment itself is not done yet, when a
+//   retest is due (Week 4/8/12 of any cycle, plus the Week 52 review),
+//   when Week 13 is available (Week 12 retest saved, no Week 13 goal
+//   yet), or when today's workout is not done yet. Rest is per muscle
+//   group, not per day: after a full-body day yesterday, today is a
+//   rest day and there is no badge; after a Push/Pull/Legs or short
 //   session yesterday, a different group is due today.
-// - Cardio: a dot while this week's cardio is under 150 minutes.
-// - Sleep: a dot when sleep has not been logged today.
+// - Health: a dot while this week's cardio is under 150 minutes, or
+//   when sleep has not been logged today. Food (Nutrition) never gets
+//   a badge: it is education only, nothing actionable, so badging it
+//   would just be noise.
 // - Journey: a dot when a boss round is ready (unlocked, unbeaten, and
 //   enough mana for the cheapest spell) or when the journey has moved to
 //   a later week than the last Journey visit (a new companion / land).
-// - Nutrition: never. It is education only; there is nothing actionable
-//   in the tab, so badging it would just be noise.
 // - Progress: a dot when a weigh-in is due (none in the last 6 days).
-// - Armor: a dot when gear has been earned since the last Armor visit.
+// - Gear: a dot when gear has been earned since the last Armor visit.
 //   armorSeenCount is the count the client had seen; it is only ever
 //   raised when the client opens the Armor tab.
-// - FAQ: never. - Coach: a NUMBER = unread nudges + replies from Derek.
+// - Coach: a NUMBER = unread nudges + replies from Derek. Coach is not
+//   a bottom tab any more (Nov 25, 2026): its count shows on the
+//   Coach sign-in button in the footer instead.
+// - Today: a NUMBER = check-in not logged today (1) + workout due today
+//   (1) + unread messages/nudges from Derek. Clears as each is done.
 //
-// Fresh accounts only ever see Today (check-in) and Assessment (do the
-// assessment): Cardio, Sleep, Journey, Workouts and Progress badges are
+// Fresh accounts only ever see Today (check-in) and Train (do the
+// assessment): Health, Journey, Train workouts and Progress badges are
 // all gated on the assessment being done first.
 import { ARMOR, BOSS_ROUNDS, CREATURES, SPELLS } from './data';
 import { RETEST_WEEKS } from './yearPlan';
@@ -156,17 +160,16 @@ export function tabBadges(doc: ProfileDoc): Record<string, TabBadge> {
   const week12Done = (doc.retests || []).some((r) => (r as { week?: number }).week === 12);
   const week13Available = week12Done && !doc.week13Goal;
 
+  const assessmentDue = !doc.assessmentDone || assessmentPending(doc) || retestDue(doc) || week13Available;
+  const healthDue = doc.assessmentDone && (cardioThisWeek(doc) < 150 || !loggedToday(doc.sleep));
+
   return {
     today: todayCount > 0 ? { count: todayCount } : null,
-    assessment: !doc.assessmentDone || assessmentPending(doc) || retestDue(doc) || week13Available ? {} : null,
-    workouts: workoutDue ? {} : null,
-    cardio: doc.assessmentDone && cardioThisWeek(doc) < 150 ? {} : null,
-    sleep: doc.assessmentDone && !loggedToday(doc.sleep) ? {} : null,
+    train: assessmentDue || workoutDue ? {} : null,
+    health: healthDue ? {} : null,
     journey: journeyNeedsAttention(doc) ? {} : null,
-    nutrition: null,
     progress: weighInDue(doc) ? {} : null,
-    armor: earnedArmorIds(doc).length > (doc.armorSeenCount || 0) ? {} : null,
-    faq: null,
+    gear: earnedArmorIds(doc).length > (doc.armorSeenCount || 0) ? {} : null,
     coach: unread > 0 ? { count: unread } : null,
   };
 }

@@ -87,6 +87,7 @@ export default function Journey({ ctx }: { ctx: Ctx }) {
         <p><strong>Next: {nextRetestLabel(journeyNextRetest)} {nextBossLabel(journeyNextBoss)}</strong></p>
         <JourneyMap currentWeek={currentWeekForDoc(doc)} met={met} bossHp={doc.bossHp || {}} />
         <p className="small muted">Boss rounds at Weeks 4, 8, and 12 of every cycle, plus a review round at the end of the road. Win the round with your class moves and mana, then do the retest to open the next land. The map above shows the first stretch, Weeks 1 to 12. The road continues below.</p>
+        <p className="small"><a href="#companions-top">See companions</a> The portraits on the map are the companions you meet on that step. A ? is someone you have not met yet. Companions live on this tab, just below the map.</p>
       </div>
 
       <div className="card">
@@ -212,8 +213,8 @@ export default function Journey({ ctx }: { ctx: Ctx }) {
       </div>
 
       <div className="card" id="companions">
-        <h3>Your companions</h3>
-        <p className="small muted">People and animals you befriend along the road, one at a time as you get further. Bosses are not companions. They are challenges you beat.</p>
+        <h3>Your companions, in full</h3>
+        <p className="small muted">People and animals you befriend along the road, one at a time as you get further. Bosses are not companions. They are challenges you beat. The short list is at the top of this tab, above the map.</p>
         {CREATURES.map((c) => {
           const isMet = met.has(c.id);
           if (!isMet) {

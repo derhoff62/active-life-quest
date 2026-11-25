@@ -565,7 +565,7 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
             {notice}
             {!doc.assessmentDone && (
               <div style={{ marginTop: 8 }}>
-                <button className="primary" onClick={() => ctx.go('assessment')}>Go to assessment</button>
+                <button className="primary" onClick={() => ctx.go('train')}>Go to assessment</button>
               </div>
             )}
           </div>
@@ -591,7 +591,7 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
           ))}
         </div>
         <p className="small muted">Moves you cannot do with this gear are swapped for one you can, and the swap is shown in the workout.</p>
-        <button onClick={() => ctx.go('assessment')}>Change my equipment in the assessment</button>
+        <button onClick={() => ctx.go('train')}>Change my equipment in the assessment</button>
       </div>
 
       <div className="card gold-frame" id="best-workout">
@@ -738,7 +738,7 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
         <p><strong>{cardioWeek} of 150 to 300 minutes this week.</strong> {cardioMilestone}.</p>
         <div className="progress-bar"><div style={{ width: `${Math.min(100, (cardioWeek / 300) * 100)}%` }} /></div>
         <p className="small muted">Zone 2, easy enough to talk. High intensity counts double automatically when you log it as HIIT.</p>
-        <button className="primary" onClick={() => go('cardio')}>Log cardio in the Cardio tab</button>
+        <button className="primary" onClick={() => go('health', 'cardio')}>Log cardio in Health</button>
       </div>
 
       <div className="card">

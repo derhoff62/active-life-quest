@@ -272,7 +272,7 @@ export default function Onboarding({ ctx }: { ctx: Ctx }) {
               d.mainGoal = gt?.label || '';
               d.xp += 20;
             });
-            go('assessment');
+            go('train');
           }}
         >
           Save and do the assessment

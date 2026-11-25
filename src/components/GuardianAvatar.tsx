@@ -139,6 +139,7 @@ export default function GuardianAvatar({
 }) {
   const g = guardian ?? DEFAULT_GUARDIAN;
   const isRanger = g.classId === 'Ranger';
+  const isSpellweaver = g.classId === 'Spellweaver';
   const main = COLOR_MAP[g.bodyColor ?? g.color] ?? COLOR_MAP.Navy;
   const light = shade(main, 100);
   const dark = shade(main, -45);
@@ -176,14 +177,21 @@ export default function GuardianAvatar({
   // dots (r2.4->2.7); they already read on every tone.
   const skinIsDark = skinTone === 'Brown' || skinTone === 'Deep';
   const browCore = skinIsDark ? '#120a04' : HAIR_C;
-  // BIGGER FIXES (Derek, Nov 23 10:12 PM, diagnosis Nov 23 10:11 PM):
-  // the Ranger brows/eyes were sub-pixel at the 96px live preview
-  // (brow stroke 1.8 units = 0.86px, glint r0.9 = 0.43px radius), so
-  // the light halo now exists on ALL skin tones for Ranger, not
-  // only Brown/Deep — on Light skin the cream rim is what separates
-  // the dark brow from the light skin at 1-2px. Mouth thickened
-  // for Ranger too (see mouthWidth below).
-  const browHalo = skinIsDark || isRanger ? '#ffe3c2' : null;
+  // BROW FIX, ROUND 3 (Derek, Nov 25 1:21 PM: "Eyebrows still look
+  // weird", after the Ranger eye fix went live). Diagnosis, measured
+  // at 180px: the cream halo was 4.6/5.2 units wide against a 2.4/3.0
+  // core — nearly twice the brow — so on Ranger each brow read as a
+  // big pale oval with a dark centre, like white goggles against the
+  // dark hood. On Guardian the core alone was the problem: 3.0 units
+  // thick, angled steeply down (22.5 to 25), its inner end sitting
+  // BELOW the eye top (24.8), so brow + eye merged into one angry
+  // dark mass (166-209 dark px in the brow band at 180px). Fix: the
+  // halo now exists ONLY on dark skin, where contrast genuinely
+  // needs it, and only ~0.6 units wider than the core on each side,
+  // so it is a thin rim, not a pale slug. On light skin a dark brow
+  // reads fine with no halo, same as Guardian always did. Mouth
+  // thickened for Ranger too (see mouthWidth below).
+  const browHalo = skinIsDark ? '#ffe3c2' : null;
   const mouthStroke = skinIsDark ? '#ffe3c2' : '#6b4a3a';
   const mouthWidth = isRanger ? 2.4 : skinIsDark ? 2.8 : 2.0;
   // Beard edge on dark skin: the old dark outline (#2e1a08) vanished
@@ -290,11 +298,16 @@ export default function GuardianAvatar({
   // face at 180px (shiny eyeballs under thick brow bars). The
   // Ranger-only enlargement was the overshoot — Guardian eyes r2.7
   // read fine. Ranger now uses the SAME eye/brow sizes as Guardian
-  // (r2.7, glint r0.9, brow core 2.4/3.0, halo 4.6/5.2); only the
-  // Ranger brow SHAPE (raised, shorter) and eye height (cy29) stay
-  // distinct, so the face keeps its own look without the bug eyes.
-  const browCoreWidth = isRanger ? (isFemale ? 2.4 : 3.0) : isFemale ? 2.4 : 3.0;
-  const browHaloWidth = isRanger ? (isFemale ? 4.6 : 5.2) : isFemale ? 4.6 : 5.2;
+  // (r2.7, glint r0.9); only the Ranger brow SHAPE (raised, shorter)
+  // and eye height (cy29) stay distinct, so the face keeps its own
+  // look without the bug eyes.
+  // BROW FIX, ROUND 3 (Nov 25): Guardian + Ranger brows are now
+  // THIN simple lines (core 1.8 Female / 2.2 Male, halo 3.0 / 3.4
+  // where a halo exists at all). Spellweaver keeps the old widths
+  // (2.4 / 3.0, halo 4.6 / 5.2) — Derek said Spellweaver looks
+  // good, so its brows are not touched.
+  const browCoreWidth = isSpellweaver ? (isFemale ? 2.4 : 3.0) : isFemale ? 1.8 : 2.2;
+  const browHaloWidth = isSpellweaver ? (isFemale ? 4.6 : 5.2) : isFemale ? 3.0 : 3.4;
   const hair = hairForLook(g.look, g.hair);
   const hasBeard = !isFemale && HAIR_WITH_BEARD.includes(hair);
   const bw = buildWidth(g.build);
@@ -319,22 +332,24 @@ export default function GuardianAvatar({
   // the angry Determined look). Six faces, same shapes as GuardianEmote:
   // Celebrate, Determined, Tired, Strong, Struggling, Good job.
   // `face` (Today's auto mood) wins; otherwise the guardian's picked
-  // default mood; old profiles get 'determined'. Brows keep the v68
-  // dark-skin halo + core so they read on every tone; closed/half-closed
+  // default mood; old profiles get 'determined'. Brows are thin lines
+  // with a narrow halo on dark skin only (round 3, Nov 25), so they
+  // read on every tone without becoming pale slugs; closed/half-closed
   // eyes get the same halo treatment. No nose, no ears, no white sclera.
   const faceId: GuardianMood = face ?? g.mood ?? 'determined';
   // RANGER FACE (Derek, Nov 23 6:44 PM: "Ranger needs touch ups:
   // eyebrows, hair, the beard isn't on the face, you can't see the
-  // eyes"). Measured in the renders: the shared brows are thick
-  // bars (Female 2.4 / Male 3.0) angled steeply down at y22.5-25,
-  // sitting directly ON the eyes (eye top y24.8, cy27.5 r2.7), so
-  // brow + eye merge into one dark angry mass, and the hood's
-  // narrow inner opening (x90-110) pinches the outer eye corners.
-  // Ranger-only: brows raised ~2.5 units, shorter (5.5 vs 7 long),
-  // shallower angle (drop 1.5, not 2.5), thinner (1.8 / 2.2), and
-  // the eyes moved DOWN to cy29, bigger (r3.0) with a small glint
-  // dot — so there is a clear skin gap between brow and eye on
-  // every mood. Guardian / Spellweaver keep the shared geometry.
+  // eyes"). Ranger-only: brows raised ~2.5 units, shorter (5.5 vs
+  // 7 long), shallower angle (drop 1.5, not 2.5), and the eyes moved
+  // DOWN to cy29 — so there is a clear skin gap between brow and
+  // eye on every mood.
+  // BROW FIX, ROUND 3 (Nov 25): the old Guardian geometry (22.5 to
+  // 25, inner end below the eye top at 24.8) merged brow + eye into
+  // one angry mass. Guardian brows are now raised ~2 units and
+  // flattened (inner end never below y23), so a clear skin gap sits
+  // above the eyes on every mood (inner bottom edge 23.1 vs eye top
+  // 24.8). Spellweaver keeps the old shared geometry exactly —
+  // Derek said it looks good.
   const browD: Record<GuardianMood, string> = isRanger
     ? {
         determined: 'M90 20 L95.5 21.5 M104.5 21.5 L110 20',
@@ -344,14 +359,23 @@ export default function GuardianAvatar({
         struggling: 'M90 21.5 L95.5 18.5 M104.5 18.5 L110 21.5',
         'thumbs-up': 'M90 18 L95.5 16.5 M104.5 16.5 L110 18',
       }
-    : {
-        determined: 'M88.5 22.5 L95.5 25 M104.5 25 L111.5 22.5',
-        celebrate: 'M88.5 21 L95.5 19.5 M104.5 19.5 L111.5 21',
-        tired: 'M88.5 23.5 L95.5 23.5 M104.5 23.5 L111.5 23.5',
-        strong: 'M88.5 20 L95.5 22.5 M104.5 25 L111.5 22.5',
-        struggling: 'M88.5 24 L95.5 21 M104.5 21 L111.5 24',
-        'thumbs-up': 'M88.5 20.5 L95.5 19 M104.5 19 L111.5 20.5',
-      };
+    : isSpellweaver
+      ? {
+          determined: 'M88.5 22.5 L95.5 25 M104.5 25 L111.5 22.5',
+          celebrate: 'M88.5 21 L95.5 19.5 M104.5 19.5 L111.5 21',
+          tired: 'M88.5 23.5 L95.5 23.5 M104.5 23.5 L111.5 23.5',
+          strong: 'M88.5 20 L95.5 22.5 M104.5 25 L111.5 22.5',
+          struggling: 'M88.5 24 L95.5 21 M104.5 21 L111.5 24',
+          'thumbs-up': 'M88.5 20.5 L95.5 19 M104.5 19 L111.5 20.5',
+        }
+      : {
+          determined: 'M88.5 20.5 L95.5 22 M104.5 22 L111.5 20.5',
+          celebrate: 'M88.5 20 L95.5 19 M104.5 19 L111.5 20',
+          tired: 'M88.5 22.5 L95.5 22.5 M104.5 22.5 L111.5 22.5',
+          strong: 'M88.5 19.5 L95.5 21.5 M104.5 21.5 L111.5 19.5',
+          struggling: 'M88.5 23 L95.5 21 M104.5 21 L111.5 23',
+          'thumbs-up': 'M88.5 20 L95.5 19 M104.5 19 L111.5 20',
+        };
   const eyeCy = isRanger ? 29 : 27.5;
   const eyeR = 2.7;
   const faceArt = (
@@ -360,11 +384,19 @@ export default function GuardianAvatar({
         <path d={browD[faceId]} fill="none" stroke={browHalo} strokeWidth={browHaloWidth} strokeLinecap="round" />
       )}
       <path d={browD[faceId]} fill="none" stroke={browCore} strokeWidth={browCoreWidth} strokeLinecap="round" />
-      {isFemale && faceId === 'determined' && !isRanger && (
-        <path d="M90 24.5 L88.5 22.5 M110 24.5 L111.5 22.5" fill="none" stroke={browCore} strokeWidth="1.8" strokeLinecap="round" />
-      )}
-      {isFemale && faceId === 'determined' && isRanger && (
-        <path d="M90 26 L88.5 24 M110 26 L111.5 24" fill="none" stroke={browCore} strokeWidth="2.4" strokeLinecap="round" />
+      {/* Female determined brow flicks, kept at the brow's outer ends.
+          Round 3: moved up with the raised Guardian brows and thinned
+          to match the new core; the old Ranger flick sat at y24-26,
+          below the brow and right above the eye. Spellweaver keeps
+          the old flick exactly. */}
+      {isFemale && faceId === 'determined' && (
+        <path
+          d={isSpellweaver ? 'M90 24.5 L88.5 22.5 M110 24.5 L111.5 22.5' : isRanger ? 'M90 21.5 L88.5 20 M110 21.5 L111.5 20' : 'M90 23 L88.5 21.5 M110 23 L111.5 21.5'}
+          fill="none"
+          stroke={browCore}
+          strokeWidth={isSpellweaver ? '1.8' : isRanger ? '1.6' : '1.4'}
+          strokeLinecap="round"
+        />
       )}
       {faceId === 'celebrate' ? (
         <>
