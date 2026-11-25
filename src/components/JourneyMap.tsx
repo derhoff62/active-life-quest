@@ -181,10 +181,14 @@ export default function JourneyMap({
         {/* Golden sky glow over the Peaks, like a far-off golden light. */}
         <ellipse cx="180" cy="380" rx="150" ry="40" fill="url(#goldGlow)" />
 
-        {lands.map((l) => {
+        {lands.map((l, li) => {
           const state = landState(l.from, l.to);
           return (
             <g key={l.label}>
+              {/* Step number, so the order is obvious at a glance:
+                  1 Forest, then 2 Shores, then 3 Peaks, top to bottom. */}
+              <circle cx="30" cy={l.y + 22} r="11" fill="#124571" stroke="#fff" strokeWidth="2" />
+              <text x="30" y={l.y + 26} textAnchor="middle" fontSize="12" fontWeight="700" fill="#fff">{li + 1}</text>
               {/* Only the land itself is dimmed when it is in the future.
                   The title pills are drawn in a separate top layer below,
                   at full strength, so a future land stays readable. */}
@@ -344,11 +348,13 @@ export default function JourneyMap({
         ))}
       </svg>
       <div className="map-legend">
-        <div><strong>Gold line:</strong> your path</div>
+        <div><strong>Gold line:</strong> your path, top to bottom, step 1 to step 3</div>
+        <div><strong>Number 1, 2, 3:</strong> the order of the lands, Forest, then Shores, then Peaks</div>
         <div><strong>Castle:</strong> each land&apos;s castle</div>
-        <div><strong>Red star:</strong> boss round</div>
-        <div><strong>Blue dot:</strong> a companion you met</div>
-        <div><strong>Shield:</strong> you are here</div>
+        <div><strong>Red star:</strong> boss round, at Weeks 4, 8, and 12</div>
+        <div><strong>Blue dot:</strong> a companion you met. Grey dot with a question mark: a companion you have not met yet</div>
+        <div><strong>Shield:</strong> you are here, right now</div>
+        <div><strong>Green tick:</strong> a land you have finished</div>
       </div>
     </div>
   );

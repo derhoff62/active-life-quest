@@ -36,7 +36,7 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
   const [showHow, setShowHow] = useState<string | null>(null);
   const [finishMinutes, setFinishMinutes] = useState('');
   const [notice, setNotice] = useState('');
-  const [timeMin, setTimeMin] = useState<15 | 30 | 45>(30);
+  const [timeMin, setTimeMin] = useState<15 | 30 | 45 | 60>(30);
   const [editId, setEditId] = useState<string | null>(null);
   const [editMinutes, setEditMinutes] = useState('');
   const [regressionPick, setRegressionPick] = useState<Record<string, string>>({});
@@ -575,7 +575,7 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
         <h3>Best for you today</h3>
         <p className="small">How much time do you have today?</p>
         <div className="row">
-          {([15, 30, 45] as const).map((t) => (
+          {([15, 30, 45, 60] as const).map((t) => (
             <button
               key={t}
               onClick={() => setTimeMin(t)}
@@ -585,6 +585,18 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
             </button>
           ))}
         </div>
+        <p className="small muted">
+          {timeMin === 15 && '15 min: easy to fit in and easy to finish. Good for busy days and getting started. You need more sessions a week to hit the same total.'}
+          {timeMin === 30 && '30 min: a solid session that fits most days. A good middle ground. You need more sessions a week than a longer workout to hit the same total.'}
+          {timeMin === 45 && '45+ min: time for a full warm-up, main lifts, and accessories. You can hit the same total with fewer sessions a week.'}
+          {timeMin === 60 && '60 min: time for a full warm-up, main lifts, accessories, and a cool-down. You can hit the same total with fewer sessions a week.'}
+        </p>
+        <details>
+          <summary>Short or long? What changes</summary>
+          <p className="small">Shorter workouts, 15 to 30 minutes, are easier to fit in and easier to stay consistent with, and they leave you less tired. The drawback is less time for a warm-up, main lifts, and accessories in one session, so progress is slower per session. You need more sessions a week to hit the same total weekly volume, so take 1 to 2 rest days between strength days for the same muscles.</p>
+          <p className="small">Longer workouts, 45 to 60 minutes, give you time for a full warm-up, main compound lifts, accessories, and a cool-down in one session, so you get more done per session. You can hit the same total weekly volume with fewer sessions a week. The drawback is they are harder to fit in, they leave you more tired, and they are easier to skip on a busy day. Longer is not better if your form breaks down, so stop the session or drop the weight if form goes.</p>
+          <p className="small">What matters most is your total volume for the week and showing up consistently, not how long any one session is.</p>
+        </details>
         {!doc.assessmentDone && <p>Do the assessment first. It sets your starting phase, and then your best workout shows here.</p>}
         {assessmentPending(doc) && <p>Assessment waiting for Derek to review. Your workouts unlock once he approves it.</p>}
         {doc.assessmentDone && isRestDay && (
@@ -704,7 +716,7 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
       <div className="card">
         <h3>Fit the workout to your time</h3>
         <p>Shorter workouts need more days: at {timeMin === 45 ? '45 or more' : timeMin} minutes, train {daysNeeded} days a week to hit your Phase {phase} weekly sets ({weeklySets} per muscle). {style === 'ppl' ? 'Push, Pull, and Legs work different muscles, so each muscle gets 2 to 3 days off before its next session.' : style === 'short' ? 'Short sessions are a small daily dose, not a full strength session, so they do not add heavy volume every day.' : 'Full-body days work the same muscles each day, so take 1 to 2 rest days between strength days.'}</p>
-        <p className="small muted">15 minutes: 4 days a week. 30 minutes: 3 days a week. 45 or more minutes: {phase >= 3 ? '3' : '2'} days a week. Take 1 to 2 rest days between strength days.</p>
+        <p className="small muted">15 minutes: 4 days a week. 30 minutes: 3 days a week. 45 or more minutes: {phase >= 3 ? '3' : '2'} days a week. 60 minutes: same as 45 or more, {phase >= 3 ? '3' : '2'} days a week. Take 1 to 2 rest days between strength days.</p>
       </div>
 
       <div className="card">

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Ctx } from '../App';
 import { PHASES, MONSTERS, CREATURES, STORY, SPELLS, CLASSES, BOSS_ROUNDS } from '../lib/data';
-import { YEAR_CYCLES, challengeForWeek } from '../lib/yearPlan';
+import { YEAR_CYCLES, challengeForWeek, nextRetestWeek, nextBossWeek, nextRetestLabel, nextBossLabel } from '../lib/yearPlan';
 import { phaseForDoc, levelForXp, metCompanionIds, currentWeekForDoc } from '../lib/store';
 import GuardianAvatar from './GuardianAvatar';
 import JourneyMap from './JourneyMap';
@@ -56,6 +56,15 @@ export default function Journey({ ctx }: { ctx: Ctx }) {
   );
   const phase = phaseForDoc(doc);
   const level = levelForXp(doc.xp);
+  // Next step on the road, in plain words, so the map reads top to
+  // bottom: where you are, what comes next, then the boss and retest.
+  const journeyWeek = currentWeekForDoc(doc);
+  const journeyDoneRetests = new Set(doc.retests.map((r) => (r as { week?: number }).week || 0));
+  const journeyNextRetest = nextRetestWeek(journeyWeek, journeyDoneRetests);
+  const journeyBeatenBossWeeks = new Set(
+    Object.entries(doc.bossHp || {}).filter(([, hp]) => hp <= 0).map(([id]) => Number(id.replace('boss-week-', ''))),
+  );
+  const journeyNextBoss = nextBossWeek(journeyWeek, journeyBeatenBossWeeks);
   const mySpells = SPELLS.filter((s) => {
     if (s.id === 'second-wind') return level >= 9;
     return s.classId === 'any' || s.classId === doc.guardian?.classId;
@@ -75,6 +84,8 @@ export default function Journey({ ctx }: { ctx: Ctx }) {
     <div>
       <div className="card gold-frame">
         <h2>Your journey</h2>
+        <p><strong>Next: {nextRetestLabel(journeyNextRetest)} {nextBossLabel(journeyNextBoss)}</strong></p>
+        <p className="small">Follow the gold path from the top, step by step. Step 1: Weeks 1 to 3, train in Sapphire Forest. Step 2: Week 4 boss round, then the Week 4 retest. Step 3: Weeks 5 to 8, Crystal Shores. Step 4: Week 8 boss round, then the retest. Step 5: Weeks 9 to 12, Navy Peaks. Step 6: Week 12 boss round, then the retest and a lighter week.</p>
         <JourneyMap currentWeek={currentWeekForDoc(doc)} met={met} bossHp={doc.bossHp || {}} />
         <div className="map">
           <p><span className="land">Land 1: Sapphire Forest, Forest Castle, Weeks 1 to 4.</span> {phase >= 1 ? 'You are here, or past here.' : ''}</p>
