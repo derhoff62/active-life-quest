@@ -142,6 +142,13 @@ function TrailScene({ step }: { step: number }) {
   // Step 3: wooden bridge over the water. Step 4: Lake Castle with
   // a waterfall. Step 5: mountain trail with a stone cairn. Step 6:
   // Navy Castle on the summit with a beacon torch.
+  // Round 6 (Derek, Nov 25, 2026): "Do what you think is best" on
+  // four live-check fails. Step 2 moat was buried under the trail,
+  // Step 4 waterfall read as a white panel, Step 6 had no moon, and
+  // the Step 5 zigzag read as a gentle arc. Fixes: the moat and the
+  // waterfall are now drawn AFTER the trail, wide and unmistakable;
+  // Step 6 gets a full pale moon; the Step 5 trail is a sharp
+  // switchback with miter joins, not a smooth curve.
   // Desktop slice crop: at desktop width preserveAspectRatio="slice"
   // shows only the middle ~60 units (y30 to y90) of the 120-unit
   // viewBox, so the flag, sun, and castle tops all sit at y32 or
@@ -155,7 +162,7 @@ function TrailScene({ step }: { step: number }) {
     2: 'M-10 96 C 70 112, 140 82, 210 98 S 310 112, 370 94',
     3: 'M-10 108 C 60 96, 110 78, 160 70 S 250 70, 300 88 S 340 100, 370 104',
     4: 'M-10 102 C 70 86, 140 106, 210 90 S 310 82, 370 100',
-    5: 'M-10 110 L 70 88 L 140 104 L 210 82 L 290 98 L 370 86',
+    5: 'M-10 112 L 60 76 L 130 110 L 200 72 L 270 108 L 340 74 L 370 92',
     6: 'M-10 112 C 80 102, 150 82, 220 86 S 310 96, 370 90',
   };
   const d = trail[step];
@@ -212,8 +219,8 @@ function TrailScene({ step }: { step: number }) {
           <rect x="42" y="72" width="12" height="20" fill="#6b5a3a" stroke="none" />
           <rect x="44" y="32" width="3" height="22" fill="#124571" />
           <path d="M47 32 L78 39 L47 47 Z" fill="#a83232" stroke="#7d2424" strokeWidth="1" />
-          <rect x="6" y="94" width="84" height="12" fill="#4a90d9" />
-          <path d="M14 100 Q24 96 34 100 Q44 104 54 100 Q64 96 74 100" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" />
+          {/* No moat here: the wide moat is drawn AFTER the trail,
+              below, so the trail cannot bury it. */}
         </g>
       )}
       {/* Step 3: Crystal Shores, wooden bridge. Water band, waves,
@@ -255,8 +262,9 @@ function TrailScene({ step }: { step: number }) {
           <rect x="24" y="56" width="10" height="20" fill="#2f6fd0" stroke="#1d4fa1" strokeWidth="1" />
           <rect x="28" y="32" width="3" height="22" fill="#124571" />
           <path d="M31 32 L62 39 L31 47 Z" fill="#a83232" stroke="#7d2424" strokeWidth="1" />
-          <rect x="94" y="58" width="18" height="34" fill="#bfe3f5" stroke="#fff" strokeWidth="1" />
-          <path d="M99 62 L99 88 M105 62 L105 88 M111 62 L111 88" stroke="#fff" strokeWidth="2" />
+          {/* No waterfall here: the wide fall is drawn AFTER the
+              trail, below, so the trail cannot bury it and it reads
+              as falling water, not a flat panel. */}
         </g>
       )}
       {/* Step 5: Navy Peaks, cairn. Pale moon, stars, two big peaks,
@@ -289,9 +297,15 @@ function TrailScene({ step }: { step: number }) {
           platform under the castle, one peak behind. */}
       {step === 6 && (
         <g>
+          {/* Full pale moon, left of the peak and clear of the boss
+              portrait at the right end: a pale disc with a crescent
+              cut and two craters, not the sun used on Steps 1 to 5. */}
+          <circle cx="138" cy="46" r="12" fill="#f2f0d8" stroke="#c9a227" strokeWidth="1.5" />
+          <circle cx="143" cy="43" r="9" fill={theme.tint} />
+          <circle cx="134" cy="44" r="2" fill="#d8d2b0" />
+          <circle cx="140" cy="50" r="1.5" fill="#d8d2b0" />
           <g fill="#f2d878">
-            <circle className="map-twinkle" cx="150" cy="38" r="2.2" />
-            <circle className="map-twinkle" cx="210" cy="46" r="1.8" />
+            <circle className="map-twinkle" cx="180" cy="38" r="2.2" />
             <circle className="map-twinkle" cx="320" cy="36" r="2.2" />
           </g>
           <g fill="#eef3f8" stroke={theme.deep} strokeWidth="1.5">
@@ -319,17 +333,38 @@ function TrailScene({ step }: { step: number }) {
       {/* Dirt trail, per step, drawn over the ground and under the
           landmark where they overlap. Step 3's bridge is drawn over
           the trail, below, so the path crosses the water on it. */}
-      <path d={d} fill="none" stroke="#d9b96a" strokeWidth="24" strokeLinecap="round" strokeLinejoin="round" />
-      <path d={d} fill="none" stroke="#8a6d00" strokeWidth="2.5" strokeDasharray="10 8" strokeLinecap="round" strokeLinejoin="round" />
+      <path d={d} fill="none" stroke="#d9b96a" strokeWidth="24" strokeLinecap="round" strokeLinejoin="miter" />
+      <path d={d} fill="none" stroke="#8a6d00" strokeWidth="2.5" strokeDasharray="10 8" strokeLinecap="round" strokeLinejoin="miter" />
       {step === 2 && (
         <g>
-          <rect x="6" y="104" width="84" height="14" fill="#4a90d9" />
-          <path d="M14 111 Q24 107 34 111 Q44 115 54 111 Q64 107 74 111" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" />
-          <rect x="38" y="102" width="22" height="6" fill="#8a6238" stroke="#5b3a1e" strokeWidth="1" />
+          {/* Wide blue moat IN FRONT of the castle base, drawn after
+              the trail so nothing buries it: water with two rows of
+              white waves, and a plank bridge where the trail crosses
+              it, in front of the castle door. */}
+          <rect x="0" y="96" width="150" height="24" fill="#4a90d9" />
+          <path d="M8 104 Q20 100 32 104 Q44 108 56 104 Q68 100 80 104 Q92 108 104 104 Q116 100 128 104 Q140 108 148 104" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" />
+          <path d="M8 114 Q20 110 32 114 Q44 118 56 114 Q68 110 80 114 Q92 118 104 114 Q116 110 128 114 Q140 118 148 114" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" />
+          <rect x="28" y="98" width="68" height="12" fill="#8a6238" stroke="#5b3a1e" strokeWidth="1.5" />
+          <path d="M44 98 L44 110 M60 98 L60 110 M76 98 L76 110" stroke="#5b3a1e" strokeWidth="1.5" />
+          <rect x="28" y="94" width="4" height="18" fill="#5b3a1e" />
+          <rect x="92" y="94" width="4" height="18" fill="#5b3a1e" />
         </g>
       )}
       {step === 4 && (
-        <ellipse cx="215" cy="109" rx="80" ry="8" fill="#4a90d9" />
+        <g>
+          {/* Wide waterfall, drawn after the trail: blue-white water
+              falling from the castle wall into the pool, with wavy
+              vertical streaks, a wavy top lip, and foam and splash
+              where it lands. It reads as falling water, not a panel. */}
+          <path d="M96 54 Q103 48 110 54 Q117 48 124 54 L124 96 L96 96 Z" fill="#bfe3f5" stroke="#4a90d9" strokeWidth="1.5" />
+          <path d="M102 58 Q100 74 103 92 M110 58 Q108 74 111 94 M118 58 Q116 74 119 92" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" />
+          <path d="M106 58 L106 90 M114 58 L114 90" stroke="#4a90d9" strokeWidth="1.5" strokeLinecap="round" />
+          <ellipse cx="110" cy="100" rx="22" ry="7" fill="#fff" />
+          <circle cx="96" cy="98" r="4" fill="#fff" />
+          <circle cx="124" cy="99" r="4" fill="#fff" />
+          <ellipse cx="215" cy="109" rx="80" ry="8" fill="#4a90d9" />
+          <path d="M150 109 Q170 105 190 109 Q210 113 230 109 Q250 105 270 109" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" />
+        </g>
       )}
       {step === 3 && (
         <g>
