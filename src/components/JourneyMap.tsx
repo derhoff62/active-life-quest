@@ -131,92 +131,219 @@ const STRIP_LABEL: Record<number, string> = {
   6: 'Navy Castle, Week 12 boss waits here',
 };
 
-function TrailScene({ land, bossStep }: { land: string; bossStep: boolean }) {
+function TrailScene({ step }: { step: number }) {
+  // Round 5 (Derek, Nov 25, 2026): "They look good but some repeat".
+  // Steps 1/2 were both Sapphire Forest, 3/4 both Crystal Shores, 5/6
+  // both Navy Peaks, differing only in castle vs signpost. Now EACH
+  // step is its own scene: same land family, different picture.
+  // Vary: terrain layout, castle design, signpost style and position,
+  // trail shape, sun/moon/stars, and one unique landmark per step.
+  // Step 1: wooden start gate. Step 2: Forest Castle with a moat.
+  // Step 3: wooden bridge over the water. Step 4: Lake Castle with
+  // a waterfall. Step 5: mountain trail with a stone cairn. Step 6:
+  // Navy Castle on the summit with a beacon torch.
+  // Desktop slice crop: at desktop width preserveAspectRatio="slice"
+  // shows only the middle ~60 units (y30 to y90) of the 120-unit
+  // viewBox, so the flag, sun, and castle tops all sit at y32 or
+  // lower in this version. Nothing important lives above y30.
+  const land = LAND_FOR_STEP[step];
   const theme = LAND_THEME[land];
+  const ground: Record<number, string> = { 1: '#4c8a4f', 2: '#3f7a44', 3: '#e8d9a8', 4: '#d9c98f', 5: '#7d8ea3', 6: '#5a6b7d' };
+  // One trail path per step, all wide tan dirt with a dashed centre.
+  const trail: Record<number, string> = {
+    1: 'M-10 106 C 60 86, 130 110, 200 90 S 310 84, 370 102',
+    2: 'M-10 96 C 70 112, 140 82, 210 98 S 310 112, 370 94',
+    3: 'M-10 108 C 60 96, 110 78, 160 70 S 250 70, 300 88 S 340 100, 370 104',
+    4: 'M-10 102 C 70 86, 140 106, 210 90 S 310 82, 370 100',
+    5: 'M-10 110 L 70 88 L 140 104 L 210 82 L 290 98 L 370 86',
+    6: 'M-10 112 C 80 102, 150 82, 220 86 S 310 96, 370 90',
+  };
+  const d = trail[step];
   return (
     <svg width="100%" height="120" viewBox="0 0 360 120" preserveAspectRatio="xMidYMid slice" role="img" aria-label={`${land} trail scene`} style={{ display: 'block', borderRadius: 12, border: `2px solid ${theme.border}` }}>
       <rect width="360" height="120" fill={theme.tint} />
-      {/* Ground band at the bottom, in the land colour. */}
-      {land === 'Sapphire Forest' && <rect x="0" y="82" width="360" height="38" fill="#4c8a4f" />}
-      {land === 'Crystal Shores' && <rect x="0" y="82" width="360" height="38" fill="#e8d9a8" />}
-      {land === 'Navy Peaks' && <rect x="0" y="82" width="360" height="38" fill="#7d8ea3" />}
-      {/* Sun, fully inside the strip (top edge at y=6, never clipped).
-          Kept clear of the boss portrait, which sits at the right end. */}
-      <circle cx="258" cy="20" r="12" fill="#f2d878" stroke="#c9a227" strokeWidth="1.5" />
-      {/* Terrain per land: three or four BIG shapes only. */}
-      {land === 'Sapphire Forest' && (
+      <rect x="0" y="82" width="360" height="38" fill={ground[step]} />
+      {/* Step 1: Sapphire Forest, start gate. Sun low and left, two
+          pines centre-right, wooden gate with a hanging sign, left. */}
+      {step === 1 && (
         <g>
+          <circle cx="128" cy="44" r="10" fill="#f2d878" stroke="#c9a227" strokeWidth="1.5" />
           <g fill={theme.deep}>
-            <path d="M150 84 L172 30 L194 84 Z" />
-            <path d="M200 84 L222 22 L244 84 Z" />
-            <path d="M250 84 L272 34 L294 84 Z" />
+            <path d="M170 84 L188 38 L206 84 Z" />
+            <path d="M215 84 L233 44 L251 84 Z" />
+            <path d="M285 84 L298 52 L311 84 Z" />
           </g>
           <g fill="#5b3a1e">
-            <rect x="168" y="82" width="7" height="10" />
-            <rect x="218" y="82" width="7" height="10" />
-            <rect x="268" y="82" width="7" height="10" />
+            <rect x="184" y="82" width="7" height="10" />
+            <rect x="229" y="82" width="7" height="10" />
+            <rect x="294" y="82" width="7" height="10" />
           </g>
+          <g fill="#5b3a1e">
+            <rect x="14" y="40" width="8" height="54" />
+            <rect x="66" y="40" width="8" height="54" />
+            <rect x="8" y="34" width="72" height="10" />
+          </g>
+          <rect x="28" y="48" width="32" height="16" fill="#1e7a46" stroke="#0f4d28" strokeWidth="1.5" />
+          <path d="M52 53 L60 56 L52 59 Z" fill="#fff" />
         </g>
       )}
-      {land === 'Crystal Shores' && (
+      {/* Step 2: Forest Castle with a moat. Stone base, wooden top,
+          green banner, red flag, blue moat in front, one tall pine. */}
+      {step === 2 && (
         <g>
-          <rect x="0" y="52" width="360" height="32" fill="#4a90d9" />
+          <circle cx="210" cy="44" r="10" fill="#f2d878" stroke="#c9a227" strokeWidth="1.5" />
+          <g fill={theme.deep}>
+            <path d="M168 84 L188 36 L208 84 Z" />
+            <path d="M248 84 L264 50 L280 84 Z" />
+          </g>
+          <g fill="#5b3a1e">
+            <rect x="184" y="82" width="7" height="10" />
+            <rect x="260" y="82" width="7" height="10" />
+          </g>
+          <g fill="#9a8a68" stroke="#6b5a3a" strokeWidth="1.5">
+            <rect x="12" y="52" width="72" height="40" />
+            <rect x="6" y="44" width="10" height="10" />
+            <rect x="28" y="44" width="10" height="10" />
+            <rect x="50" y="44" width="10" height="10" />
+            <rect x="72" y="44" width="10" height="10" />
+          </g>
+          <rect x="18" y="44" width="60" height="12" fill="#5b3a1e" />
+          <rect x="36" y="58" width="12" height="22" fill="#1e7a46" stroke="#0f4d28" strokeWidth="1" />
+          <rect x="42" y="72" width="12" height="20" fill="#6b5a3a" stroke="none" />
+          <rect x="44" y="32" width="3" height="22" fill="#124571" />
+          <path d="M47 32 L78 39 L47 47 Z" fill="#a83232" stroke="#7d2424" strokeWidth="1" />
+          <rect x="6" y="94" width="84" height="12" fill="#4a90d9" />
+          <path d="M14 100 Q24 96 34 100 Q44 104 54 100 Q64 96 74 100" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" />
+        </g>
+      )}
+      {/* Step 3: Crystal Shores, wooden bridge. Water band, waves,
+          arched plank bridge centre, signpost on the RIGHT pointing
+          back along the trail. */}
+      {step === 3 && (
+        <g>
+          <circle cx="84" cy="44" r="10" fill="#f2d878" stroke="#c9a227" strokeWidth="1.5" />
+          <rect x="0" y="54" width="360" height="30" fill="#4a90d9" />
           <g fill="none" stroke="#fff" strokeWidth="4" strokeLinecap="round">
-            <path className="map-wave" d="M140 62 Q160 54 180 62 Q200 70 220 62" />
-            <path className="map-wave" d="M230 72 Q250 64 270 72 Q290 80 310 72" />
-            <path className="map-wave" d="M150 76 Q170 68 190 76 Q210 84 230 76" />
+            <path className="map-wave" d="M20 64 Q40 56 60 64 Q80 72 100 64" />
+            <path className="map-wave" d="M280 74 Q300 66 320 74 Q340 82 355 74" />
           </g>
+          <g fill="#5b3a1e">
+            <rect x="308" y="48" width="7" height="44" fill="#5b3a1e" />
+          </g>
+          <path d="M312 52 L262 52 L250 61 L262 70 L312 70 Z" fill="#8a6238" stroke="#5b3a1e" strokeWidth="1.5" />
+          <path d="M258 57 L268 61 L258 65 Z" fill="#fff" />
         </g>
       )}
-      {land === 'Navy Peaks' && (
+      {/* Step 4: Lake Castle with a waterfall. Tall blue tower, lower
+          wall, blue banner, red flag, white waterfall into a pool. */}
+      {step === 4 && (
         <g>
+          <circle cx="190" cy="44" r="10" fill="#f2d878" stroke="#c9a227" strokeWidth="1.5" />
+          <rect x="0" y="54" width="360" height="30" fill="#4a90d9" />
+          <g fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round">
+            <path className="map-wave" d="M180 64 Q200 56 220 64 Q240 72 260 64" />
+            <path className="map-wave" d="M260 74 Q280 66 300 74 Q320 82 340 74" />
+          </g>
+          <ellipse cx="210" cy="98" rx="95" ry="12" fill="#4a90d9" />
+          <g fill="#5a7fa6" stroke="#2f4d6b" strokeWidth="1.5">
+            <rect x="12" y="40" width="34" height="52" />
+            <rect x="8" y="34" width="9" height="8" />
+            <rect x="22" y="34" width="9" height="8" />
+            <rect x="36" y="34" width="9" height="8" />
+            <rect x="46" y="58" width="48" height="34" fill="#6b8fb5" />
+          </g>
+          <rect x="24" y="56" width="10" height="20" fill="#2f6fd0" stroke="#1d4fa1" strokeWidth="1" />
+          <rect x="28" y="32" width="3" height="22" fill="#124571" />
+          <path d="M31 32 L62 39 L31 47 Z" fill="#a83232" stroke="#7d2424" strokeWidth="1" />
+          <rect x="94" y="58" width="18" height="34" fill="#bfe3f5" stroke="#fff" strokeWidth="1" />
+          <path d="M99 62 L99 88 M105 62 L105 88 M111 62 L111 88" stroke="#fff" strokeWidth="2" />
+        </g>
+      )}
+      {/* Step 5: Navy Peaks, cairn. Pale moon, stars, two big peaks,
+          stacked stone cairn left, zigzag mountain trail. */}
+      {step === 5 && (
+        <g>
+          <circle cx="290" cy="44" r="10" fill="#f2f0d8" stroke="#c9a227" strokeWidth="1.5" />
+          <g fill="#f2d878">
+            <circle className="map-twinkle" cx="120" cy="38" r="2.2" />
+            <circle className="map-twinkle" cx="180" cy="46" r="1.8" />
+            <circle className="map-twinkle" cx="240" cy="36" r="2.2" />
+          </g>
           <g fill="#eef3f8" stroke={theme.deep} strokeWidth="1.5">
-            <path d="M140 84 L190 16 L240 84 Z" />
-            <path d="M225 84 L275 28 L325 84 Z" />
+            <path d="M110 84 L170 34 L230 84 Z" />
+            <path d="M220 84 L270 44 L320 84 Z" />
           </g>
           <g fill="#fff">
-            <path d="M190 16 L206 38 L190 32 L176 40 Z" />
-            <path d="M275 28 L288 46 L274 41 L262 47 Z" />
+            <path d="M170 34 L184 52 L170 47 L156 54 Z" />
+            <path d="M270 44 L281 60 L270 56 L259 61 Z" />
           </g>
-          <g fill="#f2d878">
-            <circle className="map-twinkle" cx="120" cy="14" r="2.2" />
-            <circle className="map-twinkle" cx="330" cy="12" r="2.2" />
-            <circle className="map-twinkle" cx="300" cy="34" r="1.8" />
+          <g fill="#8a9aa8" stroke="#5a6b7d" strokeWidth="1.5">
+            <rect x="20" y="76" width="48" height="16" />
+            <rect x="28" y="62" width="32" height="14" />
+            <rect x="36" y="50" width="16" height="12" />
           </g>
         </g>
       )}
-      {/* Dirt trail: a WIDE tan path snaking left to right across the
-          strip, with a dashed centre line. Same dirt on every land. */}
-      <path d="M-10 108 C 70 78, 140 112, 210 88 S 320 82, 370 100" fill="none" stroke="#d9b96a" strokeWidth="24" strokeLinecap="round" />
-      <path d="M-10 108 C 70 78, 140 112, 210 88 S 320 82, 370 100" fill="none" stroke="#8a6d00" strokeWidth="2.5" strokeDasharray="10 8" strokeLinecap="round" />
-      {/* Castle at the end of the land, on boss steps only: BIG gold
-          castle with crenellations, a door, and a LARGE waving red
-          flag on a tall pole. On walk steps a BIG wooden signpost
-          with an arrow board marks the trail instead. */}
-      {bossStep ? (
+      {/* Step 6: Navy Castle on the summit, beacon torch. Dark navy
+          twin towers, gold banner, red flag, flaming beacon, rock
+          platform under the castle, one peak behind. */}
+      {step === 6 && (
         <g>
-          <g fill="#f2d878" stroke="#8a6d00" strokeWidth="1.5">
-            <rect x="12" y="46" width="66" height="46" />
-            <rect x="6" y="36" width="10" height="12" />
-            <rect x="28" y="36" width="10" height="12" />
-            <rect x="50" y="36" width="10" height="12" />
-            <rect x="68" y="36" width="10" height="12" />
-            <rect x="38" y="70" width="14" height="22" fill="#8a6d00" stroke="none" />
+          <g fill="#f2d878">
+            <circle className="map-twinkle" cx="150" cy="38" r="2.2" />
+            <circle className="map-twinkle" cx="210" cy="46" r="1.8" />
+            <circle className="map-twinkle" cx="320" cy="36" r="2.2" />
           </g>
-          <rect x="43" y="12" width="3" height="26" fill="#124571" />
-          <path d="M46 12 L78 19 L46 27 Z" fill="#a83232" stroke="#7d2424" strokeWidth="1" />
+          <g fill="#eef3f8" stroke={theme.deep} strokeWidth="1.5">
+            <path d="M180 84 L225 40 L270 84 Z" />
+          </g>
+          <path d="M225 40 L236 54 L225 50 L214 56 Z" fill="#fff" />
+          <path d="M0 120 L0 94 L140 84 L220 84 L360 96 L360 120 Z" fill="#5a6b7d" />
+          <g fill="#124571" stroke="#0b2f4d" strokeWidth="1.5">
+            <rect x="16" y="44" width="22" height="48" />
+            <rect x="72" y="44" width="22" height="48" />
+            <rect x="38" y="58" width="34" height="34" fill="#1d4f7a" />
+            <rect x="12" y="38" width="8" height="8" />
+            <rect x="26" y="38" width="8" height="8" />
+            <rect x="76" y="38" width="8" height="8" />
+            <rect x="90" y="38" width="8" height="8" />
+          </g>
+          <rect x="48" y="62" width="14" height="20" fill="#c9a227" stroke="#8a6d00" strokeWidth="1" />
+          <rect x="52" y="76" width="10" height="16" fill="#0b2f4d" stroke="none" />
+          <rect x="54" y="32" width="3" height="22" fill="#124571" />
+          <path d="M57 32 L88 39 L57 47 Z" fill="#a83232" stroke="#7d2424" strokeWidth="1" />
+          <rect x="108" y="48" width="4" height="40" fill="#5b3a1e" />
+          <path d="M110 34 C 100 44, 104 52, 110 56 C 116 52, 120 44, 110 34 Z" fill="#e86a1e" stroke="#a83232" strokeWidth="1" />
         </g>
-      ) : (
+      )}
+      {/* Dirt trail, per step, drawn over the ground and under the
+          landmark where they overlap. Step 3's bridge is drawn over
+          the trail, below, so the path crosses the water on it. */}
+      <path d={d} fill="none" stroke="#d9b96a" strokeWidth="24" strokeLinecap="round" strokeLinejoin="round" />
+      <path d={d} fill="none" stroke="#8a6d00" strokeWidth="2.5" strokeDasharray="10 8" strokeLinecap="round" strokeLinejoin="round" />
+      {step === 2 && (
         <g>
-          <rect x="30" y="52" width="7" height="44" fill="#5b3a1e" />
-          <path d="M34 44 L96 44 L108 53 L96 62 L34 62 Z" fill="#8a6238" stroke="#5b3a1e" strokeWidth="1.5" />
-          <path d="M88 50 L100 53 L88 56 Z" fill="#fff" />
+          <rect x="6" y="104" width="84" height="14" fill="#4a90d9" />
+          <path d="M14 111 Q24 107 34 111 Q44 115 54 111 Q64 107 74 111" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" />
+          <rect x="38" y="102" width="22" height="6" fill="#8a6238" stroke="#5b3a1e" strokeWidth="1" />
+        </g>
+      )}
+      {step === 4 && (
+        <ellipse cx="215" cy="109" rx="80" ry="8" fill="#4a90d9" />
+      )}
+      {step === 3 && (
+        <g>
+          <path d="M130 84 Q195 52 260 84" fill="none" stroke="#8a6238" strokeWidth="10" strokeLinecap="round" />
+          <g fill="#5b3a1e">
+            <rect x="136" y="62" width="6" height="24" />
+            <rect x="192" y="54" width="6" height="30" />
+            <rect x="248" y="62" width="6" height="24" />
+          </g>
         </g>
       )}
     </svg>
   );
 }
-
 type Step = {
   n: number;
   from: number;
@@ -411,7 +538,7 @@ export default function JourneyMap({
                     stands ON the trail here, at the right end of the
                     scene, on boss steps. */}
                 <div style={{ position: 'relative', marginBottom: 4 }}>
-                  <TrailScene land={LAND_FOR_STEP[s.n]} bossStep={isBossStep} />
+                  <TrailScene step={s.n} />
                   {boss && (
                     <div style={{ position: 'absolute', right: 8, top: 8, width: 56, height: 56, borderRadius: '50%', background: '#fff3c4', boxShadow: '0 0 0 2px rgba(168,50,50,0.75), 0 0 12px rgba(168,50,50,0.45)' }}>
                       <BossAvatar id={BOSS_AVATAR[boss.id] || 'the-slump'} />
