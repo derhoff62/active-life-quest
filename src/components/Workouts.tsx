@@ -46,6 +46,10 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
   // backdating window as a planned workout.
   const [showCustom, setShowCustom] = useState(false);
   const [customRows, setCustomRows] = useState<{ key: number; exerciseId: string; w: string; s: string; r: string; rest: string }[]>([]);
+  // Search text per custom row, by row key. Filters the move picker so a
+  // long list does not have to be scrolled. The picked move always stays
+  // in the list, even when it does not match the search text.
+  const [customSearch, setCustomSearch] = useState<Record<number, string>>({});
   const [customMinutes, setCustomMinutes] = useState('');
   const [customDate, setCustomDate] = useState(() => todayDayKey());
   const customKey = useRef(0);
@@ -373,6 +377,25 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
     setCustomRows((rows) => [...rows, { key: customKey.current, exerciseId: next.id, w: '', s: '', r: '', rest: String(next.restSec) }]);
   }
 
+  // Open the form with 3 empty rows (Derek, Nov 25, 2026), so it is
+  // obvious more than one move can be logged. Built in one setState
+  // call so the three picks do not collide on the same first move.
+  function openCustom() {
+    setShowCustom(true);
+    setCustomDate(todayDayKey());
+    if (customRows.length > 0) return;
+    const used = new Set<string>();
+    const rows: { key: number; exerciseId: string; w: string; s: string; r: string; rest: string }[] = [];
+    for (let i = 0; i < 3; i++) {
+      const next = customOptions.find((o) => !used.has(o.id));
+      if (!next) break;
+      used.add(next.id);
+      customKey.current += 1;
+      rows.push({ key: customKey.current, exerciseId: next.id, w: '', s: '', r: '', rest: String(next.restSec) });
+    }
+    setCustomRows(rows);
+  }
+
   function saveCustomWorkout() {
     if (!doc.assessmentDone) {
       setNotice('Do the assessment first. It sets your starting phase.');
@@ -467,6 +490,7 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
       awardBadges(d);
     });
     setCustomRows([]);
+    setCustomSearch({});
     setCustomMinutes('');
     setCustomDate(todayDayKey());
     setShowCustom(false);
@@ -839,7 +863,7 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
         <h3>Log a workout I did</h3>
         <p className="small">Did a workout that was not on the plan? Pick the moves you did, and log the weight, sets, reps, and rest for each one. It counts toward your week, your streak, and your sets per muscle, just like a planned workout. It does not replace your planned workout or move your phase forward.</p>
         {!showCustom && (
-          <button className="primary" onClick={() => { setShowCustom(true); setCustomDate(todayDayKey()); if (customRows.length === 0) addCustomRow(); }}>
+          <button className="primary" onClick={openCustom}>
             Log a workout I did
           </button>
         )}
@@ -849,8 +873,24 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
               const opt = customOptions.find((o) => o.id === row.exerciseId);
               const used = new Set(customRows.map((r) => r.exerciseId));
               const last = lastTimeFor(doc, row.exerciseId);
+              // Search filters the picker by name as they type. The move
+              // already picked on this row always stays in the list, even
+              // when it does not match the search text.
+              const q = (customSearch[row.key] || '').trim().toLowerCase();
+              const visibleOptions = customOptions.filter((o) => (o.id === row.exerciseId || !used.has(o.id)) && (!q || o.name.toLowerCase().includes(q)));
               return (
                 <div key={row.key} style={{ borderTop: '1px solid #d7e3ee', padding: '8px 0' }}>
+                  <div>
+                    <label htmlFor={`cu-search-${row.key}`}>Search moves</label>
+                    <input
+                      id={`cu-search-${row.key}`}
+                      type="search"
+                      value={customSearch[row.key] || ''}
+                      onChange={(e) => setCustomSearch((s) => ({ ...s, [row.key]: e.target.value }))}
+                      placeholder="Type a move, like squat or row"
+                    />
+                    <p className="small muted" style={{ margin: '2px 0 0' }}>{visibleOptions.length} of {customOptions.length} moves</p>
+                  </div>
                   <div className="row">
                     <div style={{ flex: 1 }}>
                       <label htmlFor={`cu-ex-${row.key}`}>Move</label>
@@ -862,7 +902,7 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
                           setCustomRows((rows) => rows.map((r) => (r.key === row.key ? { ...r, exerciseId: e.target.value, rest: String(next?.restSec ?? 60) } : r)));
                         }}
                       >
-                        {customOptions.filter((o) => o.id === row.exerciseId || !used.has(o.id)).map((o) => (
+                        {visibleOptions.map((o) => (
                           <option key={o.id} value={o.id}>{o.name}</option>
                         ))}
                       </select>
@@ -923,7 +963,7 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
             </div>
             <div className="row" style={{ marginTop: 8 }}>
               <button className="primary" onClick={saveCustomWorkout}>Save my workout</button>
-              <button onClick={() => { setShowCustom(false); setCustomRows([]); }}>Cancel</button>
+              <button onClick={() => { setShowCustom(false); setCustomRows([]); setCustomSearch({}); }}>Cancel</button>
             </div>
           </div>
         )}

@@ -158,8 +158,150 @@ function e(
   return { id, name, sets, reps, restSec, tempo, howTo, regression, swap, videoLabel, videoUrl: EXERCISE_VIDEOS[name], demoUrl: EXERCISE_DEMO_LINKS[name] };
 }
 
-export const WORKOUTS: Workout[] = [
-  {
+// ------------------------------------------------- CUSTOM-ONLY MOVES
+// Extra moves for the custom workout log only (Derek, Nov 25, 2026).
+// These are NOT in any planned workout, so they never change the plan,
+// the phase loads, or the reference tracks. They exist so a client who
+// did a workout on their own can log what they actually did. Log-only:
+// no new video to film, no demo link. Defined here, before WORKOUTS,
+// so findExerciseByName can search them without hitting a TDZ error
+// during module load (the planned workouts look names up as they load).
+export const CUSTOM_ONLY_EXERCISES: Exercise[] = [
+  // Chest
+  e('barbell-bench-press', 'Barbell Bench Press', 3, '8 reps', 90,
+    ['Lie on a bench, feet flat on the floor, bar over your chest.', 'Lower the bar slowly to your chest.', 'Press up until your arms are straight.'],
+    'Use just the bar, or dumbbells on a bench.',
+    'Dumbbell Bench Press', '4/2/1'),
+  e('incline-dumbbell-bench-press', 'Incline Dumbbell Bench Press', 3, '10 reps', 60,
+    ['Set the bench to a slight incline and lie back, dumbbells over your chest.', 'Lower the weights slowly to chest level.', 'Press up until your arms are straight.'],
+    'Flat dumbbell bench press.',
+    'Dumbbell Bench Press', '4/2/1'),
+  e('dumbbell-chest-fly', 'Dumbbell Chest Fly', 3, '12 reps', 60,
+    ['Lie on a bench, dumbbells over your chest, elbows slightly bent.', 'Open your arms wide until you feel a stretch in your chest.', 'Bring them back up slowly.'],
+    'Lighter dumbbells, shorter range.',
+    'Dumbbell Bench Press', '4/2/1'),
+  e('dumbbell-floor-press', 'Dumbbell Floor Press', 3, '10 reps', 60,
+    ['Lie on the floor, knees bent, dumbbells over your chest.', 'Lower until your elbows touch the floor.', 'Press up until your arms are straight.'],
+    'Push-up on a wall.',
+    'Push-Up', '4/2/1'),
+  // Back
+  e('barbell-row', 'Barbell Row', 3, '10 reps', 60,
+    ['Hold the bar with both hands, hinge forward with a flat back.', 'Pull the bar to your belly button.', 'Lower slowly for 3 to 4 seconds.'],
+    'Lighter bar, or a dumbbell row.',
+    'Single-Arm Dumbbell Row', '4/2/1'),
+  e('pull-up', 'Pull-Up', 3, '5 reps', 90,
+    ['Hang from the bar, hands just wider than your shoulders.', 'Pull your chin over the bar.', 'Lower slowly for 3 to 4 seconds.'],
+    'Hang from the bar for 10 seconds, or use a band for help.',
+    'Lat Pulldown', '4/2/1'),
+  e('suspension-row', 'Suspension Row', 3, '10 reps', 60,
+    ['Hold the straps, lean back, body in a straight line.', 'Pull your chest to your hands.', 'Lower slowly for 3 to 4 seconds.'],
+    'Stand more upright to make it lighter.',
+    'Seated Cable Row', '4/2/1'),
+  e('resistance-band-row', 'Resistance Band Row', 3, '12 reps', 45,
+    ['Sit tall, band around your feet, one end in each hand.', 'Pull the band to your belly button.', 'Let it out slowly for 3 to 4 seconds.'],
+    'Use a lighter band.',
+    'Seated Cable Row', '4/2/1'),
+  e('dumbbell-pullover', 'Dumbbell Pullover', 3, '10 reps', 60,
+    ['Lie on a bench, hold one dumbbell with both hands over your chest.', 'Lower it slowly behind your head.', 'Pull it back over your chest.'],
+    'Lighter dumbbell.',
+    'Seated Cable Row', '4/2/1'),
+  // Shoulders
+  e('barbell-overhead-press', 'Barbell Overhead Press', 3, '8 reps', 90,
+    ['Hold the bar at shoulder height, hands just wider than your shoulders.', 'Press up until your arms are straight.', 'Lower slowly for 3 to 4 seconds.'],
+    'Use just the bar, or a seated dumbbell press.',
+    'Dumbbell Overhead Press', '4/2/1'),
+  e('dumbbell-lateral-raise', 'Dumbbell Lateral Raise', 3, '12 reps', 45,
+    ['Hold a dumbbell in each hand at your sides.', 'Raise your arms out to shoulder height.', 'Lower slowly for 3 to 4 seconds.'],
+    'Lighter dumbbells, or raise only halfway.',
+    'Dumbbell Overhead Press', '4/2/1'),
+  e('dumbbell-shrug', 'Dumbbell Shrug', 3, '12 reps', 45,
+    ['Hold a dumbbell in each hand at your sides.', 'Shrug your shoulders up toward your ears.', 'Lower slowly. Do not roll your shoulders.'],
+    'Lighter dumbbells.',
+    'Dumbbell Overhead Press', '4/2/1'),
+  e('seated-dumbbell-overhead-press', 'Seated Dumbbell Overhead Press', 3, '10 reps', 60,
+    ['Sit on a bench, dumbbells at shoulder height.', 'Press up until your arms are straight.', 'Lower slowly for 3 to 4 seconds.'],
+    'Press one arm at a time while seated.',
+    'Dumbbell Overhead Press', '4/2/1'),
+  // Legs
+  e('leg-press', 'Leg Press', 3, '10 reps', 90,
+    ['Sit in the machine, feet flat on the platform, knees bent.', 'Push the platform away until your legs are almost straight.', 'Lower slowly for 3 to 4 seconds.'],
+    'Lighter weight, shorter range.',
+    'Dumbbell Goblet Squat', '4/2/1'),
+  e('leg-curl', 'Leg Curl', 3, '12 reps', 60,
+    ['Lie face down on the machine, heels under the pad.', 'Bend your knees and pull your heels toward your glutes.', 'Lower slowly for 3 to 4 seconds.'],
+    'Lighter weight.',
+    'Romanian Deadlift', '4/2/1'),
+  e('leg-extension', 'Leg Extension', 3, '12 reps', 60,
+    ['Sit in the machine, ankles behind the pad.', 'Straighten your knees slowly.', 'Lower slowly for 3 to 4 seconds.'],
+    'Lighter weight.',
+    'Dumbbell Goblet Squat', '4/2/1'),
+  e('walking-lunge', 'Walking Lunge', 3, '10 reps each leg', 60,
+    ['Step forward into a long lunge.', 'Lower straight down until your back knee nearly touches the floor.', 'Push through your front foot and step forward with the other leg.'],
+    'Hold a chair and step in place.',
+    'Split Squat', '4/2/1'),
+  e('hip-thrust', 'Hip Thrust', 3, '10 reps', 60,
+    ['Sit with your upper back against a bench, dumbbell on your lap.', 'Push through your heels and lift your hips.', 'Lower slowly for 3 to 4 seconds.'],
+    'Glute bridge on the floor.',
+    'Glute Bridge', '4/2/1'),
+  e('standing-calf-raise', 'Standing Calf Raise', 3, '15 reps', 45,
+    ['Stand tall, feet flat on the floor.', 'Rise up onto your toes.', 'Lower slowly for 3 to 4 seconds.'],
+    'Hold a wall and raise both heels a little.',
+    'Glute Bridge', '4/2/1'),
+  e('kettlebell-swing', 'Kettlebell Swing', 3, '10 reps', 60,
+    ['Stand with feet wide, kettlebell on the floor in front of you.', 'Hinge at the hips and swing the weight up to chest height.', 'Let it fall back and hinge again. Keep your back flat.'],
+    'Use a lighter kettlebell, or a dumbbell held with both hands.',
+    'Romanian Deadlift', '4/2/1'),
+  e('bodyweight-squat', 'Bodyweight Squat', 3, '12 reps', 45,
+    ['Stand with feet shoulder width apart, arms in front of you.', 'Sit back and down until your thighs are about parallel to the floor.', 'Push through your whole foot to stand.'],
+    'Squat to a chair.',
+    'Dumbbell Goblet Squat', '4/2/1'),
+  e('dumbbell-lunge', 'Dumbbell Lunge', 3, '10 reps each leg', 60,
+    ['Hold a dumbbell in each hand at your sides.', 'Step forward into a long lunge.', 'Push through your front foot and step back. Switch legs.'],
+    'Lunge without dumbbells, hold a wall.',
+    'Split Squat', '4/2/1'),
+  e('dumbbell-sumo-squat', 'Dumbbell Sumo Squat', 3, '12 reps', 60,
+    ['Hold one dumbbell with both hands, feet wide, toes out.', 'Sit back and down until your thighs are about parallel to the floor.', 'Push through your whole foot to stand.'],
+    'Squat to a chair with feet wide.',
+    'Dumbbell Goblet Squat', '4/2/1'),
+  // Arms. The app tracks five muscle groups and has no arms group, so
+  // curls count toward back volume and triceps work toward shoulders
+  // volume, the push and pull groups they assist. See EXERCISE_MUSCLE.
+  e('dumbbell-biceps-curl', 'Dumbbell Biceps Curl', 3, '12 reps', 45,
+    ['Hold a dumbbell in each hand at your sides, palms forward.', 'Curl the weights up to your shoulders.', 'Lower slowly for 3 to 4 seconds.'],
+    'Lighter dumbbells.',
+    'Single-Arm Dumbbell Row', '4/2/1'),
+  e('dumbbell-hammer-curl', 'Dumbbell Hammer Curl', 3, '12 reps', 45,
+    ['Hold a dumbbell in each hand at your sides, palms facing each other.', 'Curl the weights up to your shoulders.', 'Lower slowly for 3 to 4 seconds.'],
+    'Lighter dumbbells.',
+    'Single-Arm Dumbbell Row', '4/2/1'),
+  e('dumbbell-triceps-extension', 'Dumbbell Triceps Extension', 3, '12 reps', 45,
+    ['Hold one dumbbell with both hands over your head.', 'Lower it slowly behind your head.', 'Press it back up until your arms are straight.'],
+    'Lighter dumbbell, or use both hands on one dumbbell.',
+    'Push-Up', '4/2/1'),
+  e('cable-triceps-pushdown', 'Cable Triceps Pushdown', 3, '12 reps', 45,
+    ['Stand at the cable machine, hands on the bar, elbows at your sides.', 'Press the bar down until your arms are straight.', 'Let it rise slowly for 3 to 4 seconds.'],
+    'Lighter weight on the cable.',
+    'Push-Up', '4/2/1'),
+  // Core
+  e('crunch', 'Crunch', 3, '12 reps', 30,
+    ['Lie on your back, knees bent, hands across your chest.', 'Lift your shoulders off the floor.', 'Lower slowly. Do not pull on your neck.'],
+    'Lift only your shoulders a little.',
+    'Plank', '4/2/1'),
+  e('leg-raise', 'Leg Raise', 3, '10 reps', 30,
+    ['Lie on your back, legs straight, hands at your sides.', 'Raise your legs until they point at the ceiling.', 'Lower slowly without letting your low back lift.'],
+    'Bend your knees.',
+    'Dead Bug', '4/2/1'),
+  e('russian-twist', 'Russian Twist', 3, '10 reps each side', 30,
+    ['Sit on the floor, knees bent, feet on the floor.', 'Lean back a little and twist to one side.', 'Twist to the other side. Keep your chest up.'],
+    'Feet on the floor, twist only a little.',
+    'Dead Bug', '4/2/1'),
+  e('farmers-carry', "Farmer's Carry", 3, '30 seconds', 60,
+    ['Hold a heavy dumbbell in each hand at your sides.', 'Stand tall and walk in a straight line.', 'Keep your shoulders down and your belly braced.'],
+    'Lighter dumbbells, shorter walk.',
+    'Plank', '4/2/1'),
+];
+
+export const WORKOUTS: Workout[] = [  {
     id: 'day1-first',
     title: 'Your First Workout',
     phase: 1,
@@ -1185,6 +1327,40 @@ export const EXERCISE_MUSCLE: Record<string, MuscleGroup> = {
   'Bird Dog': 'core',
   'Side Plank': 'core',
   'Pallof Press': 'core',
+  // Custom-only moves (see CUSTOM_ONLY_EXERCISES). The app tracks five
+  // muscle groups and has no arms group, so curls count toward back and
+  // triceps work toward shoulders, the push and pull groups they assist.
+  'Barbell Bench Press': 'chest',
+  'Incline Dumbbell Bench Press': 'chest',
+  'Dumbbell Chest Fly': 'chest',
+  'Dumbbell Floor Press': 'chest',
+  'Barbell Row': 'back',
+  'Pull-Up': 'back',
+  'Suspension Row': 'back',
+  'Resistance Band Row': 'back',
+  'Dumbbell Pullover': 'back',
+  'Barbell Overhead Press': 'shoulders',
+  'Dumbbell Lateral Raise': 'shoulders',
+  'Dumbbell Shrug': 'shoulders',
+  'Seated Dumbbell Overhead Press': 'shoulders',
+  'Leg Press': 'legs',
+  'Leg Curl': 'legs',
+  'Leg Extension': 'legs',
+  'Walking Lunge': 'legs',
+  'Hip Thrust': 'legs',
+  'Standing Calf Raise': 'legs',
+  'Kettlebell Swing': 'legs',
+  'Bodyweight Squat': 'legs',
+  'Dumbbell Lunge': 'legs',
+  'Dumbbell Sumo Squat': 'legs',
+  'Dumbbell Biceps Curl': 'back',
+  'Dumbbell Hammer Curl': 'back',
+  'Dumbbell Triceps Extension': 'shoulders',
+  'Cable Triceps Pushdown': 'shoulders',
+  'Crunch': 'core',
+  'Leg Raise': 'core',
+  'Russian Twist': 'core',
+  "Farmer's Carry": 'core',
 };
 
 /** Search filter group for a move: push is chest and shoulders, pull is back. */
@@ -1208,7 +1384,8 @@ export const CUSTOM_WORKOUT_ID = 'custom-workout';
 export const CUSTOM_WORKOUT_TITLE = 'My workout';
 
 /** Every move in the app, once each, by first appearance in the
- * planned workouts (full-body, Push / Pull / Legs, Upper / Lower).
+ * planned workouts (full-body, Push / Pull / Legs, Upper / Lower),
+ * plus the custom-only moves for the custom workout log.
  * Reference tracks reuse the same moves, so they add nothing new.
  * The Core, Balance and Mobility day adds Plank, Bird Dog, Dead Bug,
  * Glute Bridge, and Side Plank, all already in the planned workouts. */
@@ -1221,6 +1398,11 @@ export const ALL_EXERCISES: Exercise[] = (() => {
       seen.add(ex.id);
       out.push(ex);
     }
+  }
+  for (const ex of CUSTOM_ONLY_EXERCISES) {
+    if (seen.has(ex.id)) continue;
+    seen.add(ex.id);
+    out.push(ex);
   }
   return [...out].sort((a, b) => a.name.localeCompare(b.name));
 })();
@@ -1555,6 +1737,35 @@ export const EXERCISE_EQUIPMENT: Record<string, { need?: string; anyOf?: string[
   'single-leg-rdl': { need: 'Dumbbells' },
   'single-arm-dumbbell-row': { need: 'Dumbbells' },
   'step-up': { need: 'Step platform' },
+  // Custom-only moves. A move needs one piece of gear; where a move
+  // needs two (a bench and dumbbells), the load is the gate and the
+  // bench is assumed. Leg curl and leg extension need a gym machine
+  // that is not in the equipment list, so only Gym full access sees them.
+  'barbell-bench-press': { need: 'Barbell' },
+  'incline-dumbbell-bench-press': { need: 'Dumbbells' },
+  'dumbbell-chest-fly': { need: 'Dumbbells' },
+  'dumbbell-floor-press': { need: 'Dumbbells' },
+  'barbell-row': { need: 'Barbell' },
+  'pull-up': { need: 'Pull-up bar' },
+  'suspension-row': { need: 'Suspension trainer' },
+  'resistance-band-row': { need: 'Resistance bands' },
+  'dumbbell-pullover': { need: 'Dumbbells' },
+  'barbell-overhead-press': { need: 'Barbell' },
+  'dumbbell-lateral-raise': { need: 'Dumbbells' },
+  'dumbbell-shrug': { need: 'Dumbbells' },
+  'seated-dumbbell-overhead-press': { need: 'Dumbbells' },
+  'leg-press': { need: 'Leg press machine' },
+  'leg-curl': { need: 'Gym full access' },
+  'leg-extension': { need: 'Gym full access' },
+  'hip-thrust': { need: 'Dumbbells' },
+  'kettlebell-swing': { need: 'Kettlebell' },
+  'dumbbell-lunge': { need: 'Dumbbells' },
+  'dumbbell-sumo-squat': { need: 'Dumbbells' },
+  'dumbbell-biceps-curl': { need: 'Dumbbells' },
+  'dumbbell-hammer-curl': { need: 'Dumbbells' },
+  'dumbbell-triceps-extension': { need: 'Dumbbells' },
+  'cable-triceps-pushdown': { need: 'Cable machine' },
+  'farmers-carry': { need: 'Dumbbells' },
 };
 
 /** Fallback moves, by exercise id, tried in order after the exercise's own swap field. */
@@ -1571,6 +1782,38 @@ export const EXERCISE_FALLBACKS: Record<string, string[]> = {
   'single-leg-rdl': ['Romanian Deadlift', 'Glute Bridge'],
   'single-arm-dumbbell-row': ['Seated Cable Row', 'Bird Dog'],
   'step-up': ['Split Squat', 'Glute Bridge'],
+  // Custom-only moves.
+  'barbell-bench-press': ['Dumbbell Bench Press', 'Push-Up'],
+  'incline-dumbbell-bench-press': ['Dumbbell Bench Press', 'Push-Up'],
+  'dumbbell-chest-fly': ['Dumbbell Bench Press', 'Push-Up'],
+  'dumbbell-floor-press': ['Push-Up'],
+  'barbell-row': ['Single-Arm Dumbbell Row', 'Seated Cable Row', 'Bird Dog'],
+  'pull-up': ['Lat Pulldown', 'Seated Cable Row', 'Single-Arm Dumbbell Row', 'Bird Dog'],
+  'suspension-row': ['Seated Cable Row', 'Single-Arm Dumbbell Row', 'Bird Dog'],
+  'resistance-band-row': ['Seated Cable Row', 'Single-Arm Dumbbell Row', 'Bird Dog'],
+  'dumbbell-pullover': ['Seated Cable Row', 'Lat Pulldown'],
+  'barbell-overhead-press': ['Dumbbell Overhead Press', 'Push-Up'],
+  'dumbbell-lateral-raise': ['Dumbbell Overhead Press', 'Push-Up'],
+  'dumbbell-shrug': ['Dumbbell Overhead Press', 'Push-Up'],
+  'seated-dumbbell-overhead-press': ['Dumbbell Overhead Press', 'Push-Up'],
+  'leg-press': ['Dumbbell Goblet Squat', 'Split Squat', 'Glute Bridge'],
+  'leg-curl': ['Romanian Deadlift', 'Glute Bridge'],
+  'leg-extension': ['Dumbbell Goblet Squat', 'Split Squat', 'Glute Bridge'],
+  'walking-lunge': ['Split Squat', 'Glute Bridge'],
+  'hip-thrust': ['Glute Bridge'],
+  'standing-calf-raise': ['Glute Bridge'],
+  'kettlebell-swing': ['Romanian Deadlift', 'Glute Bridge'],
+  'bodyweight-squat': ['Dumbbell Goblet Squat', 'Split Squat'],
+  'dumbbell-lunge': ['Split Squat', 'Glute Bridge'],
+  'dumbbell-sumo-squat': ['Dumbbell Goblet Squat', 'Split Squat'],
+  'dumbbell-biceps-curl': ['Single-Arm Dumbbell Row', 'Bird Dog'],
+  'dumbbell-hammer-curl': ['Single-Arm Dumbbell Row', 'Bird Dog'],
+  'dumbbell-triceps-extension': ['Push-Up', 'Dead Bug'],
+  'cable-triceps-pushdown': ['Push-Up', 'Dead Bug'],
+  'crunch': ['Plank', 'Dead Bug'],
+  'leg-raise': ['Dead Bug', 'Plank'],
+  'russian-twist': ['Dead Bug', 'Plank'],
+  'farmers-carry': ['Plank', 'Dead Bug'],
 };
 
 export function exerciseNeeds(ex: Exercise): string | null {
@@ -1595,6 +1838,8 @@ export function findExerciseByName(name: string): Exercise | undefined {
     const found = w.exercises.find((x) => x.name.trim().toLowerCase() === want);
     if (found) return found;
   }
+  const custom = CUSTOM_ONLY_EXERCISES.find((x) => x.name.trim().toLowerCase() === want);
+  if (custom) return custom;
   return undefined;
 }
 
