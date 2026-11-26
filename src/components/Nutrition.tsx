@@ -45,12 +45,14 @@ const EATING_OUT_SWAPS = [
   'Take half home when the portion is big. Stop at satisfied, about 80 percent full.',
 ];
 
-// Supplements, in one place. Same four from the macro card, with the
-// dose and what each one does. None of these are required.
+// Supplements, in one place. Same four from the macro card, with
+// what each one does. No amounts: specific doses and medical
+// supplements are outside Derek's scope as a trainer.
+// None of these are required.
 const SUPPLEMENTS_LIST = [
-  { name: 'Creatine monohydrate', text: '5 grams a day. Supports strength and muscle. Take it every day, training day or not.' },
-  { name: 'Fish oil', text: 'Supports joints and heart health. Follow the dose on the bottle.' },
-  { name: 'Magnesium glycinate', text: 'Can help sleep. Often taken in the evening. Follow the dose on the bottle.' },
+  { name: 'Creatine monohydrate', text: 'Supports strength and muscle. Take it every day, training day or not.' },
+  { name: 'Fish oil', text: 'Supports joints and heart health.' },
+  { name: 'Magnesium glycinate', text: 'Can help sleep. Often taken in the evening.' },
   { name: 'Protein powder', text: 'Whey or plant protein. Useful when a meal is short on protein. A palm-sized portion of real food does the same job.' },
 ];
 
@@ -307,6 +309,7 @@ export default function Nutrition({ ctx }: { ctx: Ctx }) {
           <div className="card">
             <h3>Supplements</h3>
             <p className="small muted">Food first. A few basics can help, but none of them replace real meals or training. None of these are required, and none of them burn fat on their own.</p>
+            <p className="small muted">Derek can talk general nutrition with you. For specific amounts, or if you take medication or have a health condition, ask your doctor.</p>
             <ul>
               {SUPPLEMENTS_LIST.map((s) => (
                 <li key={s.name}><strong>{s.name}:</strong> {s.text}</li>

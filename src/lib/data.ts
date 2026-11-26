@@ -2772,7 +2772,7 @@ export const NUTRITION: {
     title: 'Supplements',
     short: 'Food first. A few basics can help, but none of them replace real meals or training.',
     detail:
-      'Creatine (5 grams a day) supports strength and muscle. Fish oil supports joints and heart health. Magnesium glycinate can help sleep. Protein powder is useful when a meal is short on protein. None of these are required, and none of them burn fat on their own.',
+      'Creatine supports strength and muscle. Fish oil supports joints and heart health. Magnesium glycinate can help sleep. Protein powder is useful when a meal is short on protein. None of these are required, and none of them burn fat on their own.',
     sources: ['Creatine monohydrate', 'Fish oil', 'Magnesium glycinate', 'Whey or plant protein powder'],
   },
 };
