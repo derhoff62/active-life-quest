@@ -619,12 +619,71 @@ export function cardioCreditedSum(entries: { date?: string; minutes?: unknown; z
     .reduce((s, c) => s + cardioCreditMinutes(c), 0);
 }
 
-/** "Last logged 12 Nov" for a log list, or null when nothing is logged. */
+/** "Last logged 12 Nov" for a log list, or null when nothing is logged.
+ * The latest by DATE, not the last inserted: a backdated entry logged
+ * later must not hide a newer entry. Ties keep the last inserted. */
 export function lastLoggedLabel(entries: { date?: string }[] | undefined): string | null {
   const list = (entries || []).filter((e) => e.date);
   if (list.length === 0) return null;
-  const last = list[list.length - 1];
+  let last = list[0];
+  for (const e of list) {
+    if (String(e.date || '').slice(0, 10) >= String(last.date || '').slice(0, 10)) last = e;
+  }
   return `Last logged ${new Date(String(last.date)).toLocaleDateString()}`;
+}
+
+/** Day key (YYYY-MM-DD) of a stored date string. */
+export function dayKeyOf(date: string | undefined): string {
+  return String(date || '').slice(0, 10);
+}
+
+/** Today, as a day key, same UTC-day convention the app uses everywhere. */
+export function todayDayKey(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
+/** Backdating window: today back to 7 days ago, inclusive. */
+export function workoutDateRange(): { min: string; max: string } {
+  const max = todayDayKey();
+  const d = new Date(`${max}T12:00:00Z`);
+  d.setUTCDate(d.getUTCDate() - 7);
+  return { min: d.toISOString().slice(0, 10), max };
+}
+
+/** Clamp a picked workout day into the backdating window. Bad or
+ * missing input falls back to today, never a future or older date. */
+export function clampWorkoutDate(day: string | undefined): string {
+  const { min, max } = workoutDateRange();
+  const picked = String(day || '');
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(picked)) return max;
+  if (picked < min) return min;
+  if (picked > max) return max;
+  return picked;
+}
+
+/** ISO timestamp for a workout day, stamped at midday UTC so the day
+ * key never shifts with timezone: slice(0, 10) always reads back the
+ * day the client picked. */
+export function workoutDateIso(day: string): string {
+  return `${clampWorkoutDate(day)}T12:00:00.000Z`;
+}
+
+/** The client's latest workout by DATE, not insertion order. Ties keep
+ * the last inserted, so two workouts on the same day rotate as before. */
+export function latestWorkout(doc: ProfileDoc): LogEntry | null {
+  const workouts = doc.workouts || [];
+  if (workouts.length === 0) return null;
+  let best = workouts[0];
+  for (const w of workouts) {
+    if (dayKeyOf(String(w.date || '')) >= dayKeyOf(String(best.date || ''))) best = w;
+  }
+  return best;
+}
+
+/** Day key of the latest workout, or null when none is logged. */
+export function latestWorkoutDate(doc: ProfileDoc): string | null {
+  const latest = latestWorkout(doc);
+  return latest ? dayKeyOf(String(latest.date || '')) : null;
 }
 
 /** Whole days since the last check-in, 0 when one was logged today. */
@@ -751,15 +810,24 @@ export function checkinStreakDays(doc: ProfileDoc): number {
   return streak;
 }
 
-/** Last logged weight/reps for an exercise, from workout history. */
+/** Last logged weight/reps for an exercise, from workout history.
+ * Latest by DATE, not insertion order: a backdated workout logged
+ * later must not overwrite a newer "Last time". Ties keep the last
+ * inserted, so two workouts on the same day read as before. */
 export function lastTimeFor(doc: ProfileDoc, exerciseId: string): { w: string; r: string } | null {
   const workouts = doc.workouts || [];
-  for (let i = workouts.length - 1; i >= 0; i -= 1) {
-    const w = workouts[i] as { log?: Record<string, { w?: string; r?: string }> };
-    const entry = w.log?.[exerciseId];
-    if (entry && (entry.w || entry.r)) return { w: entry.w || '', r: entry.r || '' };
+  let best: { w: string; r: string } | null = null;
+  let bestDay = '';
+  for (const w of workouts) {
+    const entry = (w as { log?: Record<string, { w?: string; r?: string }> }).log?.[exerciseId];
+    if (!entry || (!entry.w && !entry.r)) continue;
+    const day = dayKeyOf(String(w.date || ''));
+    if (best === null || day >= bestDay) {
+      best = { w: entry.w || '', r: entry.r || '' };
+      bestDay = day;
+    }
   }
-  return null;
+  return best;
 }
 
 /** Gear earned, worked out from what the client has actually done, so

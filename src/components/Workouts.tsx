@@ -3,7 +3,7 @@ import type { Ctx } from '../App';
 import { WORKOUTS, CORE_BALANCE_WORKOUT, REFERENCE_TRACKS, PHASES, PHASE_WEEKLY_SETS, PHASE_VOLUME_RANGE, VOLUME_MUSCLES, weeklyVolumeForSplit, filterGroupForExercise, exerciseNeeds, daysForTime, splitForDays, TRAINING_STYLES, CES_TEMPLATES, EQUIPMENT_NOTES, effectiveEquipment, resolveExercise, findExerciseByName, CLASS_WORKOUT_FOCUS, applyClassFocus, GOAL_FINISHERS } from '../lib/data';
 import type { TrainingStyle, FilterGroup } from '../lib/data';
 import type { ExerciseFeedback } from '../lib/store';
-import { phaseForDoc, hasFullAccess, metCompanionIds, lastTimeFor, awardBadges, daysInMonthSet, currentWeekForDoc, hasApprovedRetest, hasCleanApprovedRetest, assessmentApproved, assessmentPending, volumeTierForDoc, volumeSetsFor } from '../lib/store';
+import { phaseForDoc, hasFullAccess, metCompanionIds, lastTimeFor, awardBadges, daysInMonthSet, currentWeekForDoc, hasApprovedRetest, hasCleanApprovedRetest, assessmentApproved, assessmentPending, volumeTierForDoc, volumeSetsFor, latestWorkout, latestWorkoutDate, clampWorkoutDate, workoutDateIso, workoutDateRange } from '../lib/store';
 import { cardioThisWeek } from '../lib/badges';
 import BackToTop from './BackToTop';
 import { cycleForWeek, nextRetestWeek, nextRetestLabel, isDeloadWeek } from '../lib/yearPlan';
@@ -35,6 +35,9 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
   const [restRunning, setRestRunning] = useState(false);
   const [showHow, setShowHow] = useState<string | null>(null);
   const [finishMinutes, setFinishMinutes] = useState('');
+  // Backdating (Derek, Nov 25, 2026): the day the workout was done,
+  // default today. Up to 7 days back if they forgot to log it.
+  const [workoutDate, setWorkoutDate] = useState(() => new Date().toISOString().split('T')[0]);
   const [notice, setNotice] = useState('');
   const [timeMin, setTimeMin] = useState<15 | 30 | 45 | 60>(30);
   const [editId, setEditId] = useState<string | null>(null);
@@ -83,7 +86,9 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
   const style: TrainingStyle = daysPerWeek >= 4 ? (doc.trainingStyle || 'full-body') : 'full-body';
   const split = splitForDays(daysPerWeek, phase, style);
   const lastSplitIdx = (() => {
-    const lastId = doc.workouts.length ? String(doc.workouts[doc.workouts.length - 1].workoutId || '') : '';
+    // Latest workout by DATE, not insertion order: a backdated workout
+    // logged later must not rewind the split rotation.
+    const lastId = latestWorkout(doc) ? String(latestWorkout(doc)!.workoutId || '') : '';
     return split.days.findIndex((d) => d.workoutId === lastId);
   })();
   const planned = split.days[(lastSplitIdx + 1) % split.days.length];
@@ -234,6 +239,7 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
     // weights and reps already logged, instead of starting over.
     const saved = doc.sessions?.workoutId === w.id ? doc.sessions : null;
     setActiveId(w.id);
+    setWorkoutDate(new Date().toISOString().split('T')[0]);
     setFinisherDone(false);
     setStep(saved ? saved.step : 0);
     setLog((saved?.log as Record<string, { w: string; s: string; r: string }>) || {});
@@ -245,6 +251,13 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
 
   function completeWorkout(minutesOverride?: number) {
     if (!active) return;
+    // Backdating: the workout counts on the day it was done, not the
+    // day it was logged. Clamped to today back to 7 days ago, no future
+    // dates, no older dates. Stamped at midday UTC so the day never
+    // shifts with timezone.
+    const chosenDay = clampWorkoutDate(workoutDate);
+    const chosenIso = workoutDateIso(chosenDay);
+    const backdated = chosenDay !== new Date().toISOString().split('T')[0];
     const minutes = minutesOverride ?? Math.max(1, Math.round((Date.now() - startedAt.current) / 60000));
     // Companion bonuses, only if that companion is met. Small, +5 XP each.
     const met = metCompanionIds(doc);
@@ -279,7 +292,7 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
     update((d) => {
       d.workouts.push({
         id: `w${Date.now()}`,
-        date: new Date().toISOString(),
+        date: chosenIso,
         workoutId: active.id,
         title: active.title,
         minutes,
@@ -287,7 +300,10 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
         log,
       });
       d.sessions = null;
-      d.lastWorkoutDate = new Date().toISOString().split('T')[0];
+      // lastWorkoutDate is the LATEST workout date, not blindly today:
+      // a backdated workout must not mark today as trained, and must
+      // not move the latest date backwards when a newer workout exists.
+      d.lastWorkoutDate = latestWorkoutDate(d);
       d.mana = Math.min(10, d.mana + 2);
       for (const ex of active.exercises) {
         const entry = log[ex.id];
@@ -297,7 +313,7 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
         const best = prev.length ? Math.max(...prev.map((pr) => pr.weight)) : 0;
         const bestRepsAtBest = prev.filter((pr) => pr.weight === best).reduce((m, pr) => Math.max(m, pr.reps), 0);
         if (w > best || (w === best && w > 0 && (Number(entry.r) || 0) > bestRepsAtBest)) {
-          d.prs.push({ exercise: ex.name, weight: w, reps: Number(entry.r) || 0, date: new Date().toISOString() });
+          d.prs.push({ exercise: ex.name, weight: w, reps: Number(entry.r) || 0, date: chosenIso });
         }
       }
       d.xp += 50 + bonus + prCount * 10;
@@ -305,7 +321,8 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
     });
     setActiveId(null);
     setLog({});
-    const savedText = `Workout saved. ${minutes} minutes, +${50 + bonus + prCount * 10} XP.${bonusNames.length ? ` Includes +5 XP from ${bonusNames.join(' and ')}.` : ''}${prCount ? ` New PR${prCount === 1 ? '' : 's'}: ${prNames.join(', ')} (+10 XP each).` : ''} Mana +2.`;
+    setWorkoutDate(new Date().toISOString().split('T')[0]);
+    const savedText = `Workout saved${backdated ? ` for ${new Date(chosenIso).toLocaleDateString()}` : ''}. ${minutes} minutes, +${50 + bonus + prCount * 10} XP.${bonusNames.length ? ` Includes +5 XP from ${bonusNames.join(' and ')}.` : ''}${prCount ? ` New PR${prCount === 1 ? '' : 's'}: ${prNames.join(', ')} (+10 XP each).` : ''} Mana +2.`;
     setNotice(savedText);
     toast(`Workout saved. ${minutes} minutes, +${50 + bonus + prCount * 10} XP.`);
   }
@@ -522,6 +539,17 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
               <>
                 <label htmlFor="fin-min" style={{ margin: 0 }}>How long did this workout take? (minutes)</label>
                 <input id="fin-min" inputMode="numeric" value={finishMinutes} onChange={(e) => setFinishMinutes(e.target.value)} placeholder={String(active.minutes)} style={{ maxWidth: 120 }} />
+                <label htmlFor="fin-date" style={{ margin: 0 }}>When did you do this workout?</label>
+                <input
+                  id="fin-date"
+                  type="date"
+                  value={workoutDate}
+                  min={workoutDateRange().min}
+                  max={workoutDateRange().max}
+                  onChange={(e) => setWorkoutDate(e.target.value)}
+                  style={{ maxWidth: 170 }}
+                />
+                <p className="small muted" style={{ margin: 0 }}>Pick today, or up to 7 days ago if you forgot to log it.</p>
                 <button className="primary" onClick={() => completeWorkout(finishMinutes ? Number(finishMinutes) : undefined)}>Finish workout</button>
               </>
             )}

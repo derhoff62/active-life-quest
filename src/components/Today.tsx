@@ -3,7 +3,7 @@ import type { Ctx } from '../App';
 import * as api from '../lib/api';
 import { PHASES, WORKOUTS, CORE_BALANCE_WORKOUT, WEEK13, CLASS_GOOD_FOR, GOAL_TYPES, splitForDays, foodQuestForDate } from '../lib/data';
 import type { TrainingStyle } from '../lib/data';
-import { phaseForDoc, recoveryScore, levelForXp, titleForLevel, metCompanionIds, currentWeekForDoc, checkinPreferenceText, checkinFrequenciesForMode, normalizeCheckinFrequency, loggedToday, streakDaysForDoc, lastLoggedLabel, cardioCreditedSum, hasApprovedRetest, pendingRetests, assessmentApproved, assessmentPending, volumeTierForDoc } from '../lib/store';
+import { phaseForDoc, recoveryScore, levelForXp, titleForLevel, metCompanionIds, currentWeekForDoc, checkinPreferenceText, checkinFrequenciesForMode, normalizeCheckinFrequency, loggedToday, streakDaysForDoc, lastLoggedLabel, cardioCreditedSum, hasApprovedRetest, pendingRetests, assessmentApproved, assessmentPending, volumeTierForDoc, latestWorkout } from '../lib/store';
 import { cycleForWeek, nextRetestWeek, nextBossWeek, nextRetestLabel, nextBossLabel, isDeloadWeek, challengeForWeek } from '../lib/yearPlan';
 import type { AssessmentVideo } from '../lib/store';
 import GuardianAvatar from './GuardianAvatar';
@@ -44,7 +44,9 @@ export default function Today({ ctx }: { ctx: Ctx }) {
   // Next workout rotates through the phase workouts instead of always
   // showing Day 1, even after many workouts.
   const phaseWorkouts = WORKOUTS.filter((w) => w.phase === phase && (w.id === 'day1-first' || w.id === `p${phase}a` || w.id === `p${phase}b`));
-  const lastWorkoutId = doc.workouts.length ? String(doc.workouts[doc.workouts.length - 1].workoutId || '') : '';
+  // Latest workout by DATE, not insertion order: a backdated workout
+  // logged later must not rewind the next-workout rotation.
+  const lastWorkoutId = latestWorkout(doc) ? String(latestWorkout(doc)!.workoutId || '') : '';
   const lastIdx = phaseWorkouts.findIndex((w) => w.id === lastWorkoutId);
   const nextWorkout =
     doc.workouts.length === 0

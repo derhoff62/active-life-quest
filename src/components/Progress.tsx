@@ -6,7 +6,7 @@ import Metrics from './Metrics';
 import Community from './Community';
 import { GOAL_TYPES, BADGES } from '../lib/data';
 import { cycleForWeek, nextRetestWeek, nextBossWeek, nextRetestLabel, nextBossLabel } from '../lib/yearPlan';
-import { levelForXp, titleForLevel, daysInMonthSet, streakDaysForDoc, metCompanionIds, currentWeekForDoc, cardioCreditedSum, lastLoggedLabel } from '../lib/store';
+import { levelForXp, titleForLevel, daysInMonthSet, streakDaysForDoc, metCompanionIds, currentWeekForDoc, cardioCreditedSum, lastLoggedLabel, latestWorkout } from '../lib/store';
 import BackToTop from './BackToTop';
 
 // The full badge list lives in ./Badges.tsx now, shown on the Gear tab,
@@ -60,7 +60,9 @@ export default function Progress({ ctx }: { ctx: Ctx }) {
     const d = new Date(String(w.date));
     return Date.now() - d.getTime() < 7 * 24 * 60 * 60 * 1000;
   }).length;
-  const last = workouts[workouts.length - 1] as { title?: string; date?: string } | undefined;
+  // Latest workout by DATE, not insertion order: a backdated workout
+  // logged later must not hide a newer one.
+  const last = latestWorkout(doc) as { title?: string; date?: string } | undefined;
   // What changed since last week: this week vs the week before.
   const weekMs = 7 * 24 * 60 * 60 * 1000;
   const nowMs = Date.now();
@@ -84,7 +86,9 @@ export default function Progress({ ctx }: { ctx: Ctx }) {
   if (lastWaist !== null && prevWaist !== null) changedParts.push(`Waist: ${fmtDelta(Math.round((lastWaist - prevWaist) * 10) / 10, 'in')} since your last measurement`);
   changedParts.push(`Streak: ${streak} ${streak === 1 ? 'day' : 'days'}`);
   const lastSleep = sleepArr[sleepArr.length - 1] as { hours?: number } | undefined;
-  const latestPr = prs[prs.length - 1];
+  // Latest PR by DATE, not insertion order: a backdated PR logged
+  // later must not hide a newer one. Ties keep the last inserted.
+  const latestPr = prs.length ? prs.reduce((best, p) => (String(p.date || '').slice(0, 10) >= String(best.date || '').slice(0, 10) ? p : best), prs[0]) : undefined;
   const latestMeasure = [...measurements].reverse()[0] as { waist?: string; weight?: number } | undefined;
 
   // Simple month calendar: trained days this month. Only entries from
@@ -327,10 +331,10 @@ export default function Progress({ ctx }: { ctx: Ctx }) {
       <div className="card">
         <h3>Personal records</h3>
         {prs.length === 0 && <p className="muted">No PRs yet. Log a heavier weight or more reps than last time and it counts here.</p>}
-        {prs.length > 0 && (
-          <p>{prs[prs.length - 1].exercise}: {prs[prs.length - 1].weight} lb x {prs[prs.length - 1].reps} on {new Date(prs[prs.length - 1].date).toLocaleDateString()}</p>
+        {prs.length > 0 && latestPr && (
+          <p>{latestPr.exercise}: {latestPr.weight} lb x {latestPr.reps} on {new Date(latestPr.date).toLocaleDateString()}</p>
         )}
-        {showAllPrs && prs.slice(0, -1).reverse().map((p, i) => (
+        {showAllPrs && [...prs].sort((a, b) => String(b.date || '').localeCompare(String(a.date || ''))).slice(1).map((p, i) => (
           <p key={i}>{p.exercise}: {p.weight} lb x {p.reps} on {new Date(p.date).toLocaleDateString()}</p>
         ))}
         {prs.length > 1 && (
