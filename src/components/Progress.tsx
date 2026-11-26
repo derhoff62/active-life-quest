@@ -6,7 +6,7 @@ import Metrics from './Metrics';
 import Community from './Community';
 import { GOAL_TYPES, BADGES } from '../lib/data';
 import { cycleForWeek, nextRetestWeek, nextBossWeek, nextRetestLabel, nextBossLabel } from '../lib/yearPlan';
-import { levelForXp, titleForLevel, daysInMonthSet, streakDaysForDoc, metCompanionIds, currentWeekForDoc, cardioCreditedSum, lastLoggedLabel, latestWorkout } from '../lib/store';
+import { levelForXp, titleForLevel, daysInMonthSet, streakDaysForDoc, metCompanionIds, currentWeekForDoc, cardioCreditedSum, lastLoggedLabel, latestWorkout, loggedToday, DAILY_UNLOCK_LEVELS, dailyUnlocked } from '../lib/store';
 import BackToTop from './BackToTop';
 
 // The full badge list lives in ./Badges.tsx now, shown on the Gear tab,
@@ -218,7 +218,7 @@ export default function Progress({ ctx }: { ctx: Ctx }) {
 
       <div className="card">
         <h3>Steps (optional)</h3>
-        <p className="small muted">Steps are optional. Log today's count if you track them.</p>
+        <p className="small muted">Steps are optional. Log today's count if you track them.{dailyUnlocked(doc, 'walk') ? '' : ` Walk attacks unlock at Level ${DAILY_UNLOCK_LEVELS.walk}.`}</p>
         {lastLoggedLabel(stepsArr) && <p className="small muted">{lastLoggedLabel(stepsArr)}.</p>}
         <div className="row">
           <input inputMode="numeric" value={stepsToday} onChange={(e) => setStepsToday(e.target.value)} placeholder="Steps today" style={{ maxWidth: 140 }} aria-label="Steps today" />
@@ -227,9 +227,17 @@ export default function Progress({ ctx }: { ctx: Ctx }) {
             onClick={() => {
               if (!stepsToday) return;
               const wren = metCompanionIds(doc).has('wren');
+              // First steps log of the day is the walk attack: +1 mana
+              // in Combat. Logging steps again today adds to the count,
+              // not to mana.
+              const firstWalkToday = !loggedToday(doc.steps);
+              // Walk attacks unlock at Level 3: below that, steps
+              // still log as a metric, they just earn no mana or attack.
+              const walkOpen = dailyUnlocked(doc, 'walk');
               update((d) => {
                 d.steps.push({ id: `s${Date.now()}`, date: new Date().toISOString(), steps: Number(stepsToday) });
                 if (wren) d.xp += 5;
+                if (firstWalkToday && walkOpen) d.mana = Math.min(10, d.mana + 1);
               });
               toast(wren ? `Steps logged: ${stepsToday}. +5 XP from Wren.` : `Steps logged: ${stepsToday}.`);
               setStepsToday('');

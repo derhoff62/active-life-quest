@@ -2373,11 +2373,11 @@ export const SPELLS: Spell[] = [
   },
   {
     id: 'second-wind',
-    name: 'Second Wind',
+    name: 'Power Strike',
     classId: 'any',
     cost: 6,
     damage: 30,
-    blurb: 'Every class can learn this at Level 9. Catch your breath, find your strength, and hit hard when it matters most.',
+    blurb: 'Every class can learn this at Level 9. Hit hard when it matters most.',
   },
 ];
 

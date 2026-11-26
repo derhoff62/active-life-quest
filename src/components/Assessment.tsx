@@ -2,7 +2,7 @@ import { useState } from 'react';
 import type { Ctx } from '../App';
 import * as api from '../lib/api';
 import { ASSESSMENT_EXAMPLES, ASSESSMENT_QUESTIONS, CES_TEMPLATES, CONTRAINDICATIONS, DEFAULT_EQUIPMENT, EQUIPMENT_NOTES, EQUIPMENT_OPTIONS, FOCUS_AREAS, recommendPhase } from '../lib/data';
-import { currentWeekForDoc, bestBalanceSec, lastLoggedLabel, hasApprovedRetest, pendingRetests, retestStatus, retestNextPhase, assessmentStatus } from '../lib/store';
+import { currentWeekForDoc, bestBalanceSec, lastLoggedLabel, loggedToday, hasApprovedRetest, pendingRetests, retestStatus, retestNextPhase, assessmentStatus } from '../lib/store';
 import { RETEST_WEEKS, weekLabel } from '../lib/yearPlan';
 import type { FindingId, FormRating } from '../lib/types';
 import ExampleVideo from './ExampleVideo';
@@ -318,9 +318,14 @@ export default function Assessment({ ctx }: { ctx: Ctx }) {
               }
               const prevBest = bestBalanceSec(doc);
               const newBest = Math.max(l, r);
+              // First balance hold of the day adds +1 mana, one attack
+              // in Combat. Checked before saving, or the test just
+              // added would always make this look done already.
+              const firstBalanceToday = !loggedToday(doc.balanceTests);
               update((d) => {
                 d.balanceTests = [...(d.balanceTests || []), { id: `b${Date.now()}`, date: new Date().toISOString(), leftSec: l, rightSec: r }];
                 if (newBest > prevBest) d.xp += 10;
+                if (firstBalanceToday) d.mana = Math.min(10, d.mana + 1);
               });
               setBalTestL('');
               setBalTestR('');

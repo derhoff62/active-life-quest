@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { Ctx } from '../App';
 import { ARMOR, CLASSES, CLASS_GOOD_FOR, CLASS_WORKOUT_FOCUS, SPELLS } from '../lib/data';
 import type { ArmorPiece } from '../lib/types';
-import { earnedArmorIds, levelForXp } from '../lib/store';
+import { earnedArmorIds, levelForXp, damageRange } from '../lib/store';
 import { armorKind, equipSlot, equippedArmorName, equippedWeaponName, weaponKind } from '../lib/equip';
 import { showToast } from '../lib/toast';
 import type { GuardianState } from '../lib/store';
@@ -495,14 +495,14 @@ export default function Armor({ ctx }: { ctx: Ctx }) {
       <div className="card">
         <h3>Spells and abilities</h3>
         {SPELLS.filter((s) => {
-          // Second Wind is shared by every class but only from Level 9,
+          // Power Strike is shared by every class but only from Level 9,
           // here as on Journey. Showing it at Level 1 was a lie.
           if (s.id === 'second-wind') return levelForXp(doc.xp) >= 9;
           return s.classId === 'any' || s.classId === doc.guardian?.classId;
         }).map((s) => (
-          <p key={s.id}><strong>{s.name}</strong>: {s.blurb} ({s.cost} mana, {s.damage} damage)</p>
+          <p key={s.id}><strong>{s.name}</strong>: {s.blurb} ({s.cost} mana, {damageRange(s.damage)} damage)</p>
         ))}
-        <p className="small muted">Second Wind unlocks at Level 9 for every class.</p>
+        <p className="small muted">Power Strike unlocks at Level 9 for every class.</p>
       </div>
 
       <div className="card">

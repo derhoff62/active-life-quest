@@ -3,7 +3,7 @@ import type { Ctx } from '../App';
 import * as api from '../lib/api';
 import { PHASES, WORKOUTS, CORE_BALANCE_WORKOUT, WEEK13, CLASS_GOOD_FOR, GOAL_TYPES, splitForDays, foodQuestForDate } from '../lib/data';
 import type { TrainingStyle } from '../lib/data';
-import { phaseForDoc, recoveryScore, levelForXp, titleForLevel, metCompanionIds, currentWeekForDoc, checkinPreferenceText, checkinFrequenciesForMode, normalizeCheckinFrequency, loggedToday, streakDaysForDoc, lastLoggedLabel, cardioCreditedSum, hasApprovedRetest, pendingRetests, assessmentApproved, assessmentPending, volumeTierForDoc, latestWorkout, lastSplitIndex } from '../lib/store';
+import { phaseForDoc, recoveryScore, levelForXp, titleForLevel, metCompanionIds, currentWeekForDoc, checkinPreferenceText, checkinFrequenciesForMode, normalizeCheckinFrequency, loggedToday, streakDaysForDoc, lastLoggedLabel, cardioCreditedSum, hasApprovedRetest, pendingRetests, assessmentApproved, assessmentPending, volumeTierForDoc, latestWorkout, lastSplitIndex, DAILY_UNLOCK_LEVELS, dailyUnlocked } from '../lib/store';
 import { cycleForWeek, nextRetestWeek, nextBossWeek, nextRetestLabel, nextBossLabel, isDeloadWeek, challengeForWeek } from '../lib/yearPlan';
 import type { AssessmentVideo } from '../lib/store';
 import GuardianAvatar from './GuardianAvatar';
@@ -442,14 +442,54 @@ export default function Today({ ctx }: { ctx: Ctx }) {
                 if (questBusy) return;
                 setQuestBusy(true);
                 window.setTimeout(() => setQuestBusy(false), 700);
+                // First daily quest of the day adds +1 mana, one attack
+                // in Combat. Check before pushing, or the quest just
+                // added would always make this look done already.
+                const firstQuestToday = !loggedToday(doc.quests, 'food-quest') && !loggedToday(doc.quests, 'balance-quest');
                 update((d) => {
                   d.quests.push({ id: `q${Date.now()}`, date: new Date().toISOString(), kind: 'balance-quest' });
                   d.xp += 15;
+                  if (firstQuestToday) d.mana = Math.min(10, d.mana + 1);
                 });
-                toast('Balance quest done. +15 XP.');
+                toast('Balance quest done. +15 XP, +1 mana.');
               }}
             >
               {questBusy ? 'Saving…' : 'I did my 2-minute balance quest'}
+            </button>
+          );
+        })()}
+      </div>
+
+      <div className="card">
+        <h3>5-minute stretch</h3>
+        <p className="small muted">Five minutes of easy stretching, from your corrective work or any stretch you know. Once a day, +1 attack in boss fights. {dailyUnlocked(doc, 'stretch') ? '' : `Unlocks at Level ${DAILY_UNLOCK_LEVELS.stretch}.`}</p>
+        {(() => {
+          const today = new Date().toISOString().slice(0, 10);
+          const done = doc.quests.some((q) => q.kind === 'stretch-quest' && String(q.date).slice(0, 10) === today);
+          if (done) return <p className="small ok">Done today. Stretch logged.</p>;
+          if (!dailyUnlocked(doc, 'stretch')) {
+            return (
+              <button className="primary" disabled style={{ opacity: 0.5 }}>
+                Unlocks at Level {DAILY_UNLOCK_LEVELS.stretch}
+              </button>
+            );
+          }
+          return (
+            <button
+              className="primary"
+              disabled={questBusy}
+              onClick={() => {
+                if (questBusy) return;
+                setQuestBusy(true);
+                window.setTimeout(() => setQuestBusy(false), 700);
+                update((d) => {
+                  d.quests.push({ id: `q${Date.now()}`, date: new Date().toISOString(), kind: 'stretch-quest' });
+                  d.mana = Math.min(10, d.mana + 1);
+                });
+                toast('Stretch done. +1 mana.');
+              }}
+            >
+              {questBusy ? 'Saving…' : 'I did my 5-minute stretch (+1 mana)'}
             </button>
           );
         })()}
@@ -477,8 +517,9 @@ export default function Today({ ctx }: { ctx: Ctx }) {
                       if (questBusy) return;
                       setQuestBusy(true);
                       window.setTimeout(() => setQuestBusy(false), 700);
-                      update((d) => { d.quests.push({ id: `q${Date.now()}`, date: new Date().toISOString(), kind: 'food-quest', text: quest } as never); d.xp += 5; });
-                      toast('Food quest done. +5 XP.');
+                      const firstQuestToday = !loggedToday(doc.quests, 'food-quest') && !loggedToday(doc.quests, 'balance-quest');
+                      update((d) => { d.quests.push({ id: `q${Date.now()}`, date: new Date().toISOString(), kind: 'food-quest', text: quest } as never); d.xp += 5; if (firstQuestToday) d.mana = Math.min(10, d.mana + 1); });
+                      toast('Food quest done. +5 XP, +1 mana.');
                     }}
                   >
                     {questBusy ? 'Saving…' : 'I did it (+5 XP)'}

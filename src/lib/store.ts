@@ -97,6 +97,23 @@ export interface BalanceTest {
   rightSec: number;
 }
 
+// Protein meals (Derek, Nov 25, 2026): four ticks a day, breakfast,
+// lunch, afternoon snack, dinner. Just "I had protein at this meal".
+// Grams are optional, never required, and never add extra attacks.
+export type ProteinMeal = 'breakfast' | 'lunch' | 'snack' | 'dinner';
+export interface ProteinMealEntry {
+  id: string;
+  date: string;
+  meal: ProteinMeal;
+  grams?: number;
+}
+export const PROTEIN_MEALS: { id: ProteinMeal; label: string }[] = [
+  { id: 'breakfast', label: 'Breakfast' },
+  { id: 'lunch', label: 'Lunch' },
+  { id: 'snack', label: 'Afternoon snack' },
+  { id: 'dinner', label: 'Dinner' },
+];
+
 export interface ProfileDoc {
   version: number;
   displayName: string;
@@ -136,6 +153,13 @@ export interface ProfileDoc {
   quests: LogEntry[];
   retests: LogEntry[];
   bossHp: Record<string, number>;
+  // Protein meals logged (see ProteinMealEntry above) and the Power
+  // Strike charge meter: how many charged hits were used on a day, so
+  // the meter can be worked out from today's daily things without
+  // storing a separate count that could drift.
+  proteinMeals: ProteinMealEntry[];
+  powerChargeUsed: number;
+  powerChargeUsedDay: string;
   assessmentVideos: AssessmentVideo[];
   progressPhotos: ProgressPhoto[];
   balanceBaseline: { left: number; right: number } | null;
@@ -222,6 +246,9 @@ export function defaultProfile(email = '', displayName = ''): ProfileDoc {
     quests: [],
     retests: [],
     bossHp: {},
+    proteinMeals: [],
+    powerChargeUsed: 0,
+    powerChargeUsedDay: '',
     assessmentVideos: [],
     progressPhotos: [],
     balanceBaseline: null,
@@ -279,7 +306,7 @@ export function normalizeProfile(raw: unknown): ProfileDoc {
   const arrFields = [
     'healthFlags', 'contraindications', 'equipment', 'goals', 'badges',
     'armorEarned', 'rarityEarned', 'prs', 'workouts', 'cardio', 'checkins',
-    'sleep', 'measurements', 'photos', 'quests', 'retests',
+    'sleep', 'measurements', 'photos', 'quests', 'retests', 'proteinMeals',
     'assessmentVideos', 'progressPhotos', 'messages', 'nudges',
     'dislikedExercises', 'hurtExercises', 'steps', 'exerciseFeedback', 'balanceTests',
   ] as const;
@@ -375,6 +402,8 @@ export function normalizeProfile(raw: unknown): ProfileDoc {
   out.checkinFrequency = normalizeCheckinFrequency(out.checkinMode, out.checkinFrequency);
   if (typeof out.xp !== 'number') out.xp = 0;
   if (typeof out.mana !== 'number') out.mana = 10;
+  if (typeof out.powerChargeUsed !== 'number') out.powerChargeUsed = 0;
+  if (typeof out.powerChargeUsedDay !== 'string') out.powerChargeUsedDay = '';
   if (typeof out.level !== 'number') out.level = 1;
   if (typeof out.armorSeenCount !== 'number') out.armorSeenCount = 0;
   if (typeof out.journeySeenWeek !== 'number') out.journeySeenWeek = 0;
@@ -659,6 +688,182 @@ export function yesterdayDayKey(): string {
   const d = new Date();
   d.setDate(d.getDate() - 1);
   return localDayKey(d);
+}
+
+/** True when a stored date falls on the client's local today. Stored
+ * dates are UTC timestamps, so comparing the raw slice would read
+ * tomorrow after about 4 PM Pacific. Converting through the device
+ * clock keeps a 9 PM log on today. Workout entries are stamped at
+ * local midday instead, so their slice already reads as the picked day. */
+export function isTodayLocal(date: string | undefined): boolean {
+  if (!date) return false;
+  const d = new Date(String(date));
+  if (Number.isNaN(d.getTime())) return false;
+  return localDayKey(d) === todayDayKey();
+}
+
+// -------------------------------------------------------------------
+// Boss combat: variable damage, daily attacks, Power Strike charge.
+// (Derek, Nov 25, 2026: daily things give extra attacks, some attacks
+// do less damage sometimes, and Power Strike charges up from the
+// small things done through the day.)
+// -------------------------------------------------------------------
+
+/** One spell's damage range, plus or minus 20 percent, rounded:
+// 15 becomes 12 to 18, 20 becomes 16 to 24, 30 becomes 24 to 36. */
+export function damageRange(base: number): string {
+  return `${Math.round(base * 0.8)}-${Math.round(base * 1.2)}`;
+}
+
+/** Roll one attack's damage inside its range. A weak roll is the low
+ * end, never zero, and never a miss. Pass a fixed rand in tests. */
+export function rollDamage(base: number, rand: () => number = Math.random): number {
+  const low = Math.round(base * 0.8);
+  const high = Math.round(base * 1.2);
+  return low + Math.floor(rand() * (high - low + 1));
+}
+
+/** Level locks for the new daily things (Derek, Nov 25, 2026:
+ * stair-step, so a new client is not overwhelmed). Level 1, open
+ * from the start: workout, check-in, sleep, balance hold, daily
+ * quest, cardio, rest day. Level 2: protein. Level 3: water and
+ * walk (steps). Level 4: stretch and the Power Strike charge meter.
+ * Power Strike itself still unlocks at Level 9, as before; only the
+ * charge meter unlocks at Level 4. Below Level 4 daily things still
+ * earn mana and attacks, they just do not fill a charge meter. */
+export const DAILY_UNLOCK_LEVELS: Record<string, number> = {
+  protein: 2,
+  water: 3,
+  walk: 3,
+  stretch: 4,
+  charge: 4,
+};
+
+/** The level at which one daily thing unlocks. Core things
+ * (check-in, sleep, cardio, balance, quest, workout, rest day)
+ * unlock at Level 1, so they are always open. */
+export function dailyUnlockLevel(id: string): number {
+  if (id.startsWith('protein-')) return DAILY_UNLOCK_LEVELS.protein;
+  return DAILY_UNLOCK_LEVELS[id] ?? 1;
+}
+
+/** True when this daily thing is open for this profile. Levels
+ * only go up, so an unlock is never lost. */
+export function dailyUnlocked(doc: ProfileDoc, id: string): boolean {
+  return levelForXp(doc.xp) >= dailyUnlockLevel(id);
+}
+
+/** Locked daily things for this profile, with their unlock level,
+ * for plain "Unlocks at Level 2" labels in the UI. */
+export function lockedDailyThings(doc: ProfileDoc): { id: string; label: string; level: number }[] {
+  const level = levelForXp(doc.xp);
+  const all = [
+    { id: 'protein', label: 'Protein', level: DAILY_UNLOCK_LEVELS.protein },
+    { id: 'water', label: 'Water', level: DAILY_UNLOCK_LEVELS.water },
+    { id: 'walk', label: 'Walk', level: DAILY_UNLOCK_LEVELS.walk },
+    { id: 'stretch', label: 'Stretch', level: DAILY_UNLOCK_LEVELS.stretch },
+    { id: 'charge', label: 'Power Strike charge', level: DAILY_UNLOCK_LEVELS.charge },
+  ];
+  return all.filter((t) => level < t.level);
+}
+
+export interface DailyAttack {
+  id: string;
+  label: string;
+  attacks: number;
+}
+
+/** Attacks earned today from the small things, once per thing per
+ * day, so logging the same thing twice does not farm attacks.
+ * Check-in 1, sleep 1, cardio 1, balance hold 1, daily quest 1,
+ * water 1, walk 1, stretch 1, rest day 1, workout 2, protein 1 per
+ * meal (up to 4). The balance quest counts as the quest, not as the
+ * balance hold, so one action never earns twice. Mana already granted
+ * at the log (check-in, sleep, workout) IS that thing's attack;
+ * cardio, balance, quest, water, walk, stretch, and protein add their
+ * +1 mana at their own log, capped at 10. The rest-day log is the one
+ * exception: its attack counts here and toward the charge meter, but
+ * no mana is added at its log, because that log lives in Workouts and
+ * this build does not touch that file. */
+export function dailyAttacks(doc: ProfileDoc): { items: DailyAttack[]; total: number } {
+  const today = todayDayKey();
+  const items: DailyAttack[] = [];
+  const hasToday = (entries: { date?: string }[] | undefined) =>
+    (entries || []).some((e) => isTodayLocal(e.date));
+  if (hasToday(doc.checkins)) items.push({ id: 'checkin', label: 'check-in', attacks: 1 });
+  if (hasToday(doc.sleep)) items.push({ id: 'sleep', label: 'sleep', attacks: 1 });
+  if (hasToday(doc.cardio)) items.push({ id: 'cardio', label: 'cardio', attacks: 1 });
+  if ((doc.balanceTests || []).some((t) => isTodayLocal(t.date))) {
+    items.push({ id: 'balance', label: 'balance hold', attacks: 1 });
+  }
+  if ((doc.quests || []).some((q) => ((q as { kind?: string }).kind === 'food-quest' || (q as { kind?: string }).kind === 'balance-quest') && isTodayLocal(q.date))) {
+    items.push({ id: 'quest', label: 'daily quest', attacks: 1 });
+  }
+  // Water, walk, stretch, and rest day (Derek, Nov 25, 2026): one
+  // attack each, once a day. A walk is its own thing, not a cardio
+  // session: a 10-minute walk counts even when cardio is logged too.
+  // The walk reuses the steps log on Progress, so no second walk
+  // button exists. The rest-day log already exists in Workouts and is
+  // wired in here, not duplicated. Water, walk, and stretch are
+  // level-locked (see DAILY_UNLOCK_LEVELS): below their unlock level
+  // they earn nothing here, and the log buttons are greyed out in
+  // the UI, so a locked thing cannot be tapped at all.
+  if (dailyUnlocked(doc, 'water') && (doc.quests || []).some((q) => (q as { kind?: string }).kind === 'water' && isTodayLocal(q.date))) {
+    items.push({ id: 'water', label: 'water', attacks: 1 });
+  }
+  if (dailyUnlocked(doc, 'walk') && hasToday(doc.steps)) items.push({ id: 'walk', label: 'walk', attacks: 1 });
+  if (dailyUnlocked(doc, 'stretch') && (doc.quests || []).some((q) => (q as { kind?: string }).kind === 'stretch-quest' && isTodayLocal(q.date))) {
+    items.push({ id: 'stretch', label: 'stretch', attacks: 1 });
+  }
+  if ((doc.quests || []).some((q) => (q as { kind?: string }).kind === 'rest-day' && isTodayLocal(q.date))) {
+    items.push({ id: 'rest', label: 'rest day', attacks: 1 });
+  }
+  if ((doc.workouts || []).some((w) => dayKeyOf(String(w.date || '')) === today)) {
+    items.push({ id: 'workout', label: 'workout', attacks: 2 });
+  }
+  for (const m of PROTEIN_MEALS) {
+    if (dailyUnlocked(doc, 'protein') && (doc.proteinMeals || []).some((p) => p.meal === m.id && isTodayLocal(p.date))) {
+      items.push({ id: `protein-${m.id}`, label: `protein at ${m.label.toLowerCase()}`, attacks: 1 });
+    }
+  }
+  return { items, total: items.reduce((s, i) => s + i.attacks, 0) };
+}
+
+/** Power Strike charge, 0 to 5, filled by today's daily attacks.
+ * It is worked out from the attacks earned today minus 5 per charged
+ * hit already used today, so after a charged hit the meter starts
+ * again at 0 and fills from the next daily thing. The charge meter
+ * unlocks at Level 4: below that it stays at 0, and daily things
+ * still earn mana and attacks, they just do not fill a charge meter. */
+export function powerCharge(doc: ProfileDoc): number {
+  if (levelForXp(doc.xp) < DAILY_UNLOCK_LEVELS.charge) return 0;
+  const usedToday = doc.powerChargeUsedDay === todayDayKey() ? doc.powerChargeUsed || 0 : 0;
+  return Math.max(0, Math.min(5, dailyAttacks(doc).total - 5 * usedToday));
+}
+
+/** True when the charge meter is full and Power Strike is free. */
+export function powerCharged(doc: ProfileDoc): boolean {
+  return powerCharge(doc) >= 5;
+}
+
+/** Protein meals logged today, in meal order. */
+export function proteinToday(doc: ProfileDoc): ProteinMealEntry[] {
+  const order = PROTEIN_MEALS.map((m) => m.id);
+  return (doc.proteinMeals || [])
+    .filter((p) => isTodayLocal(p.date))
+    .sort((a, b) => order.indexOf(a.meal) - order.indexOf(b.meal));
+}
+
+/** Grams logged today: the total entered, and how many of today's
+ * meals have grams. Meals with no grams still count as a tick. */
+export function proteinGramsToday(doc: ProfileDoc): { total: number; withGrams: number; count: number } {
+  const list = proteinToday(doc);
+  const withGrams = list.filter((p) => typeof p.grams === 'number' && p.grams > 0);
+  return {
+    total: withGrams.reduce((s, p) => s + (p.grams || 0), 0),
+    withGrams: withGrams.length,
+    count: list.length,
+  };
 }
 
 /** Backdating window: local today back to 7 days ago, inclusive. */

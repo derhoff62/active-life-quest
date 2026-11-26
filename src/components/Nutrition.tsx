@@ -1,7 +1,8 @@
+import { useState } from 'react';
 import type { Ctx } from '../App';
 import Switch from './Switch';
 import { NUTRITION } from '../lib/data';
-import { proteinRange, fiberTarget } from '../lib/store';
+import { proteinRange, fiberTarget, PROTEIN_MEALS, proteinToday, proteinGramsToday, workoutDateIso, todayDayKey, isTodayLocal, DAILY_UNLOCK_LEVELS, dailyUnlocked } from '../lib/store';
 
 const RULES = [
   { n: 1, title: 'Eat mostly whole foods', text: 'Food that looks like food, most of the time.' },
@@ -21,6 +22,16 @@ export default function Nutrition({ ctx }: { ctx: Ctx }) {
   const { doc, update, toast } = ctx;
   const gw = doc.body.goalWeightLb;
   const enabled = doc.nutritionEnabled;
+  // Protein grams typed but not ticked yet, per meal. The tick is the
+  // main action; grams are optional and never block it.
+  const [gramsDraft, setGramsDraft] = useState<Record<string, string>>({});
+  const todayProtein = proteinToday(doc);
+  const proteinGrams = proteinGramsToday(doc);
+  const proteinLow = gw ? Math.round(gw * 0.7) : null;
+  const proteinHigh = gw ? Math.round(gw * 1) : null;
+  const waterDone = (doc.quests || []).some((q) => (q as { kind?: string }).kind === 'water' && isTodayLocal(q.date));
+  const proteinOpen = dailyUnlocked(doc, 'protein');
+  const waterOpen = dailyUnlocked(doc, 'water');
 
   return (
     <div className="nut">
@@ -41,6 +52,101 @@ export default function Nutrition({ ctx }: { ctx: Ctx }) {
         <p style={{ marginBottom: 0 }}>
           {enabled ? 'Nutrition is on.' : 'Nutrition is off. Turn it on when you want it.'}
         </p>
+      </div>
+
+      {/* Protein and water today: NOT behind the Nutrition toggle.
+          Protein is small enough that it stays visible whether
+          Nutrition is on or off (Derek, Nov 25, 2026). The rest of
+          Nutrition below stays gated, as before. */}
+      <div className="card">
+        <h3>Protein and water today</h3>
+        <p className="small muted">Protein is optional. You do not need Nutrition on to log it. Tick each meal where you had protein. Each meal gives +1 attack in boss fights. {proteinOpen ? '' : `Protein unlocks at Level ${DAILY_UNLOCK_LEVELS.protein}. `}{waterOpen ? '' : `Water unlocks at Level ${DAILY_UNLOCK_LEVELS.water}.`}</p>
+        <p><strong>{todayProtein.length} of 4 meals today.</strong>{' '}
+          {proteinGrams.total > 0 || proteinHigh
+            ? proteinHigh
+              ? `About ${proteinGrams.total}g so far today, target ${proteinLow} to ${proteinHigh}g.`
+              : `About ${proteinGrams.total}g logged today.`
+            : 'Add your goal weight in the assessment to see your daily target.'}
+          {todayProtein.length > proteinGrams.withGrams && todayProtein.length > 0 && ' Grams not entered for some meals.'}
+        </p>
+        {PROTEIN_MEALS.map((m) => {
+          const entry = todayProtein.find((p) => p.meal === m.id);
+          const draft = gramsDraft[m.id] ?? (entry && typeof entry.grams === 'number' ? String(entry.grams) : '');
+          return (
+            <div key={m.id} className="row" style={{ marginBottom: 8, alignItems: 'center' }}>
+              <span style={{ minWidth: 110 }}><strong>{m.label}</strong></span>
+              {entry ? (
+                <span className="small ok">Logged</span>
+              ) : proteinOpen ? (
+                <button
+                  className="primary"
+                  onClick={() => {
+                    const g = Number(draft);
+                    const grams = draft !== '' && Number.isFinite(g) ? Math.max(0, Math.min(200, Math.round(g))) : undefined;
+                    update((d) => {
+                      d.proteinMeals.push({ id: `p${Date.now()}`, date: workoutDateIso(todayDayKey()), meal: m.id, grams });
+                      d.mana = Math.min(10, d.mana + 1);
+                    });
+                    toast(`Protein at ${m.label.toLowerCase()} logged. +1 mana.`);
+                  }}
+                >
+                  I had protein
+                </button>
+              ) : (
+                <button className="primary" disabled style={{ opacity: 0.5 }}>
+                  Unlocks at Level {DAILY_UNLOCK_LEVELS.protein}
+                </button>
+              )}
+              <label className="small muted" htmlFor={`protein-grams-${m.id}`}>Grams (optional)</label>
+              <input
+                id={`protein-grams-${m.id}`}
+                inputMode="numeric"
+                value={draft}
+                disabled={!proteinOpen && !entry}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  setGramsDraft((prev) => ({ ...prev, [m.id]: v }));
+                  // If the meal is already ticked, save the grams on
+                  // the entry. Grams never add attacks, the tick does.
+                  if (entry) {
+                    const g = Number(v);
+                    const grams = v !== '' && Number.isFinite(g) ? Math.max(0, Math.min(200, Math.round(g))) : undefined;
+                    update((d) => {
+                      const found = (d.proteinMeals || []).find((p) => p.id === entry.id);
+                      if (found) found.grams = grams;
+                    });
+                  }
+                }}
+                placeholder="g"
+                style={{ maxWidth: 80 }}
+                aria-label={`Protein grams at ${m.label}`}
+              />
+            </div>
+          );
+        })}
+        <div className="row" style={{ marginTop: 8, alignItems: 'center' }}>
+          <span style={{ minWidth: 110 }}><strong>Water</strong></span>
+          {waterDone ? (
+            <span className="small ok">Logged today</span>
+          ) : waterOpen ? (
+            <button
+              className="primary"
+              onClick={() => {
+                update((d) => {
+                  d.quests.push({ id: `q${Date.now()}`, date: workoutDateIso(todayDayKey()), kind: 'water' });
+                  d.mana = Math.min(10, d.mana + 1);
+                });
+                toast('Water logged. +1 mana.');
+              }}
+            >
+              I drank water today (+1 mana)
+            </button>
+          ) : (
+            <button className="primary" disabled style={{ opacity: 0.5 }}>
+              Unlocks at Level {DAILY_UNLOCK_LEVELS.water}
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Three rules: one rule per card, vertical, not a paragraph. */}

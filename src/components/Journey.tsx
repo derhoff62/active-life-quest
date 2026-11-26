@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { Ctx } from '../App';
 import { PHASES, MONSTERS, CREATURES, STORY, SPELLS, CLASSES, BOSS_ROUNDS } from '../lib/data';
 import { YEAR_CYCLES, challengeForWeek, nextRetestWeek, nextBossWeek, nextRetestLabel, nextBossLabel } from '../lib/yearPlan';
-import { phaseForDoc, levelForXp, metCompanionIds, currentWeekForDoc } from '../lib/store';
+import { phaseForDoc, levelForXp, metCompanionIds, currentWeekForDoc, dailyAttacks, powerCharge, powerCharged, rollDamage, damageRange, todayDayKey, DAILY_UNLOCK_LEVELS, lockedDailyThings } from '../lib/store';
 import GuardianAvatar from './GuardianAvatar';
 import JourneyMap from './JourneyMap';
 import CompanionAvatar, { BossAvatar } from './CompanionAvatar';
@@ -200,35 +200,67 @@ export default function Journey({ ctx }: { ctx: Ctx }) {
       <div className="card gold-frame" id="combat">
         <h2>Combat</h2>
         <p>A boss round is a practice fight at the end of a land, at Weeks 4, 8, and 12 of every cycle, plus a review round when you get there. You attack with your class spells, and each spell costs mana. Win the round, do the retest, and the next land opens. Bosses are challenges you beat, not friends.</p>
-        <p className="small muted">Mana: {doc.mana}/10. Mana refills daily, and good sleep and check-ins add more. Spells never block a workout, quest, check-in, or retest. Pick a boss, then use a spell. The bar drops with every hit.</p>
+        <p className="small muted">Mana: {doc.mana}/10. Mana refills daily, and the small things you do through the day add more. Spells never block a workout, quest, check-in, or retest. Pick a boss, then use a spell. The bar drops with every hit. Damage varies a little each time, so a hit can be a bit weaker or stronger than the number shown.</p>
+        {(() => {
+          const earned = dailyAttacks(doc);
+          const charge = powerCharge(doc);
+          const charged = powerCharged(doc);
+          const chargeOpen = level >= DAILY_UNLOCK_LEVELS.charge;
+          const locked = lockedDailyThings(doc);
+          const earnedText = earned.total > 0
+            ? `You earned ${earned.total} attack${earned.total === 1 ? '' : 's'} today from ${earned.items.map((i) => i.label).join(', ')}.`
+            : 'Log a check-in, sleep, cardio, a balance hold, a daily quest, a rest day, or a workout to earn attacks today.';
+          return (
+            <>
+              <p className="small">{earnedText}</p>
+              {locked.length > 0 && (
+                <p className="small muted">{locked.map((t) => `${t.label} unlocks at Level ${t.level}`).join('. ')}.</p>
+              )}
+              <p className="small"><strong>{chargeOpen ? `Power Strike charge: ${charge} of 5.` : `Power Strike charge unlocks at Level ${DAILY_UNLOCK_LEVELS.charge}.`}</strong> {chargeOpen ? (charged ? 'Power Strike is charged, free to use once.' : 'Each daily thing adds charge. At 5, Power Strike costs no mana.') : 'Daily things still earn attacks and mana. They just do not fill a charge meter yet.'}</p>
+            </>
+          );
+        })()}
         {bossRow(boss)}
         <p className="small"><strong>Attacking:</strong> {boss.name}. {bossBeaten ? 'Already beaten.' : bossUnlocked ? `${bossHp} of ${boss.maxHp} HP left.` : `${boss.maxHp} HP · Locked until your Week ${boss.week - 4} retest.`}</p>
         <div className="row">
-          {mySpells.map((s) => (
-            <button
-              key={s.id}
-              disabled={doc.mana < s.cost || bossBeaten || !bossUnlocked}
-              onClick={() => {
-                if (!bossUnlocked || bossBeaten) return;
-                const emberBonus = met.has('ember');
-                const newHp = Math.max(0, bossHp - s.damage);
-                const larkBonus = newHp === 0 && met.has('lark');
-                update((d) => {
-                  d.mana = Math.max(0, d.mana - s.cost);
-                  d.xp += (emberBonus ? 10 : 5) + (larkBonus ? 5 : 0);
-                  d.bossHp = { ...(d.bossHp || {}), [boss.id]: newHp };
-                });
-                setBossHit(
-                  newHp === 0
-                    ? `${boss.name} beaten. You move on to the next land.${larkBonus ? ' Lark sings (+5 XP).' : ''}`
-                    : `${s.name} dealt ${s.damage} damage. Boss took ${s.damage} damage, ${newHp} of ${boss.maxHp} HP left.${emberBonus ? ' Ember cheers you on (+5 XP).' : ''}`,
-                );
-                toast(newHp === 0 ? `${boss.name} beaten.${larkBonus ? ' +5 XP from Lark.' : ''}` : `${s.name} hit. ${newHp} of ${boss.maxHp} HP left.`);
-              }}
-            >
-              {s.name} ({s.cost} mana)
-            </button>
-          ))}
+          {mySpells.map((s) => {
+            // Power Strike at full charge costs no mana, once. Every
+            // other spell pays its cost, and a charged hit resets the
+            // meter (see powerCharge in store.ts).
+            const isChargedStrike = s.id === 'second-wind' && powerCharged(doc);
+            const cost = isChargedStrike ? 0 : s.cost;
+            return (
+              <button
+                key={s.id}
+                disabled={doc.mana < cost || bossBeaten || !bossUnlocked}
+                onClick={() => {
+                  if (!bossUnlocked || bossBeaten) return;
+                  const emberBonus = met.has('ember');
+                  const dealt = rollDamage(s.damage);
+                  const newHp = Math.max(0, bossHp - dealt);
+                  const larkBonus = newHp === 0 && met.has('lark');
+                  update((d) => {
+                    d.mana = Math.max(0, d.mana - cost);
+                    d.xp += (emberBonus ? 10 : 5) + (larkBonus ? 5 : 0);
+                    d.bossHp = { ...(d.bossHp || {}), [boss.id]: newHp };
+                    if (isChargedStrike) {
+                      const today = todayDayKey();
+                      d.powerChargeUsed = d.powerChargeUsedDay === today ? (d.powerChargeUsed || 0) + 1 : 1;
+                      d.powerChargeUsedDay = today;
+                    }
+                  });
+                  setBossHit(
+                    newHp === 0
+                      ? `${boss.name} beaten. You move on to the next land.${larkBonus ? ' Lark sings (+5 XP).' : ''}`
+                      : `${s.name} dealt ${dealt} damage. Boss took ${dealt} damage, ${newHp} of ${boss.maxHp} HP left.${isChargedStrike ? ' Power Strike was charged, so it cost no mana.' : ''}${emberBonus ? ' Ember cheers you on (+5 XP).' : ''}`,
+                  );
+                  toast(newHp === 0 ? `${boss.name} beaten.${larkBonus ? ' +5 XP from Lark.' : ''}` : `${s.name} hit for ${dealt}. ${newHp} of ${boss.maxHp} HP left.`);
+                }}
+              >
+                {s.name} ({isChargedStrike ? 'charged, free' : `${cost} mana`}, {damageRange(s.damage)} damage)
+              </button>
+            );
+          })}
         </div>
         {bossHit && <p className="ok">{bossHit}</p>}
         <p className="small muted">Your class: {doc.guardian?.classId || 'not picked yet'}. {CLASSES.find((c) => c.id === doc.guardian?.classId)?.description || ''}</p>

@@ -4,7 +4,7 @@ import * as api from '../lib/api';
 import { CES_TEMPLATES } from '../lib/data';
 import Metrics, { latestMetric, TrendChart, metricSeries } from './Metrics';
 import type { ProfileDoc } from '../lib/store';
-import { checkinPreferenceText, checkinFrequenciesForMode, normalizeCheckinFrequency, normalizeProfile, phaseForDoc, recoveryScoreForDoc, cardioCreditedSum, pendingRetests, applyRetestReview, hasCleanApprovedRetest, retestNextPhase, applyAssessmentReview, assessmentPending, assessmentStatus, volumeTierForDoc } from '../lib/store';
+import { checkinPreferenceText, checkinFrequenciesForMode, normalizeCheckinFrequency, normalizeProfile, phaseForDoc, recoveryScoreForDoc, cardioCreditedSum, pendingRetests, applyRetestReview, hasCleanApprovedRetest, retestNextPhase, applyAssessmentReview, assessmentPending, assessmentStatus, volumeTierForDoc, proteinToday } from '../lib/store';
 import { weekLabel } from '../lib/yearPlan';
 import { coachReminders, retestWeeksDue } from '../lib/coachReminders';
 import { checkinHistory, coachCheckinSummary, recoveryTrend, volumeAdjustments, volumeByWeek, workoutExerciseRows, shortDate, windowStats } from '../lib/coachStats';
@@ -199,7 +199,7 @@ export default function Coach({ ctx }: { ctx: Ctx }) {
       {selected && (
         <div className="card gold-frame">
           <h3>{selected.displayName || selected.email}</h3>
-          <p>Phase {phaseForDoc(selected.data)} · Findings: {selected.data.assessment?.findings.join(', ') || 'none'} · Workouts: {selected.data.workouts.length} · Check-ins: {selected.data.checkins.length} · Cardio: {cardioCreditedSum(selected.data.cardio)} min</p>
+          <p>Phase {phaseForDoc(selected.data)} · Findings: {selected.data.assessment?.findings.join(', ') || 'none'} · Workouts: {selected.data.workouts.length} · Check-ins: {selected.data.checkins.length} · Cardio: {cardioCreditedSum(selected.data.cardio)} min · Protein today: {proteinToday(selected.data).length} of 4 meals</p>
           {(() => {
             const parts = [(selected.data.reminderEmail || '').trim(), (selected.data.reminderPhone || '').trim()].filter(Boolean);
             const emailOk = selected.data.reminderEmailOk === true;

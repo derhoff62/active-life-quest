@@ -47,9 +47,12 @@ export default function Cardio({ ctx }: { ctx: Ctx }) {
     update((d) => {
       d.cardio.push({ id: `k${Date.now()}`, date: new Date().toISOString(), minutes: mins, zone: cardioZone });
       if (xpToday) d.xp += metCompanionIds(doc).has('sylva') ? 15 : 10;
+      // First cardio log of the day also adds +1 mana, one attack in
+      // Combat. Logging again today adds minutes, not mana.
+      if (xpToday) d.mana = Math.min(10, d.mana + 1);
     });
-    setCardioMsg(`Cardio logged: ${mins} actual minutes (${cardioZone}) = ${credited} minutes toward this week${xpToday ? ` (+10 XP${metCompanionIds(doc).has('sylva') ? ', +5 from Sylva' : ''})` : ' (already earned cardio XP today)'}.`);
-    toast(`Cardio logged: ${mins} minutes${cardioZone === 'HIIT' ? ' HIIT, counts double' : ''}${xpToday ? ', +10 XP' : ''}.`);
+    setCardioMsg(`Cardio logged: ${mins} actual minutes (${cardioZone}) = ${credited} minutes toward this week${xpToday ? ` (+10 XP${metCompanionIds(doc).has('sylva') ? ', +5 from Sylva' : ''}, +1 mana)` : ' (already earned cardio XP today)'}.`);
+    toast(`Cardio logged: ${mins} minutes${cardioZone === 'HIIT' ? ' HIIT, counts double' : ''}${xpToday ? ', +10 XP, +1 mana' : ''}.`);
     setCardioMin('');
   }
 
