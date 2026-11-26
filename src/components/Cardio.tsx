@@ -10,7 +10,7 @@
 import { useState } from 'react';
 import type { Ctx } from '../App';
 import { HIIT } from '../lib/data';
-import { metCompanionIds, loggedToday, cardioCreditMinutes, lastLoggedLabel } from '../lib/store';
+import { metCompanionIds, dayKeyOf, cardioCreditMinutes, lastLoggedLabel, todayDayKey, clampWorkoutDate, workoutDateIso, workoutDateRange } from '../lib/store';
 import { cardioThisWeek } from '../lib/badges';
 import { metricSeries, TrendChart } from './Metrics';
 
@@ -18,8 +18,14 @@ export default function Cardio({ ctx }: { ctx: Ctx }) {
   const { doc, update, toast, go } = ctx;
   const [cardioMin, setCardioMin] = useState('');
   const [cardioZone, setCardioZone] = useState<'Zone 2' | 'HIIT'>('Zone 2');
+  const [cardioDate, setCardioDate] = useState(() => todayDayKey());
   const [cardioMsg, setCardioMsg] = useState('');
   const [cardioBusy, setCardioBusy] = useState(false);
+  // Backdate preview, clamped to the same 7-day window as workouts.
+  // Local today by default, never a future or older date.
+  const dateRange = workoutDateRange();
+  const pickedDay = clampWorkoutDate(cardioDate);
+  const isPastDay = pickedDay !== todayDayKey();
 
   const weekTotal = cardioThisWeek(doc);
   const cardioMilestone =
@@ -40,19 +46,33 @@ export default function Cardio({ ctx }: { ctx: Ctx }) {
     }
     setCardioBusy(true);
     window.setTimeout(() => setCardioBusy(false), 700);
-    // Minutes always count. XP is once a day: logging twice does not
-    // earn twice. The weekly total credits HIIT double automatically.
-    const xpToday = !loggedToday(doc.cardio);
+    // Minutes always count toward that week's total. XP and mana are
+    // for today only, once a day: a backdated entry earns neither, so
+    // logging a past day cannot farm XP, mana, or boss attacks. The
+    // day key is compared, not just "today", so the first-log check
+    // follows the picked day. Entries are stamped at midday UTC on
+    // the picked day (same as workouts), so the weekly total, recent
+    // list, and trend land on the right day.
+    const chosenDay = clampWorkoutDate(cardioDate);
+    const isToday = chosenDay === todayDayKey();
+    const firstThatDay = !(doc.cardio || []).some((e) => dayKeyOf(e.date) === chosenDay);
+    const earn = isToday && firstThatDay;
     const credited = cardioZone === 'HIIT' ? mins * 2 : mins;
     update((d) => {
-      d.cardio.push({ id: `k${Date.now()}`, date: new Date().toISOString(), minutes: mins, zone: cardioZone });
-      if (xpToday) d.xp += metCompanionIds(doc).has('sylva') ? 15 : 10;
+      d.cardio.push({ id: `k${Date.now()}`, date: workoutDateIso(chosenDay), minutes: mins, zone: cardioZone });
+      if (earn) d.xp += metCompanionIds(doc).has('sylva') ? 15 : 10;
       // First cardio log of the day also adds +1 mana, one attack in
-      // Combat. Logging again today adds minutes, not mana.
-      if (xpToday) d.mana = Math.min(10, d.mana + 1);
+      // Combat. Logging again today adds minutes, not mana, and a
+      // past day adds minutes only.
+      if (earn) d.mana = Math.min(10, d.mana + 1);
     });
-    setCardioMsg(`Cardio logged: ${mins} actual minutes (${cardioZone}) = ${credited} minutes toward this week${xpToday ? ` (+10 XP${metCompanionIds(doc).has('sylva') ? ', +5 from Sylva' : ''}, +1 mana)` : ' (already earned cardio XP today)'}.`);
-    toast(`Cardio logged: ${mins} minutes${cardioZone === 'HIIT' ? ' HIIT, counts double' : ''}${xpToday ? ', +10 XP, +1 mana' : ''}.`);
+    if (!isToday) {
+      setCardioMsg(`Cardio logged for ${chosenDay}: ${mins} actual minutes (${cardioZone}) = ${credited} minutes toward that week. No XP or mana for a past day.`);
+      toast(`Cardio logged for ${chosenDay}: ${mins} minutes${cardioZone === 'HIIT' ? ' HIIT, counts double' : ''}. No XP for a past day.`);
+    } else {
+      setCardioMsg(`Cardio logged: ${mins} actual minutes (${cardioZone}) = ${credited} minutes toward this week${earn ? ` (+10 XP${metCompanionIds(doc).has('sylva') ? ', +5 from Sylva' : ''}, +1 mana)` : ' (already earned cardio XP today)'}.`);
+      toast(`Cardio logged: ${mins} minutes${cardioZone === 'HIIT' ? ' HIIT, counts double' : ''}${earn ? ', +10 XP, +1 mana' : ''}.`);
+    }
     setCardioMin('');
   }
 
@@ -109,8 +129,19 @@ export default function Cardio({ ctx }: { ctx: Ctx }) {
           </div>
         </div>
         <p className="small muted">Log your actual minutes. {cardioZone === 'HIIT' ? 'HIIT counts double, so what you enter counts as twice as much toward the week.' : 'Zone 2 counts as logged.'}</p>
+        <label htmlFor="cardio-date" style={{ margin: 0 }}>When did you do this cardio?</label>
+        <input
+          id="cardio-date"
+          type="date"
+          value={cardioDate}
+          min={dateRange.min}
+          max={dateRange.max}
+          onChange={(e) => { setCardioDate(e.target.value); setCardioMsg(''); }}
+          style={{ maxWidth: 170 }}
+        />
+        <p className="small muted" style={{ margin: 0 }}>Pick today, or up to 7 days ago if you forgot to log it. Minutes from a past day count toward that week, but XP and mana are for today only.</p>
         <button className="primary" disabled={cardioBusy} onClick={logCardio}>
-          {cardioBusy ? 'Saving…' : `Log cardio (+10 XP${metCompanionIds(doc).has('sylva') ? ', +5 from Sylva' : ''})`}
+          {cardioBusy ? 'Saving…' : isPastDay ? 'Log cardio (no XP, past day)' : `Log cardio (+10 XP${metCompanionIds(doc).has('sylva') ? ', +5 from Sylva' : ''})`}
         </button>
         {cardioMsg && <p className={cardioMsg.startsWith('Enter') ? 'error' : 'ok'}>{cardioMsg}</p>}
         {recent.length > 0 && (
