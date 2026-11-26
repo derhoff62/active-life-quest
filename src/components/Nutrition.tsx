@@ -18,6 +18,42 @@ const MACRO_ICONS: Record<string, string> = {
   supplements: 'S',
 };
 
+// A sample day of eating. An example only, not a meal plan to follow.
+// Every meal has a protein in it, so it shows what "protein at most
+// meals" looks like in a normal day.
+const SAMPLE_DAY = [
+  { meal: 'Breakfast', food: 'Greek yogurt with oats and berries, or eggs with whole wheat toast.' },
+  { meal: 'Lunch', food: 'Chicken breast or tuna sandwich on whole wheat bread, with an apple.' },
+  { meal: 'Snack', food: 'Cottage cheese with fruit, or a handful of nuts and a piece of fruit.' },
+  { meal: 'Dinner', food: 'Lean ground beef or salmon, brown rice, and broccoli or green beans.' },
+];
+
+// Whole foods grocery list, grouped so shopping is simple. No brands.
+const GROCERY_LIST = [
+  { group: 'Protein', foods: 'Chicken breast, eggs, Greek yogurt, cottage cheese, tuna, lean ground beef, tofu, lentils, beans.' },
+  { group: 'Carbs', foods: 'Oats, brown rice, sweet potatoes, whole wheat bread, quinoa, fruit.' },
+  { group: 'Healthy fats', foods: 'Olive oil, avocados, nuts, seeds, salmon, nut butter.' },
+  { group: 'Fruit and veg', foods: 'Berries, apples, bananas, broccoli, green beans, carrots, spinach, tomatoes.' },
+];
+
+// Eating out, plain swaps. Nothing to count, nothing to weigh.
+const EATING_OUT_SWAPS = [
+  'Grilled, not fried. Grilled chicken or fish instead of breaded or fried.',
+  'Sauce on the side. You decide how much goes on.',
+  'Water instead of a sugary drink.',
+  'Start with a salad or vegetables when they are on the menu.',
+  'Take half home when the portion is big. Stop at satisfied, about 80 percent full.',
+];
+
+// Supplements, in one place. Same four from the macro card, with the
+// dose and what each one does. None of these are required.
+const SUPPLEMENTS_LIST = [
+  { name: 'Creatine monohydrate', text: '5 grams a day. Supports strength and muscle. Take it every day, training day or not.' },
+  { name: 'Fish oil', text: 'Supports joints and heart health. Follow the dose on the bottle.' },
+  { name: 'Magnesium glycinate', text: 'Can help sleep. Often taken in the evening. Follow the dose on the bottle.' },
+  { name: 'Protein powder', text: 'Whey or plant protein. Useful when a meal is short on protein. A palm-sized portion of real food does the same job.' },
+];
+
 export default function Nutrition({ ctx }: { ctx: Ctx }) {
   const { doc, update, toast } = ctx;
   const gw = doc.body.goalWeightLb;
@@ -225,6 +261,66 @@ export default function Nutrition({ ctx }: { ctx: Ctx }) {
               </details>
             );
           })}
+
+          {/* A sample day of eating. An example only, not a plan
+              to follow. Every meal has a protein in it. */}
+          <div className="card">
+            <h3>A sample day of eating</h3>
+            <p className="small muted">This is an example, not a meal plan you must follow. Use it to see what a day with protein at every meal looks like, then build your own day the same way.</p>
+            <ul>
+              {SAMPLE_DAY.map((s) => (
+                <li key={s.meal}><strong>{s.meal}:</strong> {s.food}</li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Whole foods grocery list, grouped by food type. */}
+          <div className="card">
+            <h3>Whole foods grocery list</h3>
+            <p className="small muted">Buy from these groups and most meals take care of themselves. No brands, just food that looks like food.</p>
+            <ul>
+              {GROCERY_LIST.map((g) => (
+                <li key={g.group}><strong>{g.group}:</strong> {g.foods}</li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Before and after a workout. Simple timing, nothing fancy. */}
+          <div className="card">
+            <h3>Before and after a workout</h3>
+            <p><strong>Before:</strong> eat a small snack 1 to 2 hours before you train. Something with carbs and a little protein, like toast with peanut butter or yogurt with fruit. Drink water. Do not train on a full stomach.</p>
+            <p style={{ marginBottom: 0 }}><strong>After:</strong> eat a normal meal with protein and carbs within a couple of hours. Your next meal already does this. A palm-sized portion of protein, some carbs, and water is enough. No special shake is needed.</p>
+          </div>
+
+          {/* Eating out, without blowing it up. Plain swaps only. */}
+          <div className="card">
+            <h3>Eating out</h3>
+            <p className="small muted">You do not need a perfect meal when you eat out. A few swaps keep it close to normal.</p>
+            <ul>
+              {EATING_OUT_SWAPS.map((s) => (
+                <li key={s}>{s}</li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Supplements in one place. None of these are required. */}
+          <div className="card">
+            <h3>Supplements</h3>
+            <p className="small muted">Food first. A few basics can help, but none of them replace real meals or training. None of these are required, and none of them burn fat on their own.</p>
+            <ul>
+              {SUPPLEMENTS_LIST.map((s) => (
+                <li key={s.name}><strong>{s.name}:</strong> {s.text}</li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Water, in Nutrition too. Points at the tick above, so
+              there is only one water tick in the whole app. */}
+          <div className="card">
+            <h3>Water</h3>
+            <p>Aim for water with every meal, and a glass when you wake up. Most people do well with about 6 to 8 glasses a day. Drink more when it is hot or you sweat a lot. Water with fiber helps digestion, so drink water with high fiber meals.</p>
+            <p style={{ marginBottom: 0 }}>Tick it off in the Protein and water today card at the top of this page. It is there even when Nutrition is off, so you never lose it.</p>
+          </div>
 
           {/* Cardio lives in its own tab now, with its log form and
               HIIT examples. It used to be a card here, in Nutrition. */}
