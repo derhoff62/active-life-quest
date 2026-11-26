@@ -42,6 +42,8 @@ import {
   cardioCreditedSum,
   assessmentApproved,
   assessmentPending,
+  todayDayKey,
+  yesterdayDayKey,
   type ProfileDoc,
 } from './store';
 
@@ -50,11 +52,14 @@ export type TabBadge = { count?: number } | null;
 const DAY = 24 * 60 * 60 * 1000;
 
 function todayStr(): string {
-  return new Date().toISOString().slice(0, 10);
+  // Local date, not UTC: lastWorkoutDate is a local-picked day key,
+  // so comparing it to the UTC date would call a late-night workout
+  // tomorrow. todayDayKey / yesterdayDayKey live in store.ts.
+  return todayDayKey();
 }
 
 function yesterdayStr(): string {
-  return new Date(Date.now() - DAY).toISOString().slice(0, 10);
+  return yesterdayDayKey();
 }
 
 export function cardioThisWeek(doc: ProfileDoc): number {

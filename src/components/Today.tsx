@@ -3,7 +3,7 @@ import type { Ctx } from '../App';
 import * as api from '../lib/api';
 import { PHASES, WORKOUTS, CORE_BALANCE_WORKOUT, WEEK13, CLASS_GOOD_FOR, GOAL_TYPES, splitForDays, foodQuestForDate } from '../lib/data';
 import type { TrainingStyle } from '../lib/data';
-import { phaseForDoc, recoveryScore, levelForXp, titleForLevel, metCompanionIds, currentWeekForDoc, checkinPreferenceText, checkinFrequenciesForMode, normalizeCheckinFrequency, loggedToday, streakDaysForDoc, lastLoggedLabel, cardioCreditedSum, hasApprovedRetest, pendingRetests, assessmentApproved, assessmentPending, volumeTierForDoc, latestWorkout } from '../lib/store';
+import { phaseForDoc, recoveryScore, levelForXp, titleForLevel, metCompanionIds, currentWeekForDoc, checkinPreferenceText, checkinFrequenciesForMode, normalizeCheckinFrequency, loggedToday, streakDaysForDoc, lastLoggedLabel, cardioCreditedSum, hasApprovedRetest, pendingRetests, assessmentApproved, assessmentPending, volumeTierForDoc, latestWorkout, lastSplitIndex } from '../lib/store';
 import { cycleForWeek, nextRetestWeek, nextBossWeek, nextRetestLabel, nextBossLabel, isDeloadWeek, challengeForWeek } from '../lib/yearPlan';
 import type { AssessmentVideo } from '../lib/store';
 import GuardianAvatar from './GuardianAvatar';
@@ -58,7 +58,9 @@ export default function Today({ ctx }: { ctx: Ctx }) {
           // next short session), not a mix of full-body and split days.
           const style: TrainingStyle = doc.trainingStyle || 'ppl';
           const split = splitForDays(doc.trainingDays || 3, phase, style);
-          const idx = split.days.findIndex((d) => d.workoutId === lastWorkoutId);
+          // A custom workout counts too: its biggest group picks up the
+          // rotation, so a custom legs day is followed by push, not legs.
+          const idx = lastSplitIndex(doc, split.days, style);
           const next = split.days[(idx + 1) % split.days.length];
           return WORKOUTS.find((w) => w.id === next.workoutId)
             || (next.workoutId === 'core-balance-mobility' ? CORE_BALANCE_WORKOUT : undefined)

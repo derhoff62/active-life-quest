@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Ctx } from '../App';
-import { WORKOUTS, CORE_BALANCE_WORKOUT, REFERENCE_TRACKS, PHASES, PHASE_WEEKLY_SETS, PHASE_VOLUME_RANGE, VOLUME_MUSCLES, weeklyVolumeForSplit, filterGroupForExercise, exerciseNeeds, daysForTime, splitForDays, TRAINING_STYLES, CES_TEMPLATES, EQUIPMENT_NOTES, effectiveEquipment, resolveExercise, findExerciseByName, CLASS_WORKOUT_FOCUS, applyClassFocus, GOAL_FINISHERS } from '../lib/data';
+import { WORKOUTS, CORE_BALANCE_WORKOUT, REFERENCE_TRACKS, PHASES, PHASE_WEEKLY_SETS, PHASE_VOLUME_RANGE, VOLUME_MUSCLES, weeklyVolumeForSplit, filterGroupForExercise, exerciseNeeds, daysForTime, splitForDays, TRAINING_STYLES, CES_TEMPLATES, EQUIPMENT_NOTES, effectiveEquipment, resolveExercise, findExerciseByName, CLASS_WORKOUT_FOCUS, applyClassFocus, GOAL_FINISHERS, ALL_EXERCISES, CUSTOM_WORKOUT_ID, CUSTOM_WORKOUT_TITLE, customGroupsForLog } from '../lib/data';
 import type { TrainingStyle, FilterGroup } from '../lib/data';
 import type { ExerciseFeedback } from '../lib/store';
-import { phaseForDoc, hasFullAccess, metCompanionIds, lastTimeFor, awardBadges, daysInMonthSet, currentWeekForDoc, hasApprovedRetest, hasCleanApprovedRetest, assessmentApproved, assessmentPending, volumeTierForDoc, volumeSetsFor, latestWorkout, latestWorkoutDate, clampWorkoutDate, workoutDateIso, workoutDateRange } from '../lib/store';
+import { phaseForDoc, hasFullAccess, metCompanionIds, lastTimeFor, awardBadges, daysInMonthSet, currentWeekForDoc, hasApprovedRetest, hasCleanApprovedRetest, assessmentApproved, assessmentPending, volumeTierForDoc, volumeSetsFor, latestWorkoutDate, lastSplitIndex, latestWorkoutSplitGroups, clampWorkoutDate, workoutDateIso, workoutDateRange, todayDayKey, yesterdayDayKey } from '../lib/store';
 import { cardioThisWeek } from '../lib/badges';
 import BackToTop from './BackToTop';
 import { cycleForWeek, nextRetestWeek, nextRetestLabel, isDeloadWeek } from '../lib/yearPlan';
@@ -37,7 +37,18 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
   const [finishMinutes, setFinishMinutes] = useState('');
   // Backdating (Derek, Nov 25, 2026): the day the workout was done,
   // default today. Up to 7 days back if they forgot to log it.
-  const [workoutDate, setWorkoutDate] = useState(() => new Date().toISOString().split('T')[0]);
+  // Local date, not UTC: at 9:56 PM PST the UTC date is already
+  // tomorrow, and a late-night workout would log as tomorrow.
+  const [workoutDate, setWorkoutDate] = useState(() => todayDayKey());
+  // Custom workout (Derek, Nov 25, 2026): a workout the client did on
+  // their own, not from the plan. One row per move they did: the move,
+  // weight, sets, reps, and rest between sets. Date uses the same
+  // backdating window as a planned workout.
+  const [showCustom, setShowCustom] = useState(false);
+  const [customRows, setCustomRows] = useState<{ key: number; exerciseId: string; w: string; s: string; r: string; rest: string }[]>([]);
+  const [customMinutes, setCustomMinutes] = useState('');
+  const [customDate, setCustomDate] = useState(() => todayDayKey());
+  const customKey = useRef(0);
   const [notice, setNotice] = useState('');
   const [timeMin, setTimeMin] = useState<15 | 30 | 45 | 60>(30);
   const [editId, setEditId] = useState<string | null>(null);
@@ -70,9 +81,12 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
   // Best workout for you today: picked from your main goal, your gear, and
   // the time you have. Every class gets a real strength workout, Spellweaver
   // included. Only a rest day overrides it, and only if you trained yesterday.
-  const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+  // Local dates, not UTC: lastWorkoutDate is a local-picked day key,
+  // so "yesterday" and "today" must be local too, or a workout done
+  // late at night reads as tomorrow.
+  const yesterday = yesterdayDayKey();
   const trainedYesterday = doc.lastWorkoutDate === yesterday;
-  const todayStr = new Date().toISOString().split('T')[0];
+  const todayStr = todayDayKey();
   const trainedToday = doc.lastWorkoutDate === todayStr;
   const restLoggedToday = doc.quests.some((q) => (q as { kind?: string }).kind === 'rest-day' && new Date(String(q.date)).toISOString().split('T')[0] === todayStr);
   const daysNeeded = daysForTime(timeMin, phase);
@@ -85,21 +99,23 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
   // Pull / Legs, or Short). Below 4 days it is always Full-body.
   const style: TrainingStyle = daysPerWeek >= 4 ? (doc.trainingStyle || 'full-body') : 'full-body';
   const split = splitForDays(daysPerWeek, phase, style);
-  const lastSplitIdx = (() => {
-    // Latest workout by DATE, not insertion order: a backdated workout
-    // logged later must not rewind the split rotation.
-    const lastId = latestWorkout(doc) ? String(latestWorkout(doc)!.workoutId || '') : '';
-    return split.days.findIndex((d) => d.workoutId === lastId);
-  })();
+  // Latest workout by DATE, not insertion order: a backdated workout
+  // logged later must not rewind the split rotation. A custom workout
+  // counts too: its biggest group picks up the rotation where it left
+  // off, so a custom legs day is followed by push, not legs again.
+  const lastSplitIdx = lastSplitIndex(doc, split.days, style);
   const planned = split.days[(lastSplitIdx + 1) % split.days.length];
-  const lastGroup = lastSplitIdx >= 0 ? split.days[lastSplitIdx].group : undefined;
+  // Every group the latest workout hit, mapped for this style: a
+  // custom workout can hit more than one group, and any of them
+  // resting tomorrow means a rest day when that group is planned.
+  const lastGroups = latestWorkoutSplitGroups(doc, split.days, style);
   // Rest is per muscle group, not per day: on a Push / Pull / Legs week,
   // training a different muscle group the day after is fine, because
   // that muscle rested. Only the same group twice in a row needs a rest
   // day. Short sessions are a light dose, so they never force a rest day
   // (if you are sore or tired, take the day off anyway).
   const isRestDay = style === 'ppl' || style === 'upper-lower'
-    ? trainedYesterday && lastGroup !== undefined && lastGroup === planned.group
+    ? trainedYesterday && lastGroups.includes(planned.group || '')
     : style === 'short'
       ? false
       : trainedYesterday;
@@ -116,7 +132,9 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
     if (m.has('tilda')) { xp += 5; names.push('Tilda'); }
     if (m.has('miso')) { xp += 5; names.push('Miso'); }
     update((d) => {
-      d.quests.push({ id: `q${Date.now()}`, date: new Date().toISOString(), kind: 'rest-day' });
+      // Stamped at midday UTC on the local day, like a workout date,
+      // so "rest logged today" reads the local day, not the UTC date.
+      d.quests.push({ id: `q${Date.now()}`, date: workoutDateIso(todayDayKey()), kind: 'rest-day' });
       d.xp += xp;
     });
     setNotice(`Rest day logged. +${xp} XP.${names.length ? ` Includes +5 XP from ${names.join(' and ')}.` : ''}`);
@@ -239,7 +257,7 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
     // weights and reps already logged, instead of starting over.
     const saved = doc.sessions?.workoutId === w.id ? doc.sessions : null;
     setActiveId(w.id);
-    setWorkoutDate(new Date().toISOString().split('T')[0]);
+    setWorkoutDate(todayDayKey());
     setFinisherDone(false);
     setStep(saved ? saved.step : 0);
     setLog((saved?.log as Record<string, { w: string; s: string; r: string }>) || {});
@@ -257,7 +275,7 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
     // shifts with timezone.
     const chosenDay = clampWorkoutDate(workoutDate);
     const chosenIso = workoutDateIso(chosenDay);
-    const backdated = chosenDay !== new Date().toISOString().split('T')[0];
+    const backdated = chosenDay !== todayDayKey();
     const minutes = minutesOverride ?? Math.max(1, Math.round((Date.now() - startedAt.current) / 60000));
     // Companion bonuses, only if that companion is met. Small, +5 XP each.
     const met = metCompanionIds(doc);
@@ -321,10 +339,140 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
     });
     setActiveId(null);
     setLog({});
-    setWorkoutDate(new Date().toISOString().split('T')[0]);
+    setWorkoutDate(todayDayKey());
     const savedText = `Workout saved${backdated ? ` for ${new Date(chosenIso).toLocaleDateString()}` : ''}. ${minutes} minutes, +${50 + bonus + prCount * 10} XP.${bonusNames.length ? ` Includes +5 XP from ${bonusNames.join(' and ')}.` : ''}${prCount ? ` New PR${prCount === 1 ? '' : 's'}: ${prNames.join(', ')} (+10 XP each).` : ''} Mana +2.`;
     setNotice(savedText);
     toast(`Workout saved. ${minutes} minutes, +${50 + bonus + prCount * 10} XP.`);
+  }
+
+  // Custom workout: moves the client can do with their gear, resolved
+  // the same way as a planned workout (a move they cannot do is swapped
+  // for one they can, and a move they flagged as disliked or hurting is
+  // left out). One entry per move, sorted by name so it is easy to find.
+  const customOptions = useMemo(() => {
+    const flagged = new Set([...(doc.dislikedExercises || []), ...(doc.hurtExercises || [])]);
+    const seen = new Set<string>();
+    const out: { id: string; name: string; restSec: number; swappedFrom: string | null }[] = [];
+    for (const ex of ALL_EXERCISES) {
+      const resolved = resolveExercise(ex, doc.equipment);
+      if (resolved.unavailable) continue;
+      const done = resolved.exercise;
+      if (flagged.has(done.id)) continue;
+      if (seen.has(done.id)) continue;
+      seen.add(done.id);
+      out.push({ id: done.id, name: done.name, restSec: done.restSec, swappedFrom: resolved.swappedFrom });
+    }
+    return out.sort((a, b) => a.name.localeCompare(b.name));
+  }, [doc.equipment, doc.dislikedExercises, doc.hurtExercises]);
+
+  function addCustomRow() {
+    const used = new Set(customRows.map((r) => r.exerciseId));
+    const next = customOptions.find((o) => !used.has(o.id));
+    if (!next) return;
+    customKey.current += 1;
+    setCustomRows((rows) => [...rows, { key: customKey.current, exerciseId: next.id, w: '', s: '', r: '', rest: String(next.restSec) }]);
+  }
+
+  function saveCustomWorkout() {
+    if (!doc.assessmentDone) {
+      setNotice('Do the assessment first. It sets your starting phase.');
+      return;
+    }
+    if (!assessmentApproved(doc)) {
+      setNotice('Assessment waiting for Derek to review. Your workouts unlock once he approves it.');
+      return;
+    }
+    if (volumeTierForDoc(doc).tier === 'pain') {
+      setNotice('You noted sharp, new, or worsening pain. See a doctor or physical therapist. No workout today.');
+      return;
+    }
+    if (!full) {
+      setNotice('Week 2 and later workouts need the trial or beta access. Start the trial or enter your beta code on Today.');
+      return;
+    }
+    // Only rows with a move picked and at least 1 set count. Weight may
+    // be blank for bodyweight moves; rest defaults to the move's rest.
+    const rows = customRows.filter((r) => r.exerciseId && (Number(r.s) || 0) > 0);
+    if (rows.length === 0) {
+      setNotice('Add at least one move with sets to save your workout.');
+      return;
+    }
+    const minutes = Math.min(240, Math.max(1, Number(customMinutes) || 30));
+    // Same backdating window as a planned workout: the workout counts
+    // on the day it was done, not the day it was logged.
+    const chosenDay = clampWorkoutDate(customDate);
+    const chosenIso = workoutDateIso(chosenDay);
+    const backdated = chosenDay !== todayDayKey();
+    const log: Record<string, { w: string; s: string; r: string; rest: string }> = {};
+    for (const r of rows) {
+      const opt = customOptions.find((o) => o.id === r.exerciseId);
+      log[r.exerciseId] = { w: r.w, s: r.s, r: r.r, rest: r.rest || String(opt?.restSec ?? 60) };
+    }
+    // Companion bonuses, same as a planned workout. Rowan is left out:
+    // it compares minutes to the planned workout length, and a custom
+    // workout has no planned length to compare against.
+    const met = metCompanionIds(doc);
+    const workoutsThisWeek = doc.workouts.filter((w) => new Date(String(w.date)).getTime() >= weekAgo).length;
+    const bonusNames: string[] = [];
+    let bonus = 0;
+    if (met.has('bram') && workoutsThisWeek === 0) { bonus += 5; bonusNames.push('Bram'); }
+    if (met.has('ash') && workoutsThisWeek >= 1) { bonus += 5; bonusNames.push('Ash'); }
+    // Personal records, judged against the latest date logged for each
+    // move, same as a planned workout.
+    let prCount = 0;
+    const prNames: string[] = [];
+    for (const r of rows) {
+      if (!r.w) continue;
+      const prev = lastTimeFor(doc, r.exerciseId);
+      const w = Number(r.w);
+      const prevW = prev ? Number(prev.w) : 0;
+      const reps = Number(r.r) || 0;
+      const prevR = prev ? Number(prev.r) : 0;
+      const name = customOptions.find((o) => o.id === r.exerciseId)?.name || r.exerciseId;
+      if (w > prevW || (w === prevW && w > 0 && reps > prevR)) {
+        prCount += 1;
+        prNames.push(name);
+      }
+    }
+    if (met.has('ansel') && prCount > 0) { bonus += 5; bonusNames.push('Ansel'); }
+    update((d) => {
+      d.workouts.push({
+        id: `w${Date.now()}`,
+        date: chosenIso,
+        workoutId: CUSTOM_WORKOUT_ID,
+        title: CUSTOM_WORKOUT_TITLE,
+        minutes,
+        duration_minutes: minutes,
+        log,
+        custom: true,
+        // Groups hit, most sets first: drives the split rotation and
+        // tells Derek at a glance what the workout was.
+        customGroups: customGroupsForLog(log),
+      });
+      d.sessions = null;
+      d.lastWorkoutDate = latestWorkoutDate(d);
+      d.mana = Math.min(10, d.mana + 2);
+      for (const r of rows) {
+        if (!r.w) continue;
+        const name = customOptions.find((o) => o.id === r.exerciseId)?.name || r.exerciseId;
+        const w = Number(r.w);
+        const prev = doc.prs.filter((pr) => pr.exercise === name);
+        const best = prev.length ? Math.max(...prev.map((pr) => pr.weight)) : 0;
+        const bestRepsAtBest = prev.filter((pr) => pr.weight === best).reduce((m, pr) => Math.max(m, pr.reps), 0);
+        if (w > best || (w === best && w > 0 && (Number(r.r) || 0) > bestRepsAtBest)) {
+          d.prs.push({ exercise: name, weight: w, reps: Number(r.r) || 0, date: chosenIso });
+        }
+      }
+      d.xp += 50 + bonus + prCount * 10;
+      awardBadges(d);
+    });
+    setCustomRows([]);
+    setCustomMinutes('');
+    setCustomDate(todayDayKey());
+    setShowCustom(false);
+    const savedText = `My workout saved${backdated ? ` for ${new Date(chosenIso).toLocaleDateString()}` : ''}. ${minutes} minutes, +${50 + bonus + prCount * 10} XP.${bonusNames.length ? ` Includes +5 XP from ${bonusNames.join(' and ')}.` : ''}${prCount ? ` New PR${prCount === 1 ? '' : 's'}: ${prNames.join(', ')} (+10 XP each).` : ''} Mana +2.`;
+    setNotice(savedText);
+    toast(`My workout saved. ${minutes} minutes, +${50 + bonus + prCount * 10} XP.`);
   }
 
   if (active) {
@@ -684,6 +832,100 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
         )}
         {doc.assessmentDone && !isRestDay && !best && vol.tier !== 'pain' && (
           <p>No workout fits right now. Pick one from the list below.</p>
+        )}
+      </div>
+
+      <div className="card">
+        <h3>Log a workout I did</h3>
+        <p className="small">Did a workout that was not on the plan? Pick the moves you did, and log the weight, sets, reps, and rest for each one. It counts toward your week, your streak, and your sets per muscle, just like a planned workout. It does not replace your planned workout or move your phase forward.</p>
+        {!showCustom && (
+          <button className="primary" onClick={() => { setShowCustom(true); setCustomDate(todayDayKey()); if (customRows.length === 0) addCustomRow(); }}>
+            Log a workout I did
+          </button>
+        )}
+        {showCustom && (
+          <div style={{ marginTop: 10 }}>
+            {customRows.map((row) => {
+              const opt = customOptions.find((o) => o.id === row.exerciseId);
+              const used = new Set(customRows.map((r) => r.exerciseId));
+              const last = lastTimeFor(doc, row.exerciseId);
+              return (
+                <div key={row.key} style={{ borderTop: '1px solid #d7e3ee', padding: '8px 0' }}>
+                  <div className="row">
+                    <div style={{ flex: 1 }}>
+                      <label htmlFor={`cu-ex-${row.key}`}>Move</label>
+                      <select
+                        id={`cu-ex-${row.key}`}
+                        value={row.exerciseId}
+                        onChange={(e) => {
+                          const next = customOptions.find((o) => o.id === e.target.value);
+                          setCustomRows((rows) => rows.map((r) => (r.key === row.key ? { ...r, exerciseId: e.target.value, rest: String(next?.restSec ?? 60) } : r)));
+                        }}
+                      >
+                        {customOptions.filter((o) => o.id === row.exerciseId || !used.has(o.id)).map((o) => (
+                          <option key={o.id} value={o.id}>{o.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <button
+                      onClick={() => setCustomRows((rows) => rows.filter((r) => r.key !== row.key))}
+                      disabled={customRows.length <= 1}
+                    >
+                      Remove
+                    </button>
+                  </div>
+                  {opt?.swappedFrom && (
+                    <p className="small muted" style={{ margin: '4px 0' }}>Swapped in: {opt.name} instead of {opt.swappedFrom}, because you do not have the gear for it.</p>
+                  )}
+                  {last && <p className="small" style={{ margin: '4px 0' }}>Last time: {last.w ? `${last.w} lb` : ''}{last.w && last.r ? ' x ' : ''}{last.r ? `${last.r} reps` : ''}</p>}
+                  <div className="grid2" style={{ marginTop: 6 }}>
+                    <div>
+                      <label htmlFor={`cu-w-${row.key}`}>Weight (lb)</label>
+                      <input id={`cu-w-${row.key}`} inputMode="decimal" value={row.w} onChange={(e) => setCustomRows((rows) => rows.map((r) => (r.key === row.key ? { ...r, w: e.target.value } : r)))} placeholder={last?.w ? `Last: ${last.w} lb` : 'lb'} />
+                    </div>
+                    <div>
+                      <label htmlFor={`cu-s-${row.key}`}>Sets done</label>
+                      <input id={`cu-s-${row.key}`} inputMode="numeric" value={row.s} onChange={(e) => setCustomRows((rows) => rows.map((r) => (r.key === row.key ? { ...r, s: e.target.value } : r)))} placeholder="Sets" />
+                    </div>
+                    <div>
+                      <label htmlFor={`cu-r-${row.key}`}>Reps done</label>
+                      <input id={`cu-r-${row.key}`} inputMode="numeric" value={row.r} onChange={(e) => setCustomRows((rows) => rows.map((r) => (r.key === row.key ? { ...r, r: e.target.value } : r)))} placeholder="Reps" />
+                    </div>
+                    <div>
+                      <label htmlFor={`cu-rest-${row.key}`}>Rest between sets (seconds)</label>
+                      <input id={`cu-rest-${row.key}`} inputMode="numeric" value={row.rest} onChange={(e) => setCustomRows((rows) => rows.map((r) => (r.key === row.key ? { ...r, rest: e.target.value } : r)))} placeholder="Seconds" />
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+            <div className="row" style={{ marginTop: 8 }}>
+              <button onClick={addCustomRow} disabled={customRows.length >= customOptions.length}>Add a move</button>
+            </div>
+            <div className="row" style={{ marginTop: 8 }}>
+              <div>
+                <label htmlFor="cu-min" style={{ margin: 0 }}>How long did it take? (minutes)</label>
+                <input id="cu-min" inputMode="numeric" value={customMinutes} onChange={(e) => setCustomMinutes(e.target.value)} placeholder="30" style={{ maxWidth: 120 }} />
+              </div>
+              <div>
+                <label htmlFor="cu-date" style={{ margin: 0 }}>When did you do this workout?</label>
+                <input
+                  id="cu-date"
+                  type="date"
+                  value={customDate}
+                  min={workoutDateRange().min}
+                  max={workoutDateRange().max}
+                  onChange={(e) => setCustomDate(e.target.value)}
+                  style={{ maxWidth: 170 }}
+                />
+                <p className="small muted" style={{ margin: 0 }}>Pick today, or up to 7 days ago if you forgot to log it.</p>
+              </div>
+            </div>
+            <div className="row" style={{ marginTop: 8 }}>
+              <button className="primary" onClick={saveCustomWorkout}>Save my workout</button>
+              <button onClick={() => { setShowCustom(false); setCustomRows([]); }}>Cancel</button>
+            </div>
+          </div>
         )}
       </div>
 

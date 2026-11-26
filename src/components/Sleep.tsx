@@ -30,17 +30,80 @@ export default function Sleep({ ctx }: { ctx: Ctx }) {
   const recent = [...(doc.sleep || [])].reverse().slice(0, 5);
   const met = metCompanionIds(doc);
 
+  // Feedback for the sleep just logged, worked out from the entry
+  // itself, so it is still there if the client comes back to this tab
+  // later today (the form hides once sleep is logged today).
+  // Hours are whole or half hours from the slider.
+  const fmtH = (n: number) => (Number.isInteger(n) ? String(n) : n.toFixed(1));
+  const sleepEntries = doc.sleep || [];
+  const todaySleep = loggedToday(sleepEntries)
+    ? (sleepEntries[sleepEntries.length - 1] as { hours?: number })
+    : null;
+  const priorSleep = todaySleep ? sleepEntries.slice(0, -1) : [];
+  const prevSleep = priorSleep.length
+    ? (priorSleep[priorSleep.length - 1] as { hours?: number }).hours
+    : undefined;
+  const avgSleep =
+    priorSleep.length >= 2
+      ? priorSleep.slice(-7).reduce((sum, s) => sum + Number((s as { hours?: number }).hours ?? 0), 0) /
+        Math.min(7, priorSleep.length)
+      : null;
+  // Feedback by hours logged, tied to the recovery and volume rules
+  // already in the app: good trains as planned, a bit short means a
+  // little easier, a short night means the short session or a Zone 2
+  // walk and no PR attempt. No new volume rules, no medical claims.
+  function sleepFeedback(hours: number): { short: string; line: string } {
+    if (hours >= 7 && hours <= 9) {
+      return {
+        short: `${fmtH(hours)} hours, in range.`,
+        line: `Good night. ${fmtH(hours)} hours is in the 7 to 9 hour range. Train as planned today.`,
+      };
+    }
+    if (hours >= 6 && hours < 7) {
+      return {
+        short: `${fmtH(hours)} hours, a bit short.`,
+        line: `A bit short. ${fmtH(hours)} hours is under the 7 to 9 hour range, so recovery will be a bit lower today. Take the next workout a little easier.`,
+      };
+    }
+    if (hours < 6) {
+      return {
+        short: `${fmtH(hours)} hours, a short night.`,
+        line: `Short night. ${fmtH(hours)} hours is well under the 7 to 9 hour range, so recovery is down today. Do the short session or a Zone 2 walk instead, no PR attempt today, and keep a steady bedtime.`,
+      };
+    }
+    return {
+      short: `${fmtH(hours)} hours, a long night.`,
+      line: `Long night. ${fmtH(hours)} hours is over the 7 to 9 hour range. That is fine on its own. If you feel groggy, or you sleep this long most nights, tell Derek in a check-in.`,
+    };
+  }
+  const feedback = todaySleep ? sleepFeedback(Number(todaySleep.hours ?? 0)) : null;
+  const feedbackCompare: string[] = [];
+  if (todaySleep && prevSleep !== undefined) {
+    const diff = Number(todaySleep.hours ?? 0) - Number(prevSleep);
+    if (diff > 0) feedbackCompare.push(`That is ${fmtH(diff)} hour${diff === 1 ? '' : 's'} more than last night.`);
+    else if (diff < 0) feedbackCompare.push(`That is ${fmtH(-diff)} hour${-diff === 1 ? '' : 's'} less than last night.`);
+    else feedbackCompare.push('That is the same as last night.');
+  }
+  if (todaySleep && avgSleep !== null) {
+    const diff = Number(todaySleep.hours ?? 0) - avgSleep;
+    if (diff < -0.25) feedbackCompare.push(`That is below your recent average of ${avgSleep.toFixed(1)} hours.`);
+    else if (diff > 0.25) feedbackCompare.push(`That is above your recent average of ${avgSleep.toFixed(1)} hours.`);
+    else feedbackCompare.push(`That is about your recent average of ${avgSleep.toFixed(1)} hours.`);
+  }
+
   function logSleep() {
     if (sleepBusy) return;
     setSleepBusy(true);
     window.setTimeout(() => setSleepBusy(false), 700);
+    const fb = sleepFeedback(sleepH);
+    const xpText = met.has('mara') ? '+10 XP' : '+5 XP';
     update((d) => {
       d.sleep.push({ id: `s${Date.now()}`, date: new Date().toISOString(), hours: sleepH });
       d.xp += met.has('mara') ? 10 : 5;
       d.mana = Math.min(10, d.mana + 1);
     });
-    setSleepMsg('Sleep logged. +5 XP, and +1 mana for resting well.');
-    toast(met.has('mara') ? 'Sleep logged. +10 XP.' : 'Sleep logged. +5 XP.');
+    setSleepMsg(`Sleep logged. ${xpText}, and +1 mana for resting well.`);
+    toast(`Sleep logged. ${fb.short} ${xpText}`);
   }
 
   return (
@@ -61,7 +124,21 @@ export default function Sleep({ ctx }: { ctx: Ctx }) {
       <div className="card" id="log-sleep">
         <h3>Log sleep</h3>
         {loggedToday(doc.sleep) ? (
-          <p className="small ok">Sleep logged today. Log again tomorrow morning.</p>
+          <div>
+            <p className="small ok">Sleep logged today. Log again tomorrow morning.</p>
+            {sleepMsg && <p className="ok">{sleepMsg}</p>}
+            {feedback && (
+              <div>
+                <p>{feedback.line}</p>
+                {feedbackCompare.map((c) => (
+                  <p key={c} className="small muted" style={{ margin: '2px 0' }}>{c}</p>
+                ))}
+                {lastCheckin && (
+                  <p className="small muted">Your recovery score still shows your last check-in. Log tomorrow&apos;s check-in and this sleep will count in it.</p>
+                )}
+              </div>
+            )}
+          </div>
         ) : (
           <div>
             <label>Hours slept: {sleepH}</label>

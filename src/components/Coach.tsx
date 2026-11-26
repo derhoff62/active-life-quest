@@ -7,7 +7,7 @@ import type { ProfileDoc } from '../lib/store';
 import { checkinPreferenceText, checkinFrequenciesForMode, normalizeCheckinFrequency, normalizeProfile, phaseForDoc, recoveryScoreForDoc, cardioCreditedSum, pendingRetests, applyRetestReview, hasCleanApprovedRetest, retestNextPhase, applyAssessmentReview, assessmentPending, assessmentStatus, volumeTierForDoc } from '../lib/store';
 import { weekLabel } from '../lib/yearPlan';
 import { coachReminders, retestWeeksDue } from '../lib/coachReminders';
-import { checkinHistory, coachCheckinSummary, recoveryTrend, volumeAdjustments, volumeByWeek, shortDate, windowStats } from '../lib/coachStats';
+import { checkinHistory, coachCheckinSummary, recoveryTrend, volumeAdjustments, volumeByWeek, workoutExerciseRows, shortDate, windowStats } from '../lib/coachStats';
 import { VOLUME_MUSCLES } from '../lib/data';
 import GuardianEmote from './GuardianEmote';
 
@@ -432,6 +432,45 @@ export default function Coach({ ctx }: { ctx: Ctx }) {
                     ))
                   )}
                   <p className="small muted">Phase {phase} target is {weeks[0]?.target[0] ?? 6} to {weeks[0]?.target[1] ?? 10} sets per muscle a week. Legs often run high, squats and hinges all count toward legs.</p>
+                  <h5 style={{ margin: '10px 0 2px' }}>Recent workouts</h5>
+                  {(() => {
+                    const recent = [...(selected.data.workouts || [])]
+                      .sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')))
+                      .slice(0, 5);
+                    if (recent.length === 0) return <p className="small muted">No workouts logged yet.</p>;
+                    return (
+                      <div>
+                        {recent.map((w) => {
+                          const rows = workoutExerciseRows(w);
+                          const isCustom = String(w.workoutId || '') === 'custom-workout' || (w as { custom?: unknown }).custom === true;
+                          return (
+                            <div key={String(w.id)} style={{ borderTop: '1px solid #d7e3ee', padding: '6px 0' }}>
+                              <p className="small" style={{ margin: '2px 0' }}>
+                                <strong>{shortDate(String(w.date))}, {String(w.title || w.workoutId)}</strong>
+                                {' · '}{Number(w.minutes || w.duration_minutes || 0)} min
+                                {isCustom ? ' · Custom workout' : ''}
+                              </p>
+                              {rows.length === 0 ? (
+                                <p className="small muted" style={{ margin: '2px 0 2px 8px' }}>No moves logged.</p>
+                              ) : rows.map((r) => {
+                                const parts = [
+                                  r.weight ? `${r.weight} lb` : '',
+                                  r.sets ? `${r.sets} sets` : '',
+                                  r.reps ? `${r.reps} reps` : '',
+                                ].filter(Boolean).join(' x ');
+                                return (
+                                  <p key={r.name} className="small" style={{ margin: '2px 0 2px 8px' }}>
+                                    {r.name}: {parts}{r.restSec ? ` · Rest ${r.restSec}s` : ''}
+                                  </p>
+                                );
+                              })}
+                            </div>
+                          );
+                        })}
+                        <p className="small muted">Rest shown is the rest from the plan for a planned workout, and the rest the client logged for a custom workout.</p>
+                      </div>
+                    );
+                  })()}
                   <h5 style={{ margin: '10px 0 2px' }}>Workouts shortened for low recovery</h5>
                   {adjustments.length === 0 ? (
                     <p className="small muted">No workouts shortened in the last 30 days, and no check-in flagged pain.</p>

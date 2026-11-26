@@ -1196,6 +1196,77 @@ export function filterGroupForExercise(name: string): FilterGroup {
   return 'core';
 }
 
+// ------------------------------------------------- CUSTOM WORKOUTS
+// A workout the client did on their own, not from the plan (Derek,
+// Nov 25, 2026). They pick the moves they did from the moves already
+// in the app, and log weight, sets, reps, and rest for each one. No
+// new moves, nothing new to film. The entry is stored as a normal
+// workout log entry with workoutId 'custom-workout' and title
+// 'My workout', plus the filter groups it hit, so volume, streaks,
+// and the split rotation all read it the same as a planned workout.
+export const CUSTOM_WORKOUT_ID = 'custom-workout';
+export const CUSTOM_WORKOUT_TITLE = 'My workout';
+
+/** Every move in the app, once each, by first appearance in the
+ * planned workouts (full-body, Push / Pull / Legs, Upper / Lower).
+ * Reference tracks reuse the same moves, so they add nothing new.
+ * The Core, Balance and Mobility day adds Plank, Bird Dog, Dead Bug,
+ * Glute Bridge, and Side Plank, all already in the planned workouts. */
+export const ALL_EXERCISES: Exercise[] = (() => {
+  const seen = new Set<string>();
+  const out: Exercise[] = [];
+  for (const w of WORKOUTS) {
+    for (const ex of w.exercises) {
+      if (seen.has(ex.id)) continue;
+      seen.add(ex.id);
+      out.push(ex);
+    }
+  }
+  return [...out].sort((a, b) => a.name.localeCompare(b.name));
+})();
+
+export const EXERCISE_BY_ID: Map<string, Exercise> = new Map(
+  ALL_EXERCISES.map((ex) => [ex.id, ex]),
+);
+
+/** Filter groups a custom log hit, most sets first. A group counts
+ * when at least one logged move in it has sets. Used for the split
+ * rotation: a custom legs day must not be followed by another legs
+ * day, and a custom push day must not be followed by push again. */
+export function customGroupsForLog(
+  log: Record<string, { s?: string | number } | undefined> | undefined,
+): FilterGroup[] {
+  const setsByGroup: Record<FilterGroup, number> = { push: 0, pull: 0, legs: 0, core: 0 };
+  for (const [exId, entry] of Object.entries(log || {})) {
+    const sets = Number(entry?.s) || 0;
+    if (sets <= 0) continue;
+    const ex = EXERCISE_BY_ID.get(exId);
+    if (!ex) continue;
+    setsByGroup[filterGroupForExercise(ex.name)] += sets;
+  }
+  return (Object.keys(setsByGroup) as FilterGroup[])
+    .filter((g) => setsByGroup[g] > 0)
+    .sort((a, b) => setsByGroup[b] - setsByGroup[a]);
+}
+
+/** The split group a filter group maps to, for the client's style.
+ * Push / Pull / Legs keeps push, pull, and legs apart. Upper / Lower
+ * folds push and pull into upper, legs into lower. Core on its own
+ * never blocks a strength day, so it maps to 'short', which no
+ * planned split day in Push / Pull / Legs or Upper / Lower uses. */
+export function splitGroupForFilterGroup(
+  group: FilterGroup,
+  style: 'full-body' | 'ppl' | 'short' | 'upper-lower',
+): 'push' | 'pull' | 'legs' | 'short' | 'full' | 'upper' | 'lower' {
+  if (style === 'upper-lower') {
+    if (group === 'legs') return 'lower';
+    if (group === 'core') return 'short';
+    return 'upper';
+  }
+  if (group === 'core') return 'short';
+  return group;
+}
+
 /** Weekly sets target range per muscle, by phase. Same ranges as
  * PHASE_WEEKLY_SETS, as numbers so the volume table can compare. */
 export const PHASE_VOLUME_RANGE: Record<number, [number, number]> = {

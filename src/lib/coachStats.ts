@@ -17,7 +17,7 @@
 // no workout is prescribed around pain. If a client logged no
 // check-in near a workout, that workout counts as planned, and the
 // section says so instead of guessing.
-import { CORE_BALANCE_WORKOUT, EXERCISE_MUSCLE, PHASE_VOLUME_RANGE, VOLUME_MUSCLES, WORKOUTS, type MuscleGroup } from './data';
+import { CORE_BALANCE_WORKOUT, CUSTOM_WORKOUT_ID, EXERCISE_BY_ID, EXERCISE_MUSCLE, PHASE_VOLUME_RANGE, VOLUME_MUSCLES, WORKOUTS, type MuscleGroup } from './data';
 import type { Workout } from './types';
 import { recoveryScore, volumeSetsFor, type ProfileDoc, type VolumeTier } from './store';
 
@@ -164,19 +164,95 @@ function workoutById(id: string): Workout | undefined {
 }
 
 /** Sets per muscle from one finished workout, after the recovery
- * shortening that day. Returns null when the workout is not in the
- * library (reference tracks are not counted here). */
-export function setsForWorkout(doc: ProfileDoc, workoutId: string, day: string): Record<MuscleGroup, number> | null {
-  const w = workoutById(workoutId);
-  if (!w) return null;
+ * shortening that day. A planned workout counts its prescribed sets,
+ * shortened by the tier that day. A custom workout counts the sets
+ * the client actually logged, per exercise, under each move's primary
+ * muscle, shortened by the same tier. Returns null when the workout
+ * is not in the library and is not custom (reference tracks are not
+ * counted here). */
+export function setsForWorkout(
+  doc: ProfileDoc,
+  entry: { workoutId?: unknown; date?: unknown; log?: unknown; custom?: unknown },
+): Record<MuscleGroup, number> | null {
+  const day = dayKey(String(entry.date || ''));
   const tier = tierForDay(doc, day);
   const out: Record<MuscleGroup, number> = { chest: 0, back: 0, shoulders: 0, legs: 0, core: 0 };
+  const isCustom = String(entry.workoutId || '') === CUSTOM_WORKOUT_ID || (entry as { custom?: unknown }).custom === true;
+  if (isCustom) {
+    const log = (entry.log || {}) as Record<string, { s?: unknown }>;
+    for (const [exId, logged] of Object.entries(log)) {
+      const ex = EXERCISE_BY_ID.get(exId);
+      if (!ex) continue;
+      const m = EXERCISE_MUSCLE[ex.name];
+      if (!m) continue;
+      const sets = Number(logged?.s) || 0;
+      if (sets <= 0) continue;
+      out[m] += volumeSetsFor(sets, tier.tier);
+    }
+    return out;
+  }
+  const w = workoutById(String(entry.workoutId || ''));
+  if (!w) return null;
   for (const ex of w.exercises) {
     const m = EXERCISE_MUSCLE[ex.name];
     if (!m) continue;
     out[m] += volumeSetsFor(ex.sets, tier.tier);
   }
   return out;
+}
+
+export interface WorkoutExerciseRow {
+  name: string;
+  weight: string;
+  sets: string;
+  reps: string;
+  /** Rest in seconds between sets. For a planned workout this is the
+   * rest from the plan; for a custom workout it is the rest the client
+   * logged. Empty when no rest was recorded. */
+  restSec: string;
+}
+
+/** One row per exercise in a finished workout, for Derek in Coach:
+ * what they lifted, how many sets and reps, and the rest between
+ * sets. A custom workout shows the rest the client logged; a planned
+ * workout shows the rest from the plan. Moves with nothing logged
+ * are left out. */
+export function workoutExerciseRows(
+  entry: { id?: unknown; date?: unknown; workoutId?: unknown; log?: unknown; custom?: unknown },
+): WorkoutExerciseRow[] {
+  const log = (entry.log || {}) as Record<string, { w?: unknown; s?: unknown; r?: unknown; rest?: unknown }>;
+  const isCustom = String(entry.workoutId || '') === CUSTOM_WORKOUT_ID || (entry as { custom?: unknown }).custom === true;
+  if (isCustom) {
+    return Object.entries(log)
+      .map(([exId, logged]) => {
+        const ex = EXERCISE_BY_ID.get(exId);
+        if (!ex) return null;
+        if (!logged?.s && !logged?.r && !logged?.w) return null;
+        return {
+          name: ex.name,
+          weight: String(logged.w || ''),
+          sets: String(logged.s || ''),
+          reps: String(logged.r || ''),
+          restSec: String(logged.rest || ''),
+        };
+      })
+      .filter((r): r is WorkoutExerciseRow => r !== null);
+  }
+  const w = workoutById(String(entry.workoutId || ''));
+  if (!w) return [];
+  return w.exercises
+    .map((ex) => {
+      const logged = log[ex.id];
+      if (!logged?.s && !logged?.r && !logged?.w) return null;
+      return {
+        name: ex.name,
+        weight: String(logged.w || ''),
+        sets: String(logged.s || ''),
+        reps: String(logged.r || ''),
+        restSec: String(ex.restSec ?? ''),
+      };
+    })
+    .filter((r): r is WorkoutExerciseRow => r !== null);
 }
 
 export interface VolumeWeek {
@@ -203,7 +279,7 @@ export function volumeByWeek(doc: ProfileDoc, phase: number): VolumeWeek[] {
       const t = new Date(String(entry.date || '')).getTime();
       if (Number.isNaN(t) || t < from || t >= to) continue;
       workouts += 1;
-      const sets = setsForWorkout(doc, String(entry.workoutId || ''), dayKey(String(entry.date || '')));
+      const sets = setsForWorkout(doc, entry);
       if (!sets) continue;
       for (const m of VOLUME_MUSCLES) setsPerMuscle[m.id] += sets[m.id];
     }

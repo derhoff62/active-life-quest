@@ -2,8 +2,8 @@
 // It is saved to the server (Neon profiles.data) when the API is available,
 // and always to localStorage so the app works offline and before deploy.
 import type { AssessmentResult, FindingId, GoalType } from './types';
-import { ARMOR, CES_TEMPLATES, CREATURES } from './data';
-import type { TrainingStyle } from './data';
+import { ARMOR, CES_TEMPLATES, CREATURES, CUSTOM_WORKOUT_ID, customGroupsForLog, splitGroupForFilterGroup } from './data';
+import type { SplitDay, TrainingStyle } from './data';
 import { HAIR_OPTIONS, SKIN_TONES } from './guardianOptions';
 
 export const GUARDIAN_MOODS = ['celebrate', 'determined', 'tired', 'strong', 'struggling', 'thumbs-up'] as const;
@@ -637,17 +637,36 @@ export function dayKeyOf(date: string | undefined): string {
   return String(date || '').slice(0, 10);
 }
 
-/** Today, as a day key, same UTC-day convention the app uses everywhere. */
-export function todayDayKey(): string {
-  return new Date().toISOString().slice(0, 10);
+/** Local day key (YYYY-MM-DD) for a Date, on the device clock, not
+ * UTC. At 9:56 PM PST on Nov 25 this is 2026-11-25, where
+ * toISOString() would already say 2026-11-26. Every day key the
+ * client picks or sees (workout dates, the backdate picker, trained
+ * today / yesterday) must use this, never the UTC date. */
+export function localDayKey(d = new Date()): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
 }
 
-/** Backdating window: today back to 7 days ago, inclusive. */
+/** Today, as a day key, on the client's local date. */
+export function todayDayKey(): string {
+  return localDayKey();
+}
+
+/** Yesterday, as a day key, on the client's local date. */
+export function yesterdayDayKey(): string {
+  const d = new Date();
+  d.setDate(d.getDate() - 1);
+  return localDayKey(d);
+}
+
+/** Backdating window: local today back to 7 days ago, inclusive. */
 export function workoutDateRange(): { min: string; max: string } {
   const max = todayDayKey();
-  const d = new Date(`${max}T12:00:00Z`);
-  d.setUTCDate(d.getUTCDate() - 7);
-  return { min: d.toISOString().slice(0, 10), max };
+  const d = new Date();
+  d.setDate(d.getDate() - 7);
+  return { min: localDayKey(d), max };
 }
 
 /** Clamp a picked workout day into the backdating window. Bad or
@@ -684,6 +703,49 @@ export function latestWorkout(doc: ProfileDoc): LogEntry | null {
 export function latestWorkoutDate(doc: ProfileDoc): string | null {
   const latest = latestWorkout(doc);
   return latest ? dayKeyOf(String(latest.date || '')) : null;
+}
+
+/** Split groups the latest workout hit, mapped for the client's
+ * style. A planned workout contributes its split day group; a custom
+ * workout contributes every filter group it hit, mapped the same way
+ * (push and pull fold into upper on Upper / Lower, legs into lower,
+ * core on its own maps to 'short' and never blocks a strength day).
+ * Empty when nothing is logged. Used for the rest-day check: on
+ * Push / Pull / Legs or Upper / Lower, tomorrow is a rest day only
+ * when the planned group is one the client trained yesterday. */
+export function latestWorkoutSplitGroups(doc: ProfileDoc, days: SplitDay[], style: TrainingStyle): string[] {
+  const latest = latestWorkout(doc);
+  if (!latest) return [];
+  const wid = String(latest.workoutId || '');
+  if (wid === CUSTOM_WORKOUT_ID) {
+    const log = (latest as { log?: Record<string, { s?: string }> }).log;
+    return customGroupsForLog(log).map((g) => splitGroupForFilterGroup(g, style));
+  }
+  const day = days.find((d) => d.workoutId === wid);
+  return day?.group ? [day.group] : [];
+}
+
+/** Index of the latest workout in the client's split rotation, so the
+ * next day follows it instead of restarting. Planned: the split day
+ * with that workout id. Custom: the LAST split day whose group
+ * matches the custom workout's biggest group (last, so a Push day at
+ * split positions 1 and 4 advances to Pull, not back to Push; a Legs
+ * day at the end wraps to Push). -1 when nothing matches, so the
+ * rotation starts at the first day. */
+export function lastSplitIndex(doc: ProfileDoc, days: SplitDay[], style: TrainingStyle): number {
+  const latest = latestWorkout(doc);
+  if (!latest) return -1;
+  const wid = String(latest.workoutId || '');
+  if (wid === CUSTOM_WORKOUT_ID) {
+    const log = (latest as { log?: Record<string, { s?: string }> }).log;
+    const groups = customGroupsForLog(log);
+    if (groups.length === 0) return -1;
+    const want = splitGroupForFilterGroup(groups[0], style);
+    let idx = -1;
+    days.forEach((d, i) => { if (d.group === want) idx = i; });
+    return idx;
+  }
+  return days.findIndex((d) => d.workoutId === wid);
 }
 
 /** Whole days since the last check-in, 0 when one was logged today. */
