@@ -991,13 +991,72 @@ export default function GuardianAvatar({
       <circle cx="116" cy="59" r="2.5" fill={gem} stroke="#fff" strokeWidth="1" />
     </g>
   );
+  // Ranger hair TOP (Derek, Nov 25 5:18 PM: "The hair on the ranger is
+  // weird it doesn't change the top when I change the style"). The old
+  // hoodHair drew ONE solid hood first and only side locks / curls /
+  // braid / knot at the sides, never a hair top: Short, Buzz and Bald
+  // shared the same top, and ShortBeard rendered identical to Bald
+  // (verified by file hash in the baseline renders). Now every style
+  // gets a distinct hair band peeking from under the hood, drawn AFTER
+  // the hood so it sits in the opening: top y14 (1 unit above the
+  // hood's top edge, a peek of hair), sides down to y30 where the side
+  // locks start, bottom edge per style at y19-21, always above the
+  // brows (y20-21.5, drawn later on top) with a skin gap. Bald gets
+  // no band at all. Short and ShortBeard share the top by design —
+  // the beard below is what tells them apart.
+  const rangerTop = (
+    <g>
+      {hair === 'Bald' ? null : hair === 'Curly' ? (
+        <g fill={HAIR_C}>
+          <circle cx="91" cy="18" r="4" />
+          <circle cx="100" cy="16.5" r="4.5" />
+          <circle cx="109" cy="18" r="4" />
+          <circle cx="87" cy="22" r="3" />
+          <circle cx="113" cy="22" r="3" />
+        </g>
+      ) : (
+        <g>
+          <path
+            d={
+              hair === 'Buzz'
+                ? 'M88 30 Q86 17 100 16.5 Q114 17 112 30 Q110 22 100 21 Q90 22 88 30 Z'
+                : hair === 'ShortBob'
+                  ? 'M88 30 Q86 14 100 14 Q114 14 112 30 L112 20.5 L88 20.5 Z'
+                  : hair === 'Ponytail'
+                    ? 'M88 30 Q86 14 100 14 Q114 14 112 30 L112 21.5 Q100 19 88 17.5 Z'
+                    : 'M88 30 Q86 14 100 14 Q114 14 112 30 Q110 21 100 20 Q90 21 88 30 Z'
+            }
+            fill={HAIR_C}
+          />
+          {(hair === 'Short' || hair === 'ShortBeard' || hair === 'Bun' || hair === 'Topknot' || hair === 'ManBun') && (
+            <path d="M94 17 Q100 15.5 106 17" fill="none" stroke={HAIR_L} strokeWidth="2" opacity="0.8" strokeLinecap="round" />
+          )}
+          {hair === 'Long' && <path d="M100 14.5 L100 19" stroke={SKIN} strokeWidth="1.2" strokeLinecap="round" />}
+          {hair === 'Ponytail' && (
+            <path d="M92 17 Q100 18.5 108 20.5" fill="none" stroke={HAIR_L} strokeWidth="2" opacity="0.8" strokeLinecap="round" />
+          )}
+          {hair === 'Braided' && (
+            <g fill={HAIR_C}>
+              <circle cx="92" cy="15.5" r="2.5" />
+              <circle cx="100" cy="14.5" r="2.5" />
+              <circle cx="108" cy="15.5" r="2.5" />
+              <path d="M90 15 L94 16 M98 14 L102 15 M106 16 L110 15" fill="none" stroke={HAIR_L} strokeWidth="1.4" opacity="0.8" strokeLinecap="round" />
+            </g>
+          )}
+        </g>
+      )}
+    </g>
+  );
   // Ranger hood: the hood frames the face, so only the bits that peek out
   // are drawn — side locks, a braid, a bob, curls, or a knot poking above
-  // the hood. Buzz / Short / Bald show nothing extra.
+  // the hood, plus the hair top (rangerTop) peeking from under it.
+  // Buzz / Short / Bald used to show nothing extra on top; Bald still
+  // shows none, by design.
   const hoodHair = (
     <g>
       <path d="M85 46 Q80 15 100 15 Q120 15 115 46 L112 36 Q110 20 100 20 Q90 20 88 36 Z" fill={capeMain} stroke={dark} strokeWidth="2.5" />
       <path d="M91 23 Q95 20 100 20" fill="none" stroke={light} strokeWidth="2" opacity="0.6" strokeLinecap="round" />
+      {rangerTop}
       {isFemale && hair === 'Long' && rangerLongLocks}
       {isFemale && hair === 'Ponytail' && rangerPonytailTail}
       {isFemale && hair === 'Bun' && (
