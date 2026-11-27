@@ -175,14 +175,18 @@ export default function Journey({ ctx }: { ctx: Ctx }) {
         <p className="small"><a href="#companions-top">See companions</a> The portraits on the map are the companions you meet on that step. A ? is someone you have not met yet. Companions live on this tab, just below the map.</p>
       </div>
 
-      <div className="card">
-        <h2>Your road ahead</h2>
+      {/* Collapse (Derek, Nov 27, 2026): "Your road ahead" starts
+          collapsed behind Show more. The map and Combat stay open. */}
+      <details className="card">
+        <summary>
+          <strong>Show more: Your road ahead</strong>
+        </summary>
         <p className="small muted">Each stretch is different: a new goal, a new land, new boss rounds, and new companions. A stretch only opens after the last stretch's retest, the same gate as Week 13.</p>
         {cycleBlock(currentCycle)}
         <p><strong>Keep going.</strong> After the Golden Summit, test your best in a review retest, pick your next goal, and the road keeps going. There is no finish line here.</p>
         <button onClick={() => setShowMoreCycles((v) => !v)}>{showMoreCycles ? 'Hide other cycles' : 'Show all cycles'}</button>
         {showMoreCycles && otherCycles.map((c) => cycleBlock(c))}
-      </div>
+      </details>
 
       <div className="card gold-frame" id="combat">
         <h2>Combat</h2>
@@ -264,8 +268,12 @@ export default function Journey({ ctx }: { ctx: Ctx }) {
           and its caption and class text already live in the Combat
           footer above and in the Armor vault. */}
 
-      <div className="card">
-        <h3>The story</h3>
+      {/* Collapse (Derek, Nov 27, 2026): "The story" starts collapsed
+          behind Show more. The map and Combat stay open. */}
+      <details className="card">
+        <summary>
+          <strong>Show more: The story</strong>
+        </summary>
         <p>{STORY.firstLine}</p>
         {!doc.storySkipped && (
           <>
@@ -285,17 +293,22 @@ export default function Journey({ ctx }: { ctx: Ctx }) {
             <button onClick={() => update((d) => { d.storySkipped = false; })}>Read the story</button>
           </p>
         )}
-      </div>
+      </details>
 
-      <div className="card" id="companions">
-        <h3>Your companions, in full</h3>
+      {/* Collapse (Derek, Nov 27, 2026): "Your companions, in full"
+          starts collapsed behind Show more. The map and Combat stay
+          open. */}
+      <details className="card" id="companions">
+        <summary>
+          <strong>Show more: Your companions, in full</strong>
+        </summary>
         <p className="small muted">People and animals you befriend along the road, one at a time as you get further. Bosses are not companions. They are challenges you beat. The short list is at the top of this tab, above the map.</p>
         {visibleCompanions.map((c) => creatureRow(c))}
         {showAllCompanions && hiddenCompanions.map((c) => creatureRow(c))}
         {hiddenCompanions.length > 0 && (
           <button onClick={() => setShowAllCompanions((v) => !v)}>{showAllCompanions ? 'Hide companions' : 'Show all companions'}</button>
         )}
-      </div>
+      </details>
 
       <div className="card">
         <h3>How it all fits together</h3>

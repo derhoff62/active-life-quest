@@ -290,7 +290,10 @@ export default function Today({ ctx }: { ctx: Ctx }) {
       )}
 
       {doc.assessmentDone && (
-        <div className="card gold-frame">
+        <details className="card gold-frame">
+          <summary>
+            <strong>Where you are</strong>
+          </summary>
           <h3 style={{ margin: 0 }}>Where you are: Week {weekInCycle} · {yearCycle.name}</h3>
           <p className="small">Week {weekInCycle} of this stretch{isReview ? ' · Review stretch' : ''}. This stretch's goal: <strong>{yearCycle.goal}</strong> · {yearCycle.phases} · {yearCycle.track}</p>
           <p className="small">{nextRetestLabel(yearNextRetest)} {nextBossLabel(yearNextBoss)}</p>
@@ -301,7 +304,7 @@ export default function Today({ ctx }: { ctx: Ctx }) {
           <p className="small">This week: {strengthDaysThisWeek} strength, 2 walks, 1 check-in.</p>
           <p className="small muted">Cardio target: 150 minutes this week. Weigh in once, same day each week. Take 1 to 2 rest days between strength days.</p>
           <div className="row"><button onClick={() => go('journey')}>See the road ahead</button><button onClick={() => go('progress')}>See my results</button></div>
-        </div>
+        </details>
       )}
 
       {doc.nudges.filter((n) => !n.read).map((n) => (
@@ -423,7 +426,10 @@ export default function Today({ ctx }: { ctx: Ctx }) {
         </div>
       </div>
 
-      <div className="card">
+      <details className="card">
+        <summary>
+          <strong>2-minute balance quest (+15 XP)</strong>
+        </summary>
         <h3>2-minute balance quest (+15 XP)</h3>
         <p className="small muted">Stand on one leg for 2 minutes, switching sides. Hold a chair or wall if you need it. Once a day.</p>
         {(() => {
@@ -454,9 +460,12 @@ export default function Today({ ctx }: { ctx: Ctx }) {
             </button>
           );
         })()}
-      </div>
+      </details>
 
-      <div className="card">
+      <details className="card">
+        <summary>
+          <strong>5-minute stretch</strong>
+        </summary>
         <h3>5-minute stretch</h3>
         <p className="small muted">Five minutes of easy stretching, from your corrective work or any stretch you know. Once a day, +1 attack in boss fights. {dailyUnlocked(doc, 'stretch') ? '' : `Unlocks at Level ${DAILY_UNLOCK_LEVELS.stretch}.`}</p>
         {(() => {
@@ -489,7 +498,7 @@ export default function Today({ ctx }: { ctx: Ctx }) {
             </button>
           );
         })()}
-      </div>
+      </details>
 
       {doc.nutritionEnabled && (
         <div className="card">
@@ -535,7 +544,10 @@ export default function Today({ ctx }: { ctx: Ctx }) {
         </div>
       )}
 
-      <div className="card" id="today-messages">
+      <details className="card" id="today-messages">
+        <summary>
+          <strong>Message Derek</strong>
+        </summary>
         <h3>Message Derek</h3>
         <p className="small muted">This is not live chat. Derek replies within one business day.</p>
         <div className="row">
@@ -608,7 +620,7 @@ export default function Today({ ctx }: { ctx: Ctx }) {
             {!m.coachReply && m.kind !== 'video-call-request' && <p className="small muted">Waiting for Derek.</p>}
           </div>
         ))}
-      </div>
+      </details>
 
       <details className="card">
         <summary>
@@ -619,7 +631,10 @@ export default function Today({ ctx }: { ctx: Ctx }) {
         {nextWorkout && <p className="small">Next workout: {nextWorkout.title}, about {nextWorkout.minutes} minutes.</p>}
       </details>
 
-      <div className="card">
+      <details className="card">
+        <summary>
+          <strong>My goal</strong>
+        </summary>
         <h3>My goal</h3>
         {doc.goals.length > 0 && (
           <p className="small">Your main goal now: <strong>{doc.goals[0].label}</strong>{doc.goals[0].why ? `, ${doc.goals[0].why}` : ''}.</p>
@@ -660,7 +675,7 @@ export default function Today({ ctx }: { ctx: Ctx }) {
           Save my goal
         </button>
         {goalMsg && <p className="ok">{goalMsg}</p>}
-      </div>
+      </details>
 
       {/* Questions and settings used to be their own tab. They live here
           now, at the bottom of Today, closed behind one tap. */}

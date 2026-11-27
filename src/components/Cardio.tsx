@@ -85,8 +85,8 @@ export default function Cardio({ ctx }: { ctx: Ctx }) {
         <p>High intensity counts double: 20 minutes hard counts as 40. Log your actual minutes and pick the intensity, the app does the doubling.</p>
       </div>
 
-      <div className="card">
-        <h3>What is Zone 2, and what is HIIT?</h3>
+      <details className="card">
+        <summary>What is Zone 2, and what is HIIT?</summary>
         <details>
           <summary>Zone 2: steady, easy effort</summary>
           <p>Zone 2 is steady cardio at an easy effort. You can talk in full sentences the whole time, and breathing through your nose still works. Brisk walking, easy cycling, and easy swimming all count.</p>
@@ -112,7 +112,7 @@ export default function Cardio({ ctx }: { ctx: Ctx }) {
             {HIIT.precautions.map((e, i) => <li key={i}>{e}</li>)}
           </ul>
         </details>
-      </div>
+      </details>
 
       <div className="card" id="log-cardio">
         <h3>Log cardio</h3>

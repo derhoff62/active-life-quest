@@ -117,8 +117,8 @@ export default function Progress({ ctx }: { ctx: Ctx }) {
         {last && <p className="muted small">Last workout: {last.title} on {new Date(String(last.date)).toLocaleDateString()}.</p>}
       </div>
 
-      <div className="card">
-        <h3>This month</h3>
+      <details className="card">
+        <summary>This month</summary>
         <div className="row" style={{ gap: 4 }}>
           {Array.from({ length: daysInMonth }, (_, i) => i + 1).map((day) => (
             <span
@@ -136,15 +136,18 @@ export default function Progress({ ctx }: { ctx: Ctx }) {
           ))}
         </div>
         <p className="small muted">Navy days are days you trained, green days are active rest days. {activeDays.size} active days in total logged.</p>
-      </div>
+      </details>
 
       {/* Community board: opt-in only, anonymous, ranked on showing up.
           No new tab, it lives here in Progress. */}
-      <Community ctx={ctx} />
+      <details className="card">
+        <summary>Community board</summary>
+        <Community ctx={ctx} />
+      </details>
 
-      <div className="card">
+      <details className="card">
+        <summary>Per-goal progress</summary>
         <div className="row space">
-          <h3 style={{ margin: 0 }}>Per-goal progress</h3>
           <button onClick={() => setShowGoals((v) => !v)}>{showGoals ? 'Hide' : 'Show'}</button>
         </div>
         {showGoals && goals.length === 0 && <p className="muted">No goals yet. Pick one in the assessment or on Today.</p>}
@@ -188,7 +191,7 @@ export default function Progress({ ctx }: { ctx: Ctx }) {
             </details>
           );
         })}
-      </div>
+      </details>
 
       {/* Metrics tracker: one metric at a time, with a trend line.
           Measurements (waist, chest, hips, arms, thighs) and the once-a-week
@@ -280,8 +283,8 @@ export default function Progress({ ctx }: { ctx: Ctx }) {
         </div>
       </div>
 
-      <div className="card">
-        <h3>Personal records</h3>
+      <details className="card">
+        <summary>Personal records</summary>
         {prs.length === 0 && <p className="muted">No PRs yet. Log a heavier weight or more reps than last time and it counts here.</p>}
         {prs.length > 0 && latestPr && (
           <p>{latestPr.exercise}: {latestPr.weight} lb x {latestPr.reps} on {new Date(latestPr.date).toLocaleDateString()}</p>
@@ -292,7 +295,7 @@ export default function Progress({ ctx }: { ctx: Ctx }) {
         {prs.length > 1 && (
           <button onClick={() => setShowAllPrs((v) => !v)}>{showAllPrs ? 'Hide personal records' : 'Show all personal records'}</button>
         )}
-      </div>
+      </details>
       <BackToTop />
     </div>
   );

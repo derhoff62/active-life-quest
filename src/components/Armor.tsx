@@ -230,6 +230,10 @@ export default function Armor({ ctx }: { ctx: Ctx }) {
   // still to earn.
   const equippedWeapon = ARMOR.find((a) => a.id === doc.guardian?.equippedWeaponId);
   const equippedArmor = ARMOR.find((a) => a.id === doc.guardian?.equippedArmorId);
+  // Collapse (Derek, Nov 27, 2026): the Armor vault stays open while
+  // nothing is equipped, and starts collapsed once something is
+  // equipped. "Wearing now" below stays open and shows what is on.
+  const hasEquipped = Boolean(equippedWeapon || equippedArmor);
   const gearGroups = GEAR_GROUPS.map((g) => {
     const pieces = ARMOR.filter((a) => g.test(a)).sort((x, y) => Number(isEarned(y)) - Number(isEarned(x)));
     return { ...g, pieces, earnedCount: pieces.filter(isEarned).length };
@@ -284,25 +288,15 @@ export default function Armor({ ctx }: { ctx: Ctx }) {
 
   return (
     <div>
+      {/* Guardian avatar + Customize button stay OUTSIDE the
+          collapsible vault (Derek, Nov 27, 2026): the avatar must
+          stay visible while customizing, and customization is
+          non-negotiable. The vault below collapses; this card
+          never does. */}
       <div className="card gold-frame">
         <GuardianAvatar guardian={doc.guardian} level={levelForXp(doc.xp)} size="large" />
         <div className="creature">
           <div>
-            <h2>Armor vault</h2>
-            <p>
-              {doc.guardian ? `${doc.guardian.name}, Level ${doc.level}` : 'Your guardian'} · {earnedCount} {earnedCount === 1 ? 'piece' : 'pieces'} earned
-              {next ? ` · Next: ${nextHidden ? '??? (hidden until earned)' : next.name}` : ''}
-            </p>
-            <p className="small muted">Armor and weapons never block a workout, quest, check-in, or retest. They are earned, one at a time, from real milestones.</p>
-            <p className="small">
-              {equippedWeaponName(doc.guardian) || equippedArmorName(doc.guardian)
-                ? `Equipped: ${[equippedWeaponName(doc.guardian), equippedArmorName(doc.guardian)].filter(Boolean).join(' · ')}`
-                : 'Nothing equipped yet. Equip earned gear below and your guardian changes.'}
-            </p>
-            {doc.guardian && <p className="small">{CLASS_GOOD_FOR[doc.guardian.classId] || ''}</p>}
-            {doc.guardian && CLASS_WORKOUT_FOCUS[doc.guardian.classId] && (
-              <p className="small"><strong>{CLASS_WORKOUT_FOCUS[doc.guardian.classId].line}</strong></p>
-            )}
             {doc.guardian && (
               <p className="small muted">Change class, color, gem, cape, look, skin color, or name in Customize guardian below. Your XP, level, and armor stay.</p>
             )}
@@ -318,6 +312,30 @@ export default function Armor({ ctx }: { ctx: Ctx }) {
           </div>
         </div>
       </div>
+
+      <details className="card gold-frame" open={!hasEquipped}>
+        <summary>
+          <strong>Show more: Armor vault</strong>
+        </summary>
+        <div className="creature">
+          <div>
+            <p>
+              {doc.guardian ? `${doc.guardian.name}, Level ${doc.level}` : 'Your guardian'} · {earnedCount} {earnedCount === 1 ? 'piece' : 'pieces'} earned
+              {next ? ` · Next: ${nextHidden ? '??? (hidden until earned)' : next.name}` : ''}
+            </p>
+            <p className="small muted">Armor and weapons never block a workout, quest, check-in, or retest. They are earned, one at a time, from real milestones.</p>
+            <p className="small">
+              {equippedWeaponName(doc.guardian) || equippedArmorName(doc.guardian)
+                ? `Equipped: ${[equippedWeaponName(doc.guardian), equippedArmorName(doc.guardian)].filter(Boolean).join(' · ')}`
+                : 'Nothing equipped yet. Equip earned gear below and your guardian changes.'}
+            </p>
+            {doc.guardian && <p className="small">{CLASS_GOOD_FOR[doc.guardian.classId] || ''}</p>}
+            {doc.guardian && CLASS_WORKOUT_FOCUS[doc.guardian.classId] && (
+              <p className="small"><strong>{CLASS_WORKOUT_FOCUS[doc.guardian.classId].line}</strong></p>
+            )}
+          </div>
+        </div>
+      </details>
 
       {showCustomize && (
         <div className="card">

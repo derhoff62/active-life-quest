@@ -178,11 +178,11 @@ export default function Sleep({ ctx }: { ctx: Ctx }) {
         <button onClick={() => go('progress')}>See Metrics in Progress</button>
       </div>
 
-      <div className="card">
-        <h3>Rest well</h3>
+      <details className="card">
+        <summary>Rest well</summary>
         <p>Keep a steady bedtime and wake time, even on rest days. A dark, cool room helps. A short walk and some stretching on a rest day beat doing nothing, and a hard workout the day after a bad night is better done easy, or skipped.</p>
         <p className="small muted">If sleep is a struggle most nights, or you snore heavily and wake up tired, tell Derek in a check-in. He can point you to the right next step.</p>
-      </div>
+      </details>
     </div>
   );
 }
