@@ -147,7 +147,6 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
 
   const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
   const cardioWeek = cardioThisWeek(doc);
-  const cardioMilestone = cardioWeek >= 300 ? '300 minute milestone done' : cardioWeek >= 200 ? '200 done, next is 300' : cardioWeek >= 150 ? '150 done, next is 200' : 'Next milestone is 150';
   const mainGoal = doc.goals[0];
   const goalLabel = mainGoal?.label || doc.mainGoal || 'your goal';
   const goalNote =
@@ -654,30 +653,6 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
               <input id={`r-${ex.id}`} inputMode="numeric" value={log[ex.id]?.r || ''} onChange={(e) => setLog((p) => ({ ...p, [ex.id]: { ...(p[ex.id] || { w: '', s: '', r: '' }), r: e.target.value } }))} placeholder={ex.reps} />
             </div>
           </div>
-          {isLast && (() => {
-            const finisher = GOAL_FINISHERS[doc.goals[0]?.type || ''];
-            if (!finisher) return null;
-            return (
-              <div className="card gold-frame" style={{ marginTop: 12 }}>
-                <h3 style={{ margin: '0 0 4px' }}>Goal finisher: {finisher.name} (+5 XP)</h3>
-                <p className="small">{finisher.text}</p>
-                <p className="small muted">For your goal ({doc.goals[0]?.label}). Only after the last move, only on a workout day. It never changes your phase, warm-up, or rest days.</p>
-                {finisherDone ? (
-                  <p className="small ok">Finisher done. +5 XP earned.</p>
-                ) : (
-                  <button
-                    className="primary"
-                    onClick={() => {
-                      update((d) => { d.xp += 5; });
-                      setFinisherDone(true);
-                    }}
-                  >
-                    I did the finisher (+5 XP)
-                  </button>
-                )}
-              </div>
-            );
-          })()}
           <div className="card" style={{ marginTop: 12 }}>
             <h3 style={{ textAlign: 'center' }}>Rest timer</h3>
             <div className="timer">{Math.floor(restLeft / 60)}:{String(restLeft % 60).padStart(2, '0')}</div>
@@ -706,6 +681,28 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
             )}
             {isLast && (
               <>
+                {(() => {
+                  const finisher = GOAL_FINISHERS[doc.goals[0]?.type || ''];
+                  if (!finisher) return null;
+                  return (
+                    <>
+                      <p className="small" style={{ margin: 0 }}>Goal finisher: {finisher.name} (+5 XP). {finisher.text}</p>
+                      {finisherDone ? (
+                        <p className="small ok" style={{ margin: 0 }}>Finisher done. +5 XP earned.</p>
+                      ) : (
+                        <button
+                          className="primary"
+                          onClick={() => {
+                            update((d) => { d.xp += 5; });
+                            setFinisherDone(true);
+                          }}
+                        >
+                          I did the finisher (+5 XP)
+                        </button>
+                      )}
+                    </>
+                  );
+                })()}
                 <label htmlFor="fin-min" style={{ margin: 0 }}>How long did this workout take? (minutes)</label>
                 <input id="fin-min" inputMode="numeric" value={finishMinutes} onChange={(e) => setFinishMinutes(e.target.value)} placeholder={String(active.minutes)} style={{ maxWidth: 120 }} />
                 <label htmlFor="fin-date" style={{ margin: 0 }}>When did you do this workout?</label>
@@ -861,17 +858,11 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
           ))}
         </div>
         <p className="small muted">
-          {timeMin === 15 && '15 min: easy to fit in and easy to finish. Good for busy days and getting started. You need more sessions a week to hit the same total.'}
-          {timeMin === 30 && '30 min: a solid session that fits most days. A good middle ground. You need more sessions a week than a longer workout to hit the same total.'}
-          {timeMin === 45 && '45+ min: time for a full warm-up, main lifts, and accessories. You can hit the same total with fewer sessions a week.'}
-          {timeMin === 60 && '60 min: time for a full warm-up, main lifts, accessories, and a cool-down. You can hit the same total with fewer sessions a week.'}
+          {timeMin === 15 && '15 min: easy to fit in. More sessions a week to hit the same total.'}
+          {timeMin === 30 && '30 min: a solid session that fits most days.'}
+          {timeMin === 45 && '45+ min: time for a full session. Fewer sessions a week to hit the same total.'}
+          {timeMin === 60 && '60 min: time for a full session plus a cool-down. Fewer sessions a week to hit the same total.'}
         </p>
-        <details>
-          <summary>Short or long? What changes</summary>
-          <p className="small">Shorter workouts, 15 to 30 minutes, are easier to fit in and easier to stay consistent with, and they leave you less tired. The drawback is less time for a warm-up, main lifts, and accessories in one session, so progress is slower per session. You need more sessions a week to hit the same total weekly volume, so take 1 to 2 rest days between strength days for the same muscles.</p>
-          <p className="small">Longer workouts, 45 to 60 minutes, give you time for a full warm-up, main compound lifts, accessories, and a cool-down in one session, so you get more done per session. You can hit the same total weekly volume with fewer sessions a week. The drawback is they are harder to fit in, they leave you more tired, and they are easier to skip on a busy day. Longer is not better if your form breaks down, so stop the session or drop the weight if form goes.</p>
-          <p className="small">What matters most is your total volume for the week and showing up consistently, not how long any one session is.</p>
-        </details>
         {!doc.assessmentDone && <p>Do the assessment first. It sets your starting phase, and then your best workout shows here.</p>}
         {assessmentPending(doc) && <p>Assessment waiting for Derek to review. Your workouts unlock once he approves it.</p>}
         {doc.assessmentDone && vol.tier !== 'none' && <p className="small"><strong>{vol.line}</strong></p>}
@@ -1065,10 +1056,7 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
           only shows the weekly total, with a link to the one log form. */}
       <div className="card">
         <h3>Cardio this week</h3>
-        <p><strong>{cardioWeek} of 150 to 300 minutes this week.</strong> {cardioMilestone}.</p>
-        <div className="progress-bar"><div style={{ width: `${Math.min(100, (cardioWeek / 300) * 100)}%` }} /></div>
-        <p className="small muted">Zone 2, easy enough to talk. High intensity counts double automatically when you log it as HIIT.</p>
-        <button className="primary" onClick={() => go('health', 'cardio')}>Log cardio in Health</button>
+        <p>{cardioWeek} of 150 to 300 minutes this week. <button className="primary" onClick={() => go('health', 'cardio')}>Log cardio in Health</button></p>
       </div>
 
       <details>
@@ -1158,8 +1146,6 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
           return (
             <p key={day.name} className="small" style={{ margin: '4px 0' }}>
               {day.name}: {w ? w.title : day.workoutId}
-              {' '}
-              <button onClick={() => w && startWorkout(w)}>Start</button>
             </p>
           );
         })}

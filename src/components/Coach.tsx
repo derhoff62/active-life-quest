@@ -7,7 +7,7 @@ import type { ProfileDoc } from '../lib/store';
 import { checkinPreferenceText, checkinFrequenciesForMode, normalizeCheckinFrequency, normalizeProfile, phaseForDoc, recoveryScoreForDoc, cardioCreditedSum, pendingRetests, applyRetestReview, hasCleanApprovedRetest, retestNextPhase, applyAssessmentReview, assessmentPending, assessmentStatus, volumeTierForDoc, proteinToday } from '../lib/store';
 import { weekLabel } from '../lib/yearPlan';
 import { coachReminders, retestWeeksDue } from '../lib/coachReminders';
-import { checkinHistory, coachCheckinSummary, recoveryTrend, volumeAdjustments, volumeByWeek, workoutExerciseRows, shortDate, windowStats } from '../lib/coachStats';
+import { checkinHistory, volumeAdjustments, volumeByWeek, workoutExerciseRows, shortDate } from '../lib/coachStats';
 import { VOLUME_MUSCLES } from '../lib/data';
 import GuardianEmote from './GuardianEmote';
 
@@ -365,38 +365,26 @@ export default function Coach({ ctx }: { ctx: Ctx }) {
           </div>
 
           {/* Check-ins and volume, read-only: the numbers Derek goes
-              over with a client on a call. Check-in history, recovery
-              trend, sets per muscle vs the phase target, and every
-              workout shortened for low recovery, with the date and the
-              reason. Worked out from the check-ins and workouts already
-              on the profile, see coachStats.ts. */}
+              over with a client on a call. Check-in history, sets per
+              muscle vs the phase target, and every workout shortened
+              for low recovery, with the date and the reason. Worked out
+              from the check-ins and workouts already on the profile,
+              see coachStats.ts. */}
           <div className="card">
             <h4 style={{ margin: '0 0 4px' }}>Check-ins and volume</h4>
             <p className="small muted">Read this with the client on a call. Recovery is worked out from sleep, soreness, and energy. Sets are counted from the workouts they finished, after any recovery shortening that day. A workout with no check-in near it counts as planned, not shortened.</p>
             {(() => {
               const phase = phaseForDoc(selected.data);
-              const summary = coachCheckinSummary(selected.data, phase);
               const history = checkinHistory(selected.data, 30);
-              const trend = recoveryTrend(selected.data);
               const weeks = volumeByWeek(selected.data, phase);
               const adjustments = volumeAdjustments(selected.data, 30);
-              const last30 = windowStats(history, Date.now() - 30 * 24 * 60 * 60 * 1000, Date.now());
               const last7rows = history.slice(0, 7);
               return (
                 <div>
-                  {summary ? (
-                    <p><strong>{summary}</strong></p>
-                  ) : (
-                    <p className="small"><strong>No check-ins yet.</strong></p>
-                  )}
-                  {trend && (
-                    <p className="small">Recovery trend: {trend.direction === 'up' ? `up, ${trend.prevAvg} to ${trend.thisAvg} this week` : trend.direction === 'down' ? `down, ${trend.prevAvg} to ${trend.thisAvg} this week` : `about the same, ${trend.thisAvg} this week vs ${trend.prevAvg} last week`}.</p>
-                  )}
                   {history.length === 0 ? (
                     <p className="small muted">No check-ins logged yet. Check-ins show here once the client logs one.</p>
                   ) : (
                     <>
-                      <p className="small">Last 30 days: checked in {last30.daysDone} of 30 days{last30.avgRecovery !== null ? `, recovery averaged ${last30.avgRecovery}` : ''}{last30.avgSleep !== null ? `, sleep averaged ${last30.avgSleep} hours` : ''}.</p>
                       <h5 style={{ margin: '10px 0 2px' }}>Check-ins, newest first</h5>
                       <table style={{ width: '100%', fontSize: 13 }}>
                         <thead>

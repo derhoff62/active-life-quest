@@ -6,10 +6,10 @@
 // workout, sleep from Today, steps and cardio from Progress below.
 // Weight stays once a week, same day and time, and only the trend over
 // weeks matters. Measurements, photos, strength, and how clothes fit
-// come first; the scale is last.
+// come first; the scale is last. Steps are logged here in the Steps view.
 import { useState } from 'react';
 import type { ProfileDoc } from '../lib/store';
-import { metCompanionIds, cardioCreditMinutes } from '../lib/store';
+import { metCompanionIds, cardioCreditMinutes, loggedToday, lastLoggedLabel, DAILY_UNLOCK_LEVELS, dailyUnlocked } from '../lib/store';
 
 type MetricKey =
   | 'weight' | 'waist' | 'chest' | 'hips' | 'arms' | 'thighs'
@@ -154,6 +154,7 @@ export default function Metrics({ doc, update, toast }: MetricsProps) {
   const [weighMsg, setWeighMsg] = useState('');
   const [measureMsg, setMeasureMsg] = useState('');
   const [measureBusy, setMeasureBusy] = useState(false);
+  const [stepsToday, setStepsToday] = useState('');
   // History (Derek, Nov 25, 2026): latest 5 entries stay visible, the
   // older entries hide behind Show all history at the bottom of the
   // card, after the log forms, so expanding never buries the log form.
@@ -171,6 +172,32 @@ export default function Metrics({ doc, update, toast }: MetricsProps) {
       .filter((c) => Date.now() - new Date(String(c.date)).getTime() < 7 * 24 * 60 * 60 * 1000)
       .reduce((s, c) => s + cardioCreditMinutes(c as { minutes?: unknown; zone?: unknown }), 0)
     : null;
+  const cardioTotal = (doc.cardio || [])
+    .reduce((s, c) => s + cardioCreditMinutes(c as { minutes?: unknown; zone?: unknown }), 0);
+  const stepsWeek = metric === 'steps'
+    ? (doc.steps || [])
+      .filter((s) => Date.now() - new Date(String(s.date)).getTime() < 7 * 24 * 60 * 60 * 1000)
+      .reduce((t, s) => t + Number((s as { steps?: number }).steps || 0), 0)
+    : null;
+
+  function logSteps() {
+    if (!update || !toast || !stepsToday) return;
+    const wren = metCompanionIds(doc).has('wren');
+    // First steps log of the day is the walk attack: +1 mana
+    // in Combat. Logging steps again today adds to the count,
+    // not to mana.
+    const firstWalkToday = !loggedToday(doc.steps);
+    // Walk attacks unlock at Level 3: below that, steps
+    // still log as a metric, they just earn no mana or attack.
+    const walkOpen = dailyUnlocked(doc, 'walk');
+    update((d) => {
+      d.steps.push({ id: `s${Date.now()}`, date: new Date().toISOString(), steps: Number(stepsToday) });
+      if (wren) d.xp += 5;
+      if (firstWalkToday && walkOpen) d.mana = Math.min(10, d.mana + 1);
+    });
+    toast(wren ? `Steps logged: ${stepsToday}. +5 XP from Wren.` : `Steps logged: ${stepsToday}.`);
+    setStepsToday('');
+  }
 
   function logMeasurement() {
     if (!update || !toast || measureBusy) return;
@@ -266,8 +293,8 @@ export default function Metrics({ doc, update, toast }: MetricsProps) {
             {isBody && 'No measurements for this one yet. Log one below.'}
             {metric === 'strength' && 'No personal records yet. Log a heavier weight or more reps than last time in a workout and it shows here.'}
             {metric === 'sleep' && 'No sleep logged yet. Log it in the Sleep tab.'}
-            {metric === 'steps' && 'No steps logged yet. Log them below on Progress.'}
-            {metric === 'cardio' && 'No cardio logged yet. Log it in the Cardio tab.'}
+            {metric === 'steps' && 'No steps logged yet. Log them below.'}
+            {metric === 'cardio' && 'No cardio logged yet. Log it in the Cardio tab. Target 150 to 300 minutes a week, Zone 2.'}
           </p>
         ) : (
           <>
@@ -278,7 +305,8 @@ export default function Metrics({ doc, update, toast }: MetricsProps) {
               )}
             </p>
             {metric === 'weight' && <p className="small muted">Only the trend over weeks matters, not one weigh-in.</p>}
-            {metric === 'cardio' && cardioWeek !== null && <p className="small">Last 7 days: {cardioWeek} minutes of the 150 to 300 target.</p>}
+            {metric === 'cardio' && cardioWeek !== null && <p className="small">Last 7 days: {cardioWeek} minutes of the 150 to 300 target. Total logged: {cardioTotal} minutes.</p>}
+            {metric === 'steps' && stepsWeek !== null && <p className="small">Last 7 days: {stepsWeek.toLocaleString()} steps.</p>}
             <TrendChart points={points} unit={meta.unit} />
             <p className="small muted">{points.length} {points.length === 1 ? 'entry' : 'entries'} logged.</p>
             {points.slice(-5).reverse().map((p, i) => (
@@ -335,10 +363,20 @@ export default function Metrics({ doc, update, toast }: MetricsProps) {
         <p className="small muted" style={{ marginTop: 12 }}>Sleep is logged in the Sleep tab.</p>
       )}
       {!readOnly && metric === 'steps' && (
-        <p className="small muted" style={{ marginTop: 12 }}>Log steps below on this page. It shows up here.</p>
+        <div style={{ marginTop: 12 }}>
+          <h4 style={{ margin: '0 0 6px' }}>Steps (optional)</h4>
+          <p className="small muted">Steps are optional. Log today's count if you track them.{dailyUnlocked(doc, 'walk') ? '' : ` Walk attacks unlock at Level ${DAILY_UNLOCK_LEVELS.walk}.`}</p>
+          {lastLoggedLabel(doc.steps || []) && <p className="small muted">{lastLoggedLabel(doc.steps || [])}.</p>}
+          <div className="row">
+            <input inputMode="numeric" value={stepsToday} onChange={(e) => setStepsToday(e.target.value)} placeholder="Steps today" style={{ maxWidth: 140 }} aria-label="Steps today" />
+            <button className="primary" onClick={logSteps}>
+              Log steps
+            </button>
+          </div>
+        </div>
       )}
       {!readOnly && metric === 'cardio' && (
-        <p className="small muted" style={{ marginTop: 12 }}>Log cardio in the Cardio tab. It shows up here.</p>
+        <p className="small muted" style={{ marginTop: 12 }}>Log cardio in the Cardio tab. It shows up here. Target 150 to 300 minutes a week, Zone 2, easy enough to talk. High intensity counts double automatically when you log it as HIIT.</p>
       )}
 
       {points.length > 5 && (

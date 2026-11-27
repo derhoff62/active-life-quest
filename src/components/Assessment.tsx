@@ -216,7 +216,10 @@ export default function Assessment({ ctx }: { ctx: Ctx }) {
         </div>
         <div className="card" id="retest">
           <h3>Retest (Weeks 4, 8, and 12 of each cycle)</h3>
-          <p className="small muted">A retest is a short check, not the full assessment. Do it at Weeks 4, 8, and 12 of each 12-week cycle. There is a review retest too, then you keep going with a new goal. You may not be able to see your own imbalance, so Derek reviews your movement screen before your phase moves. A retest Derek approves as clean moves you to the next phase and moves your corrective steps one step forward. Week 12 of each cycle is also a deload week: lighter loads that week. The next cycle only opens after that cycle's retest is approved.</p>
+          <details>
+            <summary>Show more about retests</summary>
+            <p className="small muted">A retest is a short check, not the full assessment. Do it at Weeks 4, 8, and 12 of each 12-week cycle. There is a review retest too, then you keep going with a new goal. You may not be able to see your own imbalance, so Derek reviews your movement screen before your phase moves. A retest Derek approves as clean moves you to the next phase and moves your corrective steps one step forward. Week 12 of each cycle is also a deload week: lighter loads that week. The next cycle only opens after that cycle's retest is approved.</p>
+          </details>
           {pendingRetests(doc).length > 0 && (
             <p className="notice">Waiting for Derek to review: {pendingRetests(doc).map((r) => weekLabel(Number((r as { week?: number }).week || 0))).join(', ')}. Your phase does not move until he approves it.</p>
           )}
@@ -442,7 +445,7 @@ export default function Assessment({ ctx }: { ctx: Ctx }) {
 
       {step === 1 && (
         <div>
-          <h3>Step 2: Goals, history, and body details (optional)</h3>
+          <h3>Step 2: Goals and history</h3>
           {ASSESSMENT_QUESTIONS.questions.map((q) => (
             <p key={q} className="small">· {q}</p>
           ))}
@@ -486,32 +489,35 @@ export default function Assessment({ ctx }: { ctx: Ctx }) {
               </label>
             ))}
           </div>
-          <div className="grid2">
-            <div>
-              <label htmlFor="a-sex">Sex (for nutrition numbers)</label>
-              <select id="a-sex" value={sex} onChange={(e) => setSex(e.target.value)}>
-                <option value="">Prefer not to say</option>
-                <option value="female">Female</option>
-                <option value="male">Male</option>
-              </select>
+          <details>
+            <summary>Show more: body details (optional)</summary>
+            <div className="grid2">
+              <div>
+                <label htmlFor="a-sex">Sex (for nutrition numbers)</label>
+                <select id="a-sex" value={sex} onChange={(e) => setSex(e.target.value)}>
+                  <option value="">Prefer not to say</option>
+                  <option value="female">Female</option>
+                  <option value="male">Male</option>
+                </select>
+              </div>
+              <div>
+                <label htmlFor="a-age">Age</label>
+                <input id="a-age" inputMode="numeric" value={age} onChange={(e) => setAge(e.target.value)} placeholder="e.g. 45" />
+              </div>
+              <div>
+                <label htmlFor="a-height">Height (inches)</label>
+                <input id="a-height" inputMode="numeric" value={height} onChange={(e) => setHeight(e.target.value)} placeholder="e.g. 66" />
+              </div>
+              <div>
+                <label htmlFor="a-weight">Weight (lb)</label>
+                <input id="a-weight" inputMode="numeric" value={weight} onChange={(e) => setWeight(e.target.value)} placeholder="e.g. 190" />
+              </div>
+              <div>
+                <label htmlFor="a-goalw">Goal weight (lb)</label>
+                <input id="a-goalw" inputMode="numeric" value={goalWeight} onChange={(e) => setGoalWeight(e.target.value)} placeholder="e.g. 165" />
+              </div>
             </div>
-            <div>
-              <label htmlFor="a-age">Age</label>
-              <input id="a-age" inputMode="numeric" value={age} onChange={(e) => setAge(e.target.value)} placeholder="e.g. 45" />
-            </div>
-            <div>
-              <label htmlFor="a-height">Height (inches)</label>
-              <input id="a-height" inputMode="numeric" value={height} onChange={(e) => setHeight(e.target.value)} placeholder="e.g. 66" />
-            </div>
-            <div>
-              <label htmlFor="a-weight">Weight (lb)</label>
-              <input id="a-weight" inputMode="numeric" value={weight} onChange={(e) => setWeight(e.target.value)} placeholder="e.g. 190" />
-            </div>
-            <div>
-              <label htmlFor="a-goalw">Goal weight (lb)</label>
-              <input id="a-goalw" inputMode="numeric" value={goalWeight} onChange={(e) => setGoalWeight(e.target.value)} placeholder="e.g. 165" />
-            </div>
-          </div>
+          </details>
           <div className="row" style={{ marginTop: 14 }}>
             <button className="primary" onClick={() => setStep(2)}>Next: movement screen</button>
             <button onClick={() => setStep(0)}>Back</button>

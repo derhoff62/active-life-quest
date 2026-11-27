@@ -252,6 +252,9 @@ export default function Today({ ctx }: { ctx: Ctx }) {
             {assessmentApproved(doc) && !doc.workouts.length && <p>Your next step: do Day 1. It takes about 10 to 15 minutes.</p>}
             {assessmentApproved(doc) && doc.workouts.length > 0 && <p>Your next step: your Phase {phase} workout. {phaseInfo?.name}. Take 1 to 2 rest days between strength days.</p>}
             {assessmentApproved(doc) && vol.tier !== 'none' && <p className="small"><strong>{vol.line}</strong></p>}
+            {yearWeek === 1 && (
+              <p className="small">First week: {firstWeekDoneCount} of 3. {firstWeekWorkoutDone ? '✓' : '○'} 1 short workout · {firstWeekCheckinDone ? '✓' : '○'} 1 check-in · {firstWeekBalanceDone ? '✓' : '○'} 1 balance hold.{firstWeekDoneCount === 3 ? ' First week done. Nice start.' : ''}</p>
+            )}
             <div className="row">
               {!doc.assessmentDone && <button className="primary" onClick={() => go('train')}>Start the assessment</button>}
               {assessmentPending(doc) && <button className="primary" onClick={() => go('train')}>See my assessment</button>}
@@ -261,19 +264,6 @@ export default function Today({ ctx }: { ctx: Ctx }) {
           </div>
         </div>
       </div>
-
-      {yearWeek === 1 && (
-        <div className="card gold-frame">
-          <h3 style={{ margin: 0 }}>Your first week</h3>
-          <p>You did {firstWeekDoneCount} of 3 this week.</p>
-          {firstWeekDoneCount === 3 && <p><strong>First week done. Nice start.</strong></p>}
-          <ul>
-            <li>1 short workout: {firstWeekWorkoutDone ? 'Done' : 'Not done yet'}</li>
-            <li>1 check-in: {firstWeekCheckinDone ? 'Done' : 'Not done yet'}</li>
-            <li>1 balance hold: {firstWeekBalanceDone ? 'Done' : 'Not done yet'}</li>
-          </ul>
-        </div>
-      )}
 
       {unfinished && (
         <div className="card gold-frame" id="resume-workout">
@@ -308,15 +298,9 @@ export default function Today({ ctx }: { ctx: Ctx }) {
           {isDeloadWeek(yearWeek) && <p className="small"><strong>Deload week.</strong> Lighter loads this week, then your retest.</p>}
           <p className="small muted">Results so far: {doc.prs.length} personal record{doc.prs.length === 1 ? '' : 's'} · {yearCardioTotal.toLocaleString()} cardio minutes · Streak {yearStreak} {yearStreak === 1 ? 'day' : 'days'}{yearWaistChange !== null ? ` · Waist ${yearWaistChange > 0 ? '+' : ''}${yearWaistChange} in since your first measurement` : ''} · {doc.badges.length} badges</p>
           <p className="small">This month's challenge: <strong>{yearChallenge.title}</strong> · {yearChallenge.detail}</p>
-          <div className="row"><button onClick={() => go('journey')}>See the road ahead</button><button onClick={() => go('progress')}>See my results</button></div>
-        </div>
-      )}
-
-      {doc.assessmentDone && (
-        <div className="card">
-          <h3 style={{ margin: 0 }}>Your week at a glance</h3>
-          <p>This week: {strengthDaysThisWeek} strength, 2 walks, 1 check-in.</p>
+          <p className="small">This week: {strengthDaysThisWeek} strength, 2 walks, 1 check-in.</p>
           <p className="small muted">Cardio target: 150 minutes this week. Weigh in once, same day each week. Take 1 to 2 rest days between strength days.</p>
+          <div className="row"><button onClick={() => go('journey')}>See the road ahead</button><button onClick={() => go('progress')}>See my results</button></div>
         </div>
       )}
 
@@ -426,6 +410,17 @@ export default function Today({ ctx }: { ctx: Ctx }) {
             {checkinMsg && <p className="ok">{checkinMsg}</p>}
           </div>
         )}
+        <div style={{ borderTop: '1px solid #d7e3ee', marginTop: 12, paddingTop: 12 }}>
+          <h4 style={{ margin: '0 0 4px' }}>Book a video call</h4>
+          <label htmlFor="call-when">Times that work for you</label>
+          <input id="call-when" value={callWhen} onChange={(e) => setCallWhen(e.target.value)} placeholder="e.g. Tue or Thu morning, or any weekday after 5" />
+          <label htmlFor="call-topic">What do you want to talk about?</label>
+          <input id="call-topic" value={callTopic} onChange={(e) => setCallTopic(e.target.value)} placeholder="e.g. my squat form, or my Week 4 retest" />
+          <button className="primary" style={{ marginTop: 10 }} onClick={sendCallRequest} disabled={!callWhen.trim() && !callTopic.trim()}>
+            Request a video call
+          </button>
+          {callMsg && <p className="ok">{callMsg}</p>}
+        </div>
       </div>
 
       <div className="card">
@@ -540,37 +535,6 @@ export default function Today({ ctx }: { ctx: Ctx }) {
         </div>
       )}
 
-      <div className="card">
-        <h3>Reminder times</h3>
-        <p className="small muted">Pick when you want a reminder card on Today. In-app reminders only, no push notifications yet.</p>
-        <div className="grid2">
-          <div>
-            <label htmlFor="rt-workout">Workout reminder</label>
-            <input id="rt-workout" type="time" value={doc.reminderTimes.workout} onChange={(e) => update((d) => { d.reminderTimes.workout = e.target.value; })} />
-          </div>
-          <div>
-            <label htmlFor="rt-checkin">Check-in reminder</label>
-            <input id="rt-checkin" type="time" value={doc.reminderTimes.checkin} onChange={(e) => update((d) => { d.reminderTimes.checkin = e.target.value; })} />
-          </div>
-          <div>
-            <label htmlFor="rt-streak">Streak reminder</label>
-            <input id="rt-streak" type="time" value={doc.reminderTimes.streak} onChange={(e) => update((d) => { d.reminderTimes.streak = e.target.value; })} />
-          </div>
-        </div>
-        {(() => {
-          const now = new Date();
-          const hhmm = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-          const today = now.toISOString().slice(0, 10);
-          const workedToday = doc.workouts.some((w) => String(w.date).slice(0, 10) === today);
-          const checkedToday = doc.checkins.some((c) => String(c.date).slice(0, 10) === today);
-          const cards: string[] = [];
-          if (hhmm >= doc.reminderTimes.workout && !workedToday) cards.push('Reminder: time for your workout today.');
-          if (hhmm >= doc.reminderTimes.checkin && !checkedToday) cards.push('Reminder: your daily check-in is waiting.');
-          if (hhmm >= doc.reminderTimes.streak && doc.workouts.length > 0 && !workedToday) cards.push('Reminder: keep your streak going with one small step today.');
-          return cards.map((c) => <p key={c} className="notice">{c}</p>);
-        })()}
-      </div>
-
       <div className="card" id="today-messages">
         <h3>Message Derek</h3>
         <p className="small muted">This is not live chat. Derek replies within one business day.</p>
@@ -646,24 +610,6 @@ export default function Today({ ctx }: { ctx: Ctx }) {
         ))}
       </div>
 
-      <div className="card">
-        <h3>Book a video call check-in with Derek</h3>
-        <p className="small muted">A live video call, not a recording. Each video check-in is 30 minutes, at most once a week. Derek replies within one business day to set a time and send the call link. The app itself does not do the video call.</p>
-        <label htmlFor="call-when">Times that work for you</label>
-        <input id="call-when" value={callWhen} onChange={(e) => setCallWhen(e.target.value)} placeholder="e.g. Tue or Thu morning, or any weekday after 5" />
-        <label htmlFor="call-topic">What do you want to talk about?</label>
-        <input id="call-topic" value={callTopic} onChange={(e) => setCallTopic(e.target.value)} placeholder="e.g. my squat form, or my Week 4 retest" />
-        <button className="primary" style={{ marginTop: 10 }} onClick={sendCallRequest} disabled={!callWhen.trim() && !callTopic.trim()}>
-          Request a video call
-        </button>
-        {callMsg && <p className="ok">{callMsg}</p>}
-        {doc.messages.filter((m) => m.kind === 'video-call-request').slice(0, 3).map((m) => (
-          <p key={m.id} className="small" style={{ borderTop: '1px solid #d7e3ee', paddingTop: 8 }}>
-            {m.callStatus === 'confirmed' && m.callTime ? `Confirmed: video call on ${m.callTime}. Derek will send the call link.` : 'Request sent. Derek will reply within one business day to set a time.'}
-          </p>
-        ))}
-      </div>
-
       <details className="card">
         <summary>
           <strong>Your plan</strong>
@@ -722,6 +668,36 @@ export default function Today({ ctx }: { ctx: Ctx }) {
         <summary>
           <strong>Questions and settings</strong>
         </summary>
+        <div className="card">
+          <h3>Reminder times</h3>
+          <p className="small muted">Pick when you want a reminder card on Today. In-app reminders only, no push notifications yet.</p>
+          <div className="grid2">
+            <div>
+              <label htmlFor="rt-workout">Workout reminder</label>
+              <input id="rt-workout" type="time" value={doc.reminderTimes.workout} onChange={(e) => update((d) => { d.reminderTimes.workout = e.target.value; })} />
+            </div>
+            <div>
+              <label htmlFor="rt-checkin">Check-in reminder</label>
+              <input id="rt-checkin" type="time" value={doc.reminderTimes.checkin} onChange={(e) => update((d) => { d.reminderTimes.checkin = e.target.value; })} />
+            </div>
+            <div>
+              <label htmlFor="rt-streak">Streak reminder</label>
+              <input id="rt-streak" type="time" value={doc.reminderTimes.streak} onChange={(e) => update((d) => { d.reminderTimes.streak = e.target.value; })} />
+            </div>
+          </div>
+          {(() => {
+            const now = new Date();
+            const hhmm = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+            const today = now.toISOString().slice(0, 10);
+            const workedToday = doc.workouts.some((w) => String(w.date).slice(0, 10) === today);
+            const checkedToday = doc.checkins.some((c) => String(c.date).slice(0, 10) === today);
+            const cards: string[] = [];
+            if (hhmm >= doc.reminderTimes.workout && !workedToday) cards.push('Reminder: time for your workout today.');
+            if (hhmm >= doc.reminderTimes.checkin && !checkedToday) cards.push('Reminder: your daily check-in is waiting.');
+            if (hhmm >= doc.reminderTimes.streak && doc.workouts.length > 0 && !workedToday) cards.push('Reminder: keep your streak going with one small step today.');
+            return cards.map((c) => <p key={c} className="notice">{c}</p>);
+          })()}
+        </div>
         <Faq ctx={ctx} />
       </details>
     </div>

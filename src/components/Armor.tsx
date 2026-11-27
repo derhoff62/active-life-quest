@@ -216,13 +216,20 @@ export default function Armor({ ctx }: { ctx: Ctx }) {
     onToggleEquip: () => toggleEquip(a),
     onToggleDetails: () => setExpandedGearId((cur) => (cur === a.id ? null : a.id)),
   });
-  // Wearing now: the two equipped pieces, weapon and armor. Up next: the
-  // next two unearned pieces in vault order, so there is always something
-  // close to aim at. Full list: grouped by type, earned first in each
-  // group, then still to earn.
+  // Tier 3, item 44: "Wearing now" only renders when something is
+  // equipped. At Level 1 it is empty, and its text duplicates the
+  // vault header "Equipped:" line above. "Up next" is deleted: it
+  // was just the first 2 unearned pieces, already in "All gear"
+  // below, and the vault header already names the next piece
+  // ("Next: ..."). Equipped pieces still show in the vault header
+  // and in "All gear" (earned-first in each group). This changes
+  // Derek's established Gear pattern (Wearing now / Up next /
+  // Show all gear) to Wearing now (only when equipped) / All gear.
+  // Wearing now: the two equipped pieces, weapon and armor.
+  // Full list: grouped by type, earned first in each group, then
+  // still to earn.
   const equippedWeapon = ARMOR.find((a) => a.id === doc.guardian?.equippedWeaponId);
   const equippedArmor = ARMOR.find((a) => a.id === doc.guardian?.equippedArmorId);
-  const nextPieces = ARMOR.filter((a) => !isEarned(a)).slice(0, 2);
   const gearGroups = GEAR_GROUPS.map((g) => {
     const pieces = ARMOR.filter((a) => g.test(a)).sort((x, y) => Number(isEarned(y)) - Number(isEarned(x)));
     return { ...g, pieces, earnedCount: pieces.filter(isEarned).length };
@@ -494,24 +501,14 @@ export default function Armor({ ctx }: { ctx: Ctx }) {
 
       <p className="small muted">Spells are on Journey, in Combat.</p>
 
+      {(equippedWeapon || equippedArmor) && (
       <div className="card">
         <h3>Wearing now</h3>
         <p className="small muted">What your guardian has on. Tap Details on a piece to see how you earned it and what it does.</p>
         {equippedWeapon && <GearCard key={equippedWeapon.id} piece={equippedWeapon} {...gearCardProps(equippedWeapon)} />}
         {equippedArmor && <GearCard key={equippedArmor.id} piece={equippedArmor} {...gearCardProps(equippedArmor)} />}
-        {!equippedWeapon && !equippedArmor && (
-          <p className="small">Nothing equipped yet. Equip earned gear below and your guardian changes.</p>
-        )}
       </div>
-
-      <div className="card">
-        <h3>Up next</h3>
-        <p className="small muted">The next pieces to aim at, in vault order.</p>
-        {nextPieces.map((a) => (
-          <GearCard key={a.id} piece={a} {...gearCardProps(a)} />
-        ))}
-        {nextPieces.length === 0 && <p className="small">Every piece earned. Nothing left to aim at.</p>}
-      </div>
+      )}
 
       <div className="card" id="gear-list">
         <h3>All gear</h3>

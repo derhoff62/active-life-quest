@@ -1,9 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Ctx } from '../App';
-import { PHASES, CREATURES, STORY, SPELLS, CLASSES, BOSS_ROUNDS } from '../lib/data';
-import { YEAR_CYCLES, challengeForWeek, nextRetestWeek, nextBossWeek, nextRetestLabel, nextBossLabel } from '../lib/yearPlan';
+import { CREATURES, STORY, SPELLS, CLASSES, BOSS_ROUNDS } from '../lib/data';
+import { YEAR_CYCLES, nextRetestWeek, nextBossWeek, nextRetestLabel, nextBossLabel } from '../lib/yearPlan';
 import { phaseForDoc, levelForXp, metCompanionIds, currentWeekForDoc, dailyAttacks, powerCharge, powerCharged, rollDamage, damageRange, todayDayKey, DAILY_UNLOCK_LEVELS, lockedDailyThings } from '../lib/store';
-import GuardianAvatar from './GuardianAvatar';
 import JourneyMap from './JourneyMap';
 import CompanionAvatar, { BossAvatar } from './CompanionAvatar';
 import BackToTop from './BackToTop';
@@ -181,7 +180,6 @@ export default function Journey({ ctx }: { ctx: Ctx }) {
         <p className="small muted">Each stretch is different: a new goal, a new land, new boss rounds, and new companions. A stretch only opens after the last stretch's retest, the same gate as Week 13.</p>
         {cycleBlock(currentCycle)}
         <p><strong>Keep going.</strong> After the Golden Summit, test your best in a review retest, pick your next goal, and the road keeps going. There is no finish line here.</p>
-        <p className="small">This month's challenge: <strong>{challengeForWeek(currentWeekForDoc(doc)).title}</strong> · {challengeForWeek(currentWeekForDoc(doc)).detail}</p>
         <button onClick={() => setShowMoreCycles((v) => !v)}>{showMoreCycles ? 'Hide other cycles' : 'Show all cycles'}</button>
         {showMoreCycles && otherCycles.map((c) => cycleBlock(c))}
       </div>
@@ -189,7 +187,6 @@ export default function Journey({ ctx }: { ctx: Ctx }) {
       <div className="card gold-frame" id="combat">
         <h2>Combat</h2>
         <p>A boss round is a practice fight at the end of a land, at Weeks 4, 8, and 12 of every cycle, plus a review round when you get there. You attack with your class spells, and each spell costs mana. Win the round, do the retest, and the next land opens. Bosses are challenges you beat, not friends.</p>
-        <p className="small muted">Mana: {doc.mana}/10. Mana refills daily, and the small things you do through the day add more. Spells never block a workout, quest, check-in, or retest. Pick a boss, then use a spell. The bar drops with every hit. Damage varies a little each time, so a hit can be a bit weaker or stronger than the number shown.</p>
         {(() => {
           const earned = dailyAttacks(doc);
           const charge = powerCharge(doc);
@@ -199,13 +196,17 @@ export default function Journey({ ctx }: { ctx: Ctx }) {
           const earnedText = earned.total > 0
             ? `You earned ${earned.total} attack${earned.total === 1 ? '' : 's'} today from ${earned.items.map((i) => i.label).join(', ')}.`
             : 'Log a check-in, sleep, cardio, a balance hold, a daily quest, a rest day, or a workout to earn attacks today.';
+          // Tier 3, item 23: the mana, attacks-earned, charge, and
+          // lock status used to be three paragraphs. They are now
+          // two short lines. All wording kept: mana and daily refill,
+          // attacks earned today, Power Strike charge meter and its
+          // Level lock, and every other daily level lock. Damage
+          // still varies a little each time, and spells still never
+          // block a workout, quest, check-in, or retest.
           return (
             <>
-              <p className="small">{earnedText}</p>
-              {locked.length > 0 && (
-                <p className="small muted">{locked.map((t) => `${t.label} unlocks at Level ${t.level}`).join('. ')}.</p>
-              )}
-              <p className="small"><strong>{chargeOpen ? `Power Strike charge: ${charge} of 5.` : `Power Strike charge unlocks at Level ${DAILY_UNLOCK_LEVELS.charge}.`}</strong> {chargeOpen ? (charged ? 'Power Strike is charged, free to use once.' : 'Each daily thing adds charge. At 5, Power Strike costs no mana.') : 'Daily things still earn attacks and mana. They just do not fill a charge meter yet.'}</p>
+              <p className="small muted">Mana: {doc.mana}/10, refills daily. {earnedText} Damage varies a little each time. Spells never block a workout, quest, check-in, or retest.</p>
+              <p className="small"><strong>{chargeOpen ? `Power Strike charge: ${charge} of 5.` : `Power Strike charge unlocks at Level ${DAILY_UNLOCK_LEVELS.charge}.`}</strong> {chargeOpen ? (charged ? 'Power Strike is charged, free to use once.' : 'Each daily thing adds charge. At 5, Power Strike costs no mana.') : 'Daily things still earn attacks and mana. They just do not fill a charge meter yet.'}{locked.length > 0 ? ` ${locked.map((t) => `${t.label} unlocks at Level ${t.level}`).join('. ')}.` : ''}</p>
             </>
           );
         })()}
@@ -258,15 +259,10 @@ export default function Journey({ ctx }: { ctx: Ctx }) {
       </div>
 
 
-      <div className="card gold-frame">
-        <h3>Your guardian</h3>
-        <GuardianAvatar guardian={doc.guardian} level={levelForXp(doc.xp)} size="medium" background={phase >= 3 ? 'peaks' : phase >= 2 ? 'shores' : 'forest'} />
-        <p className="small muted" style={{ textAlign: 'center' }}>
-          {doc.guardian
-            ? `${doc.guardian.name} the ${doc.guardian.classId} walks this map with you. ${CLASSES.find((c) => c.id === doc.guardian?.classId)?.description || ''}`
-            : 'Pick your guardian on Today, then they walk this map with you.'}
-        </p>
-      </div>
+      {/* Tier 3, item 26: the "Your guardian" card is deleted. It was
+          the third large avatar on the tab (also on Gear and Today),
+          and its caption and class text already live in the Combat
+          footer above and in the Armor vault. */}
 
       <div className="card">
         <h3>The story</h3>
@@ -304,12 +300,8 @@ export default function Journey({ ctx }: { ctx: Ctx }) {
       <div className="card">
         <h3>How it all fits together</h3>
         <p>1. Assessment draws your map. 2. Correctives clear the path. 3. Workouts move you through the lands. 4. Retests open the next castle. 5. After Week 12, pick a new goal and cycle back.</p>
-        <details>
-          <summary>Phases 1 to 5</summary>
-          {PHASES.map((p) => (
-            <p key={p.phase}><strong>Phase {p.phase}: {p.name}</strong> ({p.weeks}): {p.reps}, {p.sets}, rest {p.rest}. {p.description}</p>
-          ))}
-        </details>
+        {/* Tier 3, item 24: the "Phases 1 to 5" details are deleted.
+            They duplicated Today "Your plan" and Train. */}
       </div>
       <BackToTop />
     </div>

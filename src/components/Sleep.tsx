@@ -166,13 +166,15 @@ export default function Sleep({ ctx }: { ctx: Ctx }) {
       </div>
 
       <div className="card">
-        <h3>Your sleep trend</h3>
-        {points.length === 0 ? (
-          <p className="muted">No sleep logged yet. Log it above and the trend shows up here.</p>
-        ) : (
-          <TrendChart points={points} unit="hours" />
-        )}
-        <p className="small muted">The full trend, with every metric, is in Progress, under Metrics.</p>
+        <details>
+          <summary>Your sleep trend</summary>
+          {points.length === 0 ? (
+            <p className="muted">No sleep logged yet. Log it above and the trend shows up here.</p>
+          ) : (
+            <TrendChart points={points} unit="hours" />
+          )}
+          <p className="small muted">The full trend, with every metric, is in Progress, under Metrics.</p>
+        </details>
         <button onClick={() => go('progress')}>See Metrics in Progress</button>
       </div>
 

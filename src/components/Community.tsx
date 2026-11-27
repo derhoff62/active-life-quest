@@ -138,18 +138,41 @@ export default function Community({ ctx }: { ctx: Ctx }) {
           hint="Turn on to join the board"
         />
       </div>
-      <p className="small muted">
-        See how everyone is showing up, without anyone seeing your real name. Turn it on to join. Turn it off any time and your name comes straight off.
-      </p>
-      <p className="small">
-        <strong>Shared when you join:</strong> your guardian name, and this month’s workouts, check-ins, cardio minutes, and streak days.
-      </p>
-      <p className="small">
-        <strong>Never shared:</strong> your real name, your email, your weight, your measurements, or your photos.
-      </p>
-      <p className="small muted">
-        Ranked on showing up only, not on strength or weight. Score: 10 points per workout, 5 per check-in, 2 per streak day, 1 per 10 cardio minutes. Top 5 shown, plus your own place. The board resets on the 1st of the month, so everyone starts fresh.
-      </p>
+      {!optedIn && (
+        <>
+          <p className="small muted">
+            See how everyone is showing up, without anyone seeing your real name.
+          </p>
+          <details>
+            <summary>Show more</summary>
+            <p className="small">
+              <strong>Shared when you join:</strong> your guardian name, and this month’s workouts, check-ins, cardio minutes, and streak days.
+            </p>
+            <p className="small">
+              <strong>Never shared:</strong> your real name, your email, your weight, your measurements, or your photos.
+            </p>
+            <p className="small muted">
+              Ranked on showing up only, not on strength or weight. Score: 10 points per workout, 5 per check-in, 2 per streak day, 1 per 10 cardio minutes. Top 5 shown, plus your own place. The board resets on the 1st of the month, so everyone starts fresh.
+            </p>
+          </details>
+        </>
+      )}
+      {optedIn && (
+        <>
+          <p className="small muted">
+            See how everyone is showing up, without anyone seeing your real name. Turn it on to join. Turn it off any time and your name comes straight off.
+          </p>
+          <p className="small">
+            <strong>Shared when you join:</strong> your guardian name, and this month’s workouts, check-ins, cardio minutes, and streak days.
+          </p>
+          <p className="small">
+            <strong>Never shared:</strong> your real name, your email, your weight, your measurements, or your photos.
+          </p>
+          <p className="small muted">
+            Ranked on showing up only, not on strength or weight. Score: 10 points per workout, 5 per check-in, 2 per streak day, 1 per 10 cardio minutes. Top 5 shown, plus your own place. The board resets on the 1st of the month, so everyone starts fresh.
+          </p>
+        </>
+      )}
 
       {!optedIn && (
         <p className="muted">The board is off. Turn it on to join in.</p>

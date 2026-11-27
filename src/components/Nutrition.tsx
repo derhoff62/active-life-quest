@@ -110,8 +110,9 @@ export default function Nutrition({ ctx }: { ctx: Ctx }) {
           const entry = todayProtein.find((p) => p.meal === m.id);
           const draft = gramsDraft[m.id] ?? (entry && typeof entry.grams === 'number' ? String(entry.grams) : '');
           return (
-            <div key={m.id} className="row" style={{ marginBottom: 8, alignItems: 'center' }}>
-              <span style={{ minWidth: 110 }}><strong>{m.label}</strong></span>
+            <div key={m.id} style={{ marginBottom: 8 }}>
+              <div className="row" style={{ alignItems: 'center' }}>
+                <span style={{ minWidth: 110 }}><strong>{m.label}</strong></span>
               {entry ? (
                 <span className="small ok">Logged</span>
               ) : proteinOpen ? (
@@ -134,30 +135,37 @@ export default function Nutrition({ ctx }: { ctx: Ctx }) {
                   Unlocks at Level {DAILY_UNLOCK_LEVELS.protein}
                 </button>
               )}
-              <label className="small muted" htmlFor={`protein-grams-${m.id}`}>Grams (optional)</label>
-              <input
-                id={`protein-grams-${m.id}`}
-                inputMode="numeric"
-                value={draft}
-                disabled={!proteinOpen && !entry}
-                onChange={(e) => {
-                  const v = e.target.value;
-                  setGramsDraft((prev) => ({ ...prev, [m.id]: v }));
-                  // If the meal is already ticked, save the grams on
-                  // the entry. Grams never add attacks, the tick does.
-                  if (entry) {
-                    const g = Number(v);
-                    const grams = v !== '' && Number.isFinite(g) ? Math.max(0, Math.min(200, Math.round(g))) : undefined;
-                    update((d) => {
-                      const found = (d.proteinMeals || []).find((p) => p.id === entry.id);
-                      if (found) found.grams = grams;
-                    });
-                  }
-                }}
-                placeholder="g"
-                style={{ maxWidth: 80 }}
-                aria-label={`Protein grams at ${m.label}`}
-              />
+              </div>
+              <details>
+                <summary className="small muted">Add grams (optional)</summary>
+                <div className="row" style={{ alignItems: 'center', marginTop: 4 }}>
+                  <label className="small muted" htmlFor={`protein-grams-${m.id}`}>Grams (optional)</label>
+                  <input
+                    id={`protein-grams-${m.id}`}
+                    inputMode="numeric"
+                    value={draft}
+                    disabled={!proteinOpen && !entry}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      setGramsDraft((prev) => ({ ...prev, [m.id]: v }));
+                      // If the meal is already ticked, save the grams on
+                      // the entry. Grams never add attacks, the tick does.
+                      if (entry) {
+                        const g = Number(v);
+                        const grams = v !== '' && Number.isFinite(g) ? Math.max(0, Math.min(200, Math.round(g))) : undefined;
+                        update((d) => {
+                          const found = (d.proteinMeals || []).find((p) => p.id === entry.id);
+                          if (found) found.grams = grams;
+                        });
+                      }
+                    }}
+                    placeholder="g"
+                    style={{ maxWidth: 80 }}
+                    aria-label={`Protein grams at ${m.label}`}
+                  />
+                </div>
+                <p className="small muted" style={{ margin: '4px 0 0' }}>Grams are optional and never add attacks. The tick does.</p>
+              </details>
             </div>
           );
         })}
@@ -184,9 +192,15 @@ export default function Nutrition({ ctx }: { ctx: Ctx }) {
             </button>
           )}
         </div>
+        <details>
+          <summary className="small muted">How much water?</summary>
+          <p>Aim for water with every meal, and a glass when you wake up. Most people do well with about 6 to 8 glasses a day. Drink more when it is hot or you sweat a lot. Water with fiber helps digestion, so drink water with high fiber meals.</p>
+        </details>
       </div>
 
-      {/* Three rules: one rule per card, vertical, not a paragraph. */}
+      {/* Three rules: one rule per card, vertical, not a paragraph.
+          The 80 percent visual lives here now, with rule 3, so the
+          message and the bar are in one card instead of two. */}
       <div className="card">
         <h3>Three rules</h3>
         <p className="muted small">Keep these three in mind. Everything else below is detail.</p>
@@ -201,11 +215,6 @@ export default function Nutrition({ ctx }: { ctx: Ctx }) {
             </li>
           ))}
         </ol>
-      </div>
-
-      {/* 80% scale: its own card, with a clear visual bar. */}
-      <div className="card">
-        <h3>How full is satisfied?</h3>
         <p>Stop when you feel satisfied, about 80 percent full.</p>
         <div className="nut-scale-bar" aria-label="Fullness scale: stop at 80 percent, satisfied">
           <div className="nut-scale-fill" />
@@ -314,14 +323,6 @@ export default function Nutrition({ ctx }: { ctx: Ctx }) {
                 <li key={s.name}><strong>{s.name}:</strong> {s.text}</li>
               ))}
             </ul>
-          </details>
-
-          {/* Water, in Nutrition too. Points at the tick above, so
-              there is only one water tick in the whole app. */}
-          <details className="card">
-            <summary>Water</summary>
-            <p>Aim for water with every meal, and a glass when you wake up. Most people do well with about 6 to 8 glasses a day. Drink more when it is hot or you sweat a lot. Water with fiber helps digestion, so drink water with high fiber meals.</p>
-            <p style={{ marginBottom: 0 }}>Tick it off in the Protein and water today card at the top of this page. It is there even when Nutrition is off, so you never lose it.</p>
           </details>
 
           {/* Cardio lives in its own tab now, with its log form and

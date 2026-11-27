@@ -4,7 +4,7 @@ import { FAQS } from '../lib/data';
 import Switch from './Switch';
 
 export default function Faq({ ctx }: { ctx: Ctx }) {
-  const { doc, update, toast, go } = ctx;
+  const { doc, update, toast } = ctx;
   const [open, setOpen] = useState<string | null>(null);
   return (
     <div>
@@ -42,7 +42,7 @@ export default function Faq({ ctx }: { ctx: Ctx }) {
             hint="Tap to turn reduced motion on or off"
           />
         </div>
-        <p className="small muted">Reduced motion turns off the bobbing, glowing, and shimmer animations. Bigger text is the same switch as the one in Progress.</p>
+        <p className="small muted">Reduced motion turns off the bobbing, glowing, and shimmer animations.</p>
         <h4>Reminders</h4>
         <p>Email and phone for reminders if you forget to log in. We only use them to remind you, never to share them.</p>
         <label htmlFor="reminder-email">Email for reminders</label>
@@ -59,11 +59,6 @@ export default function Faq({ ctx }: { ctx: Ctx }) {
         </label>
         {!(doc.reminderPhone || '').trim() && <p className="small muted">Add a phone number above to turn this on.</p>}
         <p className="small muted">No reminders are sent yet. Derek will turn them on later.</p>
-      </div>
-      <div className="card gold-frame">
-        <h3>Still have a question?</h3>
-        <p>Ask Derek. He replies within one business day.</p>
-        <button className="primary" onClick={() => go('today')}>Ask Derek a question</button>
       </div>
     </div>
   );

@@ -27,6 +27,7 @@
 // Nov 25 found the old pins/trail missing from screenshots; this
 // layout is the fix.
 // Progression, bosses, companions, and XP are unchanged.
+import { useState } from 'react';
 import { CREATURES, BOSS_ROUNDS } from '../lib/data';
 import { weekLabel } from '../lib/yearPlan';
 import CompanionAvatar, { BossAvatar } from './CompanionAvatar';
@@ -419,6 +420,10 @@ export default function JourneyMap({
 }) {
   const week = Math.min(52, Math.max(1, currentWeek));
   const pastFirstStretch = week > 12;
+  // Map legend (Tier 3, item 22): the 9-line legend repeats what the
+  // strip labels, status pills, HP bars, and ? captions already say,
+  // so it starts hidden behind Show more. Map strips untouched.
+  const [showLegend, setShowLegend] = useState(false);
   const hereLand = pastFirstStretch ? 'past Week 12, on the next stretch' : LAND_FOR_STEP[STEPS.find((s) => week >= s.from && week <= s.to)?.n ?? 1];
 
   // Status per step, from the client's real week. Done steps sit below
@@ -643,6 +648,10 @@ export default function JourneyMap({
       {pastFirstStretch && (
         <p className="small">You are past Week 12. The road keeps going below, in Your road ahead.</p>
       )}
+      <button onClick={() => setShowLegend((v) => !v)} aria-expanded={showLegend}>
+        {showLegend ? 'Hide map legend' : 'Show map legend'}
+      </button>
+      {showLegend && (
       <div className="map-legend">
         <div><strong>Red line:</strong> the path you have travelled, bottom to top, step 1 to where you are now</div>
         <div><strong>Grey line:</strong> the path ahead of you</div>
@@ -654,6 +663,7 @@ export default function JourneyMap({
         <div><strong>Name:</strong> a companion you met. A ? is someone you have not met yet</div>
         <div><strong>Green tick:</strong> a step you have finished. You are here is the step with the gold border</div>
       </div>
+      )}
     </div>
   );
 }

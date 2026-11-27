@@ -20,7 +20,7 @@ const GEMS = [...GUARDIAN_GEMS];
 
 export default function Onboarding({ ctx }: { ctx: Ctx }) {
   const { doc, update, go } = ctx;
-  const [step, setStep] = useState(0);
+  const [step, setStep] = useState(1);
   const [name, setName] = useState('');
   const [classId, setClassId] = useState<ClassId>('Guardian');
   const [color, setColor] = useState('Navy');
@@ -53,24 +53,12 @@ export default function Onboarding({ ctx }: { ctx: Ctx }) {
 
   const EQUIP = EQUIPMENT_OPTIONS;
 
-  if (step === 0) {
-    return (
-      <div className="card">
-        <h2>Your first 5 minutes</h2>
-        <p>1. Pick your guardian. 2. Do the assessment. 3. Find your next step on Today. 4. Start your first workout.</p>
-        <p className="small muted">Nothing here is a test you can fail. The assessment finds where to start, so the plan fits you.</p>
-        <button className="primary" onClick={() => setStep(1)} style={{ width: '100%' }}>Pick my guardian</button>
-        <p style={{ marginTop: 10 }}>
-          <button onClick={() => update((d) => { d.tutorialDone = true; d.guardianPicked = true; d.guardian = { name: 'Brave Beginner', classId: 'Guardian', color: 'Navy', gem: 'Sapphire', cape: true, look: 'Female', hair: 'Long', build: 'Athletic', skinColor: 'Light', bodyColor: 'Navy', armColor: 'Navy', legColor: 'Navy', capeColor: 'Navy' }; })}>Skip for now</button>
-        </p>
-      </div>
-    );
-  }
-
   if (step === 1) {
     return (
       <div className="card">
         <h2>Pick your guardian</h2>
+        <p>1. Pick your guardian. 2. Do the assessment. 3. Find your next step on Today. 4. Start your first workout.</p>
+        <p className="small muted">Nothing here is a test you can fail. The assessment finds where to start, so the plan fits you.</p>
         <p>Your guardian walks the journey with you. Pick a class, then give them a name.</p>
         {CLASSES.map((c) => (
           <div key={c.id} className="card" style={{ margin: '8px 0' }}>
@@ -178,8 +166,10 @@ export default function Onboarding({ ctx }: { ctx: Ctx }) {
         </label>
         <div className="row" style={{ marginTop: 12 }}>
           <button className="primary" disabled={!name.trim()} onClick={() => { setGoal(CLASS_SUGGESTED_GOALS[classId]?.[0] || 'weight-loss'); setStep(2); }}>Next: my goal</button>
-          <button onClick={() => setStep(0)}>Back</button>
         </div>
+        <p style={{ marginTop: 10 }}>
+          <button onClick={() => update((d) => { d.tutorialDone = true; d.guardianPicked = true; d.guardian = { name: 'Brave Beginner', classId: 'Guardian', color: 'Navy', gem: 'Sapphire', cape: true, look: 'Female', hair: 'Long', build: 'Athletic', skinColor: 'Light', bodyColor: 'Navy', armColor: 'Navy', legColor: 'Navy', capeColor: 'Navy' }; })}>Skip for now</button>
+        </p>
       </div>
     );
   }
