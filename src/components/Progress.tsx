@@ -34,7 +34,7 @@ export default function Progress({ ctx }: { ctx: Ctx }) {
   const [photoUploading, setPhotoUploading] = useState(false);
   const [photoMsg, setPhotoMsg] = useState('');
   const [photoError, setPhotoError] = useState('');
-  const [showGoals, setShowGoals] = useState(true);
+  const [showGoals, setShowGoals] = useState(false);
   // History (Derek, Nov 25, 2026): latest PR and latest photo stay
   // visible, the full history hides behind Show more.
   const [showAllPrs, setShowAllPrs] = useState(false);

@@ -34,6 +34,7 @@ export default function Onboarding({ ctx }: { ctx: Ctx }) {
   const [armColor, setArmColor] = useState('Navy');
   const [legColor, setLegColor] = useState('Navy');
   const [capeColor, setCapeColor] = useState('Navy');
+  const [showPartColors, setShowPartColors] = useState(false);
   const setOverallColor = (c: string) => {
     setColor(c);
     setBodyColor(c);
@@ -145,26 +146,33 @@ export default function Onboarding({ ctx }: { ctx: Ctx }) {
             </select>
           </div>
         </div>
-        <h4 style={{ margin: '14px 0 4px' }}>Colors, by part</h4>
-        <p className="small muted">Each part starts as your overall color. Change any part on its own, or tap Match all to set them back.</p>
-        {([
-          ['Body', bodyColor, setBodyColor],
-          ['Arms', armColor, setArmColor],
-          ['Legs', legColor, setLegColor],
-          ['Cape', capeColor, setCapeColor],
-        ] as const).map(([label, value, set]) => (
-          <div key={label}>
-            <label htmlFor={`g-${label.toLowerCase()}-color`}>{label} color</label>
-            <select id={`g-${label.toLowerCase()}-color`} value={value} onChange={(e) => set(e.target.value)}>
-              {COLORS.map((c) => <option key={c}>{c}</option>)}
-            </select>
-          </div>
-        ))}
-        <div className="row" style={{ marginTop: 8 }}>
-          <button type="button" onClick={() => { setArmColor(bodyColor); setLegColor(bodyColor); setCapeColor(bodyColor); setColor(bodyColor); }}>
-            Match all to Body color
-          </button>
-        </div>
+        <button type="button" onClick={() => setShowPartColors((v) => !v)} aria-expanded={showPartColors}>
+          {showPartColors ? 'Hide colors by part' : 'Customize colors by part'}
+        </button>
+        {showPartColors && (
+          <>
+            <h4 style={{ margin: '14px 0 4px' }}>Colors, by part</h4>
+            <p className="small muted">Each part starts as your overall color. Change any part on its own, or tap Match all to set them back.</p>
+            {([
+              ['Body', bodyColor, setBodyColor],
+              ['Arms', armColor, setArmColor],
+              ['Legs', legColor, setLegColor],
+              ['Cape', capeColor, setCapeColor],
+            ] as const).map(([label, value, set]) => (
+              <div key={label}>
+                <label htmlFor={`g-${label.toLowerCase()}-color`}>{label} color</label>
+                <select id={`g-${label.toLowerCase()}-color`} value={value} onChange={(e) => set(e.target.value)}>
+                  {COLORS.map((c) => <option key={c}>{c}</option>)}
+                </select>
+              </div>
+            ))}
+            <div className="row" style={{ marginTop: 8 }}>
+              <button type="button" onClick={() => { setArmColor(bodyColor); setLegColor(bodyColor); setCapeColor(bodyColor); setColor(bodyColor); }}>
+                Match all to Body color
+              </button>
+            </div>
+          </>
+        )}
         <label style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
           <input type="checkbox" checked={cape} onChange={(e) => setCape(e.target.checked)} style={{ width: 'auto', minHeight: 0 }} /> Cape
         </label>

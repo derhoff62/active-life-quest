@@ -15,7 +15,6 @@ const MACRO_ICONS: Record<string, string> = {
   carbs: 'C',
   fats: 'F',
   fiber: 'Fi',
-  supplements: 'S',
 };
 
 // A sample day of eating. An example only, not a meal plan to follow.
@@ -45,7 +44,7 @@ const EATING_OUT_SWAPS = [
   'Take half home when the portion is big. Stop at satisfied, about 80 percent full.',
 ];
 
-// Supplements, in one place. Same four from the macro card, with
+// Supplements, in one place: the only Supplements block, with
 // what each one does. No amounts: specific doses and medical
 // supplements are outside Derek's scope as a trainer.
 // None of these are required.
@@ -266,48 +265,48 @@ export default function Nutrition({ ctx }: { ctx: Ctx }) {
 
           {/* A sample day of eating. An example only, not a plan
               to follow. Every meal has a protein in it. */}
-          <div className="card">
-            <h3>A sample day of eating</h3>
+          <details className="card">
+            <summary>A sample day of eating</summary>
             <p className="small muted">This is an example, not a meal plan you must follow. Use it to see what a day with protein at every meal looks like, then build your own day the same way.</p>
             <ul>
               {SAMPLE_DAY.map((s) => (
                 <li key={s.meal}><strong>{s.meal}:</strong> {s.food}</li>
               ))}
             </ul>
-          </div>
+          </details>
 
           {/* Whole foods grocery list, grouped by food type. */}
-          <div className="card">
-            <h3>Whole foods grocery list</h3>
+          <details className="card">
+            <summary>Whole foods grocery list</summary>
             <p className="small muted">Buy from these groups and most meals take care of themselves. No brands, just food that looks like food.</p>
             <ul>
               {GROCERY_LIST.map((g) => (
                 <li key={g.group}><strong>{g.group}:</strong> {g.foods}</li>
               ))}
             </ul>
-          </div>
+          </details>
 
           {/* Before and after a workout. Simple timing, nothing fancy. */}
-          <div className="card">
-            <h3>Before and after a workout</h3>
+          <details className="card">
+            <summary>Before and after a workout</summary>
             <p><strong>Before:</strong> eat a small snack 1 to 2 hours before you train. Something with carbs and a little protein, like toast with peanut butter or yogurt with fruit. Drink water. Do not train on a full stomach.</p>
             <p style={{ marginBottom: 0 }}><strong>After:</strong> eat a normal meal with protein and carbs within a couple of hours. Your next meal already does this. A palm-sized portion of protein, some carbs, and water is enough. No special shake is needed.</p>
-          </div>
+          </details>
 
           {/* Eating out, without blowing it up. Plain swaps only. */}
-          <div className="card">
-            <h3>Eating out</h3>
+          <details className="card">
+            <summary>Eating out</summary>
             <p className="small muted">You do not need a perfect meal when you eat out. A few swaps keep it close to normal.</p>
             <ul>
               {EATING_OUT_SWAPS.map((s) => (
                 <li key={s}>{s}</li>
               ))}
             </ul>
-          </div>
+          </details>
 
           {/* Supplements in one place. None of these are required. */}
-          <div className="card">
-            <h3>Supplements</h3>
+          <details className="card">
+            <summary>Supplements</summary>
             <p className="small muted">Food first. A few basics can help, but none of them replace real meals or training. None of these are required, and none of them burn fat on their own.</p>
             <p className="small muted">Derek can talk general nutrition with you. For specific amounts, or if you take medication or have a health condition, ask your doctor.</p>
             <ul>
@@ -315,15 +314,15 @@ export default function Nutrition({ ctx }: { ctx: Ctx }) {
                 <li key={s.name}><strong>{s.name}:</strong> {s.text}</li>
               ))}
             </ul>
-          </div>
+          </details>
 
           {/* Water, in Nutrition too. Points at the tick above, so
               there is only one water tick in the whole app. */}
-          <div className="card">
-            <h3>Water</h3>
+          <details className="card">
+            <summary>Water</summary>
             <p>Aim for water with every meal, and a glass when you wake up. Most people do well with about 6 to 8 glasses a day. Drink more when it is hot or you sweat a lot. Water with fiber helps digestion, so drink water with high fiber meals.</p>
             <p style={{ marginBottom: 0 }}>Tick it off in the Protein and water today card at the top of this page. It is there even when Nutrition is off, so you never lose it.</p>
-          </div>
+          </details>
 
           {/* Cardio lives in its own tab now, with its log form and
               HIIT examples. It used to be a card here, in Nutrition. */}

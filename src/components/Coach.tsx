@@ -270,7 +270,7 @@ export default function Coach({ ctx }: { ctx: Ctx }) {
           </div>
 
           <div className="card">
-            <h4 style={{ margin: '0 0 4px' }}>Stats this week</h4>
+            <h4 style={{ margin: '0 0 4px' }}>Stats and trends</h4>
             {(() => {
               const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
               const w = selected.data.workouts.filter((x) => new Date(String(x.date)).getTime() >= weekAgo).length;
@@ -294,10 +294,6 @@ export default function Coach({ ctx }: { ctx: Ctx }) {
                 </div>
               );
             })()}
-          </div>
-
-          <div className="card">
-            <h4 style={{ margin: '0 0 4px' }}>Stats and trends</h4>
             {(() => {
               const DAY = 24 * 60 * 60 * 1000;
               const nowMs = Date.now();

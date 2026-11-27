@@ -356,6 +356,7 @@ export default function Today({ ctx }: { ctx: Ctx }) {
         <p className="muted small">
           Recovery score from your last check-in: {lastCheckin ? `${rec}/100` : 'not set yet, log your first check-in below'}. Sleep 40, aches 25, energy 25, rest rhythm 10.
         </p>
+        <p className="small">Sleep is logged in Health. <button onClick={() => go('health', 'sleep')}>Log sleep in Health</button></p>
         {lastCheckin && <p className="small"><strong>{vol.line}</strong></p>}
         <p className="small">Your daily check-in is in the app. Complete your tasks for the day, then log how it went here.</p>
         {lastLoggedLabel(doc.checkins) && <p className="small muted">{lastLoggedLabel(doc.checkins)}.</p>}
@@ -570,14 +571,6 @@ export default function Today({ ctx }: { ctx: Ctx }) {
         })()}
       </div>
 
-      {/* Sleep is logged in the Sleep tab now, not here. This card only
-          shows last night and the recovery score, with a link there. */}
-      <div className="card">
-        <h3>Sleep and recovery</h3>
-        <p className="muted small">Last night: {lastSleep?.hours ?? 'not logged yet'} hours. Recovery score: {lastCheckin ? `${rec}/100` : 'not set yet, log your first check-in above'}.</p>
-        <button className="primary" onClick={() => go('health', 'sleep')}>Log sleep in Health</button>
-      </div>
-
       <div className="card" id="today-messages">
         <h3>Message Derek</h3>
         <p className="small muted">This is not live chat. Derek replies within one business day.</p>
@@ -671,18 +664,14 @@ export default function Today({ ctx }: { ctx: Ctx }) {
         ))}
       </div>
 
-      <div className="card">
-        <h3>Your companions</h3>
-        <p className="small muted">You meet companions one at a time as you travel. They live on Journey, not here.</p>
-        <button onClick={() => go('journey')}>Meet them on Journey</button>
-      </div>
-
-      <div className="card">
-        <h3>Your plan</h3>
+      <details className="card">
+        <summary>
+          <strong>Your plan</strong>
+        </summary>
         <p>Phase {phase}: {phaseInfo?.name}. {phaseInfo?.description}</p>
         <p className="small muted">{phaseInfo?.why}</p>
         {nextWorkout && <p className="small">Next workout: {nextWorkout.title}, about {nextWorkout.minutes} minutes.</p>}
-      </div>
+      </details>
 
       <div className="card">
         <h3>My goal</h3>

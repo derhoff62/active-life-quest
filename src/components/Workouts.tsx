@@ -3,7 +3,7 @@ import type { Ctx } from '../App';
 import { WORKOUTS, CORE_BALANCE_WORKOUT, REFERENCE_TRACKS, PHASES, PHASE_WEEKLY_SETS, PHASE_VOLUME_RANGE, VOLUME_MUSCLES, weeklyVolumeForSplit, filterGroupForExercise, exerciseNeeds, daysForTime, splitForDays, TRAINING_STYLES, CES_TEMPLATES, EQUIPMENT_NOTES, effectiveEquipment, resolveExercise, findExerciseByName, CLASS_WORKOUT_FOCUS, applyClassFocus, GOAL_FINISHERS, ALL_EXERCISES, CUSTOM_WORKOUT_ID, CUSTOM_WORKOUT_TITLE, customGroupsForLog } from '../lib/data';
 import type { TrainingStyle, FilterGroup } from '../lib/data';
 import type { ExerciseFeedback } from '../lib/store';
-import { phaseForDoc, hasFullAccess, metCompanionIds, lastTimeFor, awardBadges, daysInMonthSet, currentWeekForDoc, hasApprovedRetest, hasCleanApprovedRetest, assessmentApproved, assessmentPending, volumeTierForDoc, volumeSetsFor, latestWorkoutDate, lastSplitIndex, latestWorkoutSplitGroups, clampWorkoutDate, workoutDateIso, workoutDateRange, todayDayKey, yesterdayDayKey } from '../lib/store';
+import { phaseForDoc, hasFullAccess, metCompanionIds, lastTimeFor, awardBadges, currentWeekForDoc, hasApprovedRetest, hasCleanApprovedRetest, assessmentApproved, assessmentPending, volumeTierForDoc, volumeSetsFor, latestWorkoutDate, lastSplitIndex, latestWorkoutSplitGroups, clampWorkoutDate, workoutDateIso, workoutDateRange, todayDayKey, yesterdayDayKey } from '../lib/store';
 import { cardioThisWeek } from '../lib/badges';
 import BackToTop from './BackToTop';
 import { cycleForWeek, nextRetestWeek, nextRetestLabel, isDeloadWeek } from '../lib/yearPlan';
@@ -145,17 +145,6 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
     toast(`Rest day logged. +${xp} XP.`);
   }
 
-  // Month calendar, same as Progress: navy days are trained days, green
-  // days are active rest days. Only entries from this month light up:
-  // a workout on the 15th last month must not light up the 15th now.
-  const nowCal = new Date();
-  const daysInMonth = new Date(nowCal.getFullYear(), nowCal.getMonth() + 1, 0).getDate();
-  const trainedDays = daysInMonthSet(doc.workouts, nowCal.getFullYear(), nowCal.getMonth());
-  const restDays = daysInMonthSet(
-    doc.quests.filter((q) => (q as { kind?: string }).kind === 'rest-day'),
-    nowCal.getFullYear(),
-    nowCal.getMonth(),
-  );
   const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
   const cardioWeek = cardioThisWeek(doc);
   const cardioMilestone = cardioWeek >= 300 ? '300 minute milestone done' : cardioWeek >= 200 ? '200 done, next is 300' : cardioWeek >= 150 ? '150 done, next is 200' : 'Next milestone is 150';
@@ -251,6 +240,14 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
         setNotice('Phase 5 is locked until a clean form retest AND Derek approves it in Coach.');
         return;
       }
+    }
+    // Phase leak guard: a workout from a later phase than the client's
+    // current phase can never start, even if a button for it is
+    // reachable from the list, the split, or a resume. Phase 4 and 5
+    // have their own messages above.
+    if (w.phase > phase) {
+      setNotice(`That workout is from Phase ${w.phase}. You are on Phase ${phase} right now.`);
+      return;
     }
     if (!full && w.id !== 'day1-first') {
       setNotice('Week 2 and later workouts need the trial or beta access. Start the trial or enter your beta code on Today.');
@@ -739,6 +736,61 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
     );
   }
 
+  // Workout list, split by phase: only the client's current phase
+  // shows up front. Other phases sit behind one Show more below.
+  // The muscle and equipment filters apply to both lists.
+  const filteredWorkouts = WORKOUTS.filter((w) => {
+    const byMuscle = muscleFilter === 'all' || w.exercises.some((e) => filterGroupForExercise(e.name) === muscleFilter);
+    const byEquip = equipFilter === 'all'
+      ? true
+      : equipFilter === 'none'
+        ? w.exercises.every((e) => !exerciseNeeds(e))
+        : w.exercises.some((e) => (exerciseNeeds(e) || '').includes(equipFilter));
+    return byMuscle && byEquip;
+  });
+  const currentPhaseWorkouts = filteredWorkouts.filter((w) => w.phase === phase);
+  const otherPhaseWorkouts = filteredWorkouts.filter((w) => w.phase !== phase);
+  // One card for both lists, so the current-phase list and the
+  // Show more list always show the same card.
+  const workoutCard = (w: Workout) => {
+    const locked =
+      (w.phase === 4 && !hasApprovedRetest(doc, 12)) ||
+      (w.phase === 5 && !(hasCleanApprovedRetest(doc) && doc.phase5Approved));
+    const resolved = w.exercises.map((e) => resolveForDoc(e, doc));
+    const swapped = resolved.filter((r) => r.swappedFrom);
+    return (
+      <div className="card" key={w.id}>
+        <div className="row space">
+          <h3 style={{ margin: 0 }}>{w.title}</h3>
+          <span className="pill">Phase {w.phase} · ~{w.minutes} min</span>
+        </div>
+        <p className="muted small">{w.day}{w.note ? ` · ${w.note}` : ''}</p>
+        <p>{resolved.map((r) => r.exercise.name).join(' · ')}</p>
+        {swapped.length > 0 && (
+          <p className="small muted">
+            Swapped for your gear: {swapped.map((r) => `${r.exercise.name} in for ${r.swappedFrom}`).join('; ')}.
+          </p>
+        )}
+        {classFocus && focusFor(w) && (
+          <p className="small"><strong>{classFocus.line}</strong></p>
+        )}
+        <details>
+          <summary>Regressions: easier versions</summary>
+          {w.exercises.map((e) => (
+            <p key={e.id} className="small" style={{ margin: '4px 0' }}>
+              <strong>{e.name}:</strong> {e.regression}
+            </p>
+          ))}
+          <p className="small muted">In the workout, tap "Use the easier version" on any move to switch to it. Tap "I don&apos;t like this move" or "This hurts" and it is swapped out from now on.</p>
+        </details>
+        <button className="primary" disabled={locked} onClick={() => startWorkout(w)}>
+          {locked ? 'Locked' : 'Start workout'}
+        </button>
+        {w.phase === 5 && <p className="small muted">Phase 5 is locked until a clean form retest AND Derek approves it in Coach.</p>}
+      </div>
+    );
+  };
+
   return (
     <div>
       <div className="card">
@@ -828,11 +880,27 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
           <div>
             <p><strong>Today is an active rest day.</strong> {style === 'ppl' || style === 'upper-lower' ? 'You trained those same muscles yesterday, so they rest today. A different muscle group is next.' : 'You trained yesterday. Take 1 to 2 rest days between strength days.'}</p>
             <p className="small muted">Rest well today: a gentle walk, your 2-minute balance hold, and your stretches. No strength workout today. The gym gives the stimulus, recovery builds on it.</p>
-            <button onClick={logRestDay}>
-              Log my rest day (+5 XP)
-            </button>
+            {restLoggedToday ? (
+              <p>Today is an active rest day, and you logged it. Walk, stretch, balance, and rest well.</p>
+            ) : (
+              <button onClick={logRestDay}>
+                Log my rest day (+5 XP)
+              </button>
+            )}
             {notice && <p className="notice" style={{ marginTop: 8 }}>{notice}</p>}
           </div>
+        )}
+        {!isRestDay && trainedToday && style === 'full-body' && (
+          <p><strong>Tomorrow is an active rest day.</strong> You trained today. Tomorrow, walk, stretch, and do your 2-minute balance hold. No strength workout tomorrow.</p>
+        )}
+        {!isRestDay && trainedToday && style !== 'full-body' && (
+          <p><strong>Tomorrow is {planned.name.replace('Day ', 'day ')} in your split.</strong> {style === 'ppl' ? 'A different muscle group, so yesterday’s muscles keep resting.' : 'A short 15-minute dose. If you are sore or tired, take the day off instead.'}</p>
+        )}
+        {!isRestDay && !trainedToday && trainedYesterday && style !== 'full-body' && (
+          <p><strong>Today is {planned.name}.</strong> A different muscle group from yesterday, so yesterday’s muscles keep resting. {style === 'short' ? 'A short 15-minute dose. If you are sore or tired, take the day off instead.' : ''}</p>
+        )}
+        {!trainedYesterday && !trainedToday && (
+          <p>Rest days are active days. On a rest day, walk, stretch, and do your 2-minute balance hold. Take 1 to 2 rest days between strength days.</p>
         )}
         {doc.assessmentDone && !isRestDay && best && (
           <div>
@@ -991,55 +1059,7 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
         </div>
       )}
 
-      <div className="card">
-        <h3>Your week at a glance</h3>
-        <p className="small muted">
-          {nowCal.toLocaleString('default', { month: 'long' })} {nowCal.getFullYear()}. Navy days are days you trained, green days are active rest days.
-        </p>
-        <div className="row" style={{ gap: 4 }}>
-          {Array.from({ length: daysInMonth }, (_, i) => i + 1).map((day) => (
-            <span
-              key={day}
-              style={{
-                width: 28, height: 28, display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                borderRadius: 8,
-                background: trainedDays.has(day) ? '#124571' : restDays.has(day) ? '#1e7a46' : '#eef5fb',
-                color: trainedDays.has(day) || restDays.has(day) ? '#fff' : '#124571',
-                fontSize: 12,
-                outline: day === nowCal.getDate() ? '2px solid #c9a227' : 'none',
-              }}
-            >
-              {day}
-            </span>
-          ))}
-        </div>
-        <p className="small muted">Today is outlined in gold. Workouts this week: {doc.workouts.filter((w) => new Date(String(w.date)).getTime() >= weekAgo).length}.</p>
-      </div>
-
-      <div className="card">
-        <h3>Active rest days</h3>
-        {isRestDay && !restLoggedToday && (
-          <div>
-            <p><strong>Today is an active rest day.</strong> {style === 'ppl' ? 'You trained those same muscles yesterday, so they rest today.' : 'You trained yesterday. Take 1 to 2 rest days between strength days.'}</p>
-            <p className="small muted">Rest well today: a gentle walk, your 2-minute balance hold, and your stretches. No strength workout today. The gym gives the stimulus, recovery builds on it.</p>
-            <button onClick={logRestDay}>Log my rest day (+5 XP)</button>
-          </div>
-        )}
-        {isRestDay && restLoggedToday && <p>Today is an active rest day, and you logged it. Walk, stretch, balance, and rest well.</p>}
-        {!isRestDay && trainedToday && style === 'full-body' && (
-          <p><strong>Tomorrow is an active rest day.</strong> You trained today. Tomorrow, walk, stretch, and do your 2-minute balance hold. No strength workout tomorrow.</p>
-        )}
-        {!isRestDay && trainedToday && style !== 'full-body' && (
-          <p><strong>Tomorrow is {planned.name.replace('Day ', 'day ')} in your split.</strong> {style === 'ppl' ? 'A different muscle group, so yesterday’s muscles keep resting.' : 'A short 15-minute dose. If you are sore or tired, take the day off instead.'}</p>
-        )}
-        {!isRestDay && !trainedToday && trainedYesterday && style !== 'full-body' && (
-          <p><strong>Today is {planned.name}.</strong> A different muscle group from yesterday, so yesterday’s muscles keep resting. {style === 'short' ? 'A short 15-minute dose. If you are sore or tired, take the day off instead.' : ''}</p>
-        )}
-        {!trainedYesterday && !trainedToday && (
-          <p>Rest days are active days. On a rest day, walk, stretch, and do your 2-minute balance hold. Take 1 to 2 rest days between strength days.</p>
-        )}
-        {notice && <p className="notice" style={{ marginTop: 8 }}>{notice}</p>}
-      </div>
+      <p className="small muted">Workouts this week: {doc.workouts.filter((w) => new Date(String(w.date)).getTime() >= weekAgo).length}.</p>
 
       {/* Cardio is logged in the Cardio tab now, not here. This card
           only shows the weekly total, with a link to the one log form. */}
@@ -1051,6 +1071,8 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
         <button className="primary" onClick={() => go('health', 'cardio')}>Log cardio in Health</button>
       </div>
 
+      <details>
+        <summary>Show more about your weekly sets and time</summary>
       <div className="card">
         <h3>Fit the workout to your time</h3>
         <p>Shorter workouts need more days: at {timeMin === 45 ? '45 or more' : timeMin} minutes, train {daysNeeded} days a week to hit your Phase {phase} weekly sets ({weeklySets} per muscle). {style === 'ppl' ? 'Push, Pull, and Legs work different muscles, so each muscle gets 2 to 3 days off before its next session.' : style === 'short' ? 'Short sessions are a small daily dose, not a full strength session, so they do not add heavy volume every day.' : 'Full-body days work the same muscles each day, so take 1 to 2 rest days between strength days.'}</p>
@@ -1076,6 +1098,7 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
         })()}
         <p className="small muted">Legs run high on purpose: squats, hinges, and single-leg moves all count toward legs, so being over on legs is normal.</p>
       </div>
+      </details>
 
       <div className="card">
         <h3>My week: training days and splits</h3>
@@ -1213,52 +1236,14 @@ export default function Workouts({ ctx }: { ctx: Ctx }) {
         )}
       </div>
 
-      {WORKOUTS.filter((w) => {
-        const byMuscle = muscleFilter === 'all' || w.exercises.some((e) => filterGroupForExercise(e.name) === muscleFilter);
-        const byEquip = equipFilter === 'all'
-          ? true
-          : equipFilter === 'none'
-            ? w.exercises.every((e) => !exerciseNeeds(e))
-            : w.exercises.some((e) => (exerciseNeeds(e) || '').includes(equipFilter));
-        return byMuscle && byEquip;
-      }).map((w) => {
-        const locked =
-          (w.phase === 4 && !hasApprovedRetest(doc, 12)) ||
-          (w.phase === 5 && !(hasCleanApprovedRetest(doc) && doc.phase5Approved));
-        const resolved = w.exercises.map((e) => resolveForDoc(e, doc));
-        const swapped = resolved.filter((r) => r.swappedFrom);
-        return (
-          <div className="card" key={w.id}>
-            <div className="row space">
-              <h3 style={{ margin: 0 }}>{w.title}</h3>
-              <span className="pill">Phase {w.phase} · ~{w.minutes} min</span>
-            </div>
-            <p className="muted small">{w.day}{w.note ? ` · ${w.note}` : ''}</p>
-            <p>{resolved.map((r) => r.exercise.name).join(' · ')}</p>
-            {swapped.length > 0 && (
-              <p className="small muted">
-                Swapped for your gear: {swapped.map((r) => `${r.exercise.name} in for ${r.swappedFrom}`).join('; ')}.
-              </p>
-            )}
-            {classFocus && focusFor(w) && (
-              <p className="small"><strong>{classFocus.line}</strong></p>
-            )}
-            <details>
-              <summary>Regressions: easier versions</summary>
-              {w.exercises.map((e) => (
-                <p key={e.id} className="small" style={{ margin: '4px 0' }}>
-                  <strong>{e.name}:</strong> {e.regression}
-                </p>
-              ))}
-              <p className="small muted">In the workout, tap "Use the easier version" on any move to switch to it. Tap "I don&apos;t like this move" or "This hurts" and it is swapped out from now on.</p>
-            </details>
-            <button className="primary" disabled={locked} onClick={() => startWorkout(w)}>
-              {locked ? 'Locked' : 'Start workout'}
-            </button>
-            {w.phase === 5 && <p className="small muted">Phase 5 is locked until a clean form retest AND Derek approves it in Coach.</p>}
-          </div>
-        );
-      })}
+      {currentPhaseWorkouts.map(workoutCard)}
+
+      {otherPhaseWorkouts.length > 0 && (
+        <details>
+          <summary>Show more workouts</summary>
+          {otherPhaseWorkouts.map(workoutCard)}
+        </details>
+      )}
 
       <div className="card">
         <h3>Workout history</h3>

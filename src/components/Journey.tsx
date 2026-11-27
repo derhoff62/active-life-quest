@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Ctx } from '../App';
-import { PHASES, MONSTERS, CREATURES, STORY, SPELLS, CLASSES, BOSS_ROUNDS } from '../lib/data';
+import { PHASES, CREATURES, STORY, SPELLS, CLASSES, BOSS_ROUNDS } from '../lib/data';
 import { YEAR_CYCLES, challengeForWeek, nextRetestWeek, nextBossWeek, nextRetestLabel, nextBossLabel } from '../lib/yearPlan';
 import { phaseForDoc, levelForXp, metCompanionIds, currentWeekForDoc, dailyAttacks, powerCharge, powerCharged, rollDamage, damageRange, todayDayKey, DAILY_UNLOCK_LEVELS, lockedDailyThings } from '../lib/store';
 import GuardianAvatar from './GuardianAvatar';
@@ -41,7 +41,6 @@ export default function Journey({ ctx }: { ctx: Ctx }) {
   const [showAllBosses, setShowAllBosses] = useState(false);
   const [showMoreCycles, setShowMoreCycles] = useState(false);
   const [showAllCompanions, setShowAllCompanions] = useState(false);
-  const [showAllMonsters, setShowAllMonsters] = useState(false);
   // Same as Armor: the "new companion" badge and the top notice stay
   // while you are on this tab, and clear when you leave it. The
   // boss-ready part of the badge does not clear on a visit at all: it
@@ -167,16 +166,6 @@ export default function Journey({ ctx }: { ctx: Ctx }) {
       </div>
     );
   };
-  const monsterRow = (m: (typeof MONSTERS)[number]) => (
-    <div className="creature" key={m.id} style={{ margin: '10px 0' }}>
-      <div className="avatar" aria-hidden><BossAvatar id={m.id} /></div>
-      <div>
-        <p><strong>{m.name}</strong>: guards the {m.castle} in {m.land}, {m.weeks}. Boss round: {m.bossRound}.</p>
-        <p className="small muted">{m.blurb}</p>
-      </div>
-    </div>
-  );
-
   return (
     <div>
       <div className="card gold-frame">
@@ -310,14 +299,6 @@ export default function Journey({ ctx }: { ctx: Ctx }) {
         {hiddenCompanions.length > 0 && (
           <button onClick={() => setShowAllCompanions((v) => !v)}>{showAllCompanions ? 'Hide companions' : 'Show all companions'}</button>
         )}
-      </div>
-
-      <div className="card">
-        <h3>Monsters and bosses</h3>
-        <p className="small muted">Defeat a monster in a boss round and it is beaten. You move on to the next land. Consistency powers your attacks. Sleep and recovery raise your defense.</p>
-        {MONSTERS.slice(0, 2).map((m) => monsterRow(m))}
-        {showAllMonsters && MONSTERS.slice(2).map((m) => monsterRow(m))}
-        <button onClick={() => setShowAllMonsters((v) => !v)}>{showAllMonsters ? 'Hide monsters' : 'Show all monsters'}</button>
       </div>
 
       <div className="card">

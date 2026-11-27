@@ -2738,7 +2738,6 @@ export const NUTRITION: {
   carbs: NutritionSection;
   fats: NutritionSection;
   fiber: NutritionSection;
-  supplements: NutritionSection;
 } = {
   protein: {
     title: 'Protein',
@@ -2767,13 +2766,6 @@ export const NUTRITION: {
     detail:
       'Fiber is the quiet helper in weight loss. It slows digestion, steadies energy, and helps a smaller meal feel like enough. Add it slowly and drink water with it, or your stomach will complain.',
     sources: ['Oats', 'Beans', 'Lentils', 'Berries', 'Apples', 'Broccoli', 'Whole wheat bread', 'Chia seeds'],
-  },
-  supplements: {
-    title: 'Supplements',
-    short: 'Food first. A few basics can help, but none of them replace real meals or training.',
-    detail:
-      'Creatine supports strength and muscle. Fish oil supports joints and heart health. Magnesium glycinate can help sleep. Protein powder is useful when a meal is short on protein. None of these are required, and none of them burn fat on their own.',
-    sources: ['Creatine monohydrate', 'Fish oil', 'Magnesium glycinate', 'Whey or plant protein powder'],
   },
 };
 

@@ -102,6 +102,14 @@ export default function Cardio({ ctx }: { ctx: Ctx }) {
           <p>When to use it: only on non-strength days, or after a strength workout, 1 to 2 times a week at most, never every day. Always warm up for 5 minutes and cool down for 5 minutes.</p>
           <p>One HIIT minute counts double toward your weekly cardio total, so 10 hard minutes count as 20. Log your actual minutes and pick HIIT, the app does the doubling.</p>
           <p>Stop if you feel sharp, new, or worsening pain, chest pain, or dizziness. See a doctor or physical therapist about it. If a move hurts your joints, swap to a joint-friendly option or back to Zone 2 cardio.</p>
+          <h4>Examples</h4>
+          <ul className="nut-examples">
+            {HIIT.examples.map((e, i) => <li key={i}>{e}</li>)}
+          </ul>
+          <h4>Be careful with HIIT</h4>
+          <ul className="nut-examples">
+            {HIIT.precautions.map((e, i) => <li key={i}>{e}</li>)}
+          </ul>
         </details>
         <details>
           <summary>Find your zones with heart rate</summary>
@@ -172,16 +180,6 @@ export default function Cardio({ ctx }: { ctx: Ctx }) {
         <button onClick={() => go('progress')}>See Metrics in Progress</button>
       </div>
 
-      <div className="card">
-        <h3>High-intensity (HIIT) examples</h3>
-        <ul className="nut-examples">
-          {HIIT.examples.map((e, i) => <li key={i}>{e}</li>)}
-        </ul>
-        <h4>Be careful with HIIT</h4>
-        <ul className="nut-examples">
-          {HIIT.precautions.map((e, i) => <li key={i}>{e}</li>)}
-        </ul>
-      </div>
     </div>
   );
 }
